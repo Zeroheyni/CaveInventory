@@ -1,0 +1,18 @@
+.campaign-strip{
+  display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
+  padding:8px 12px; margin-bottom:14px; background: var(--stone-800); border:1px solid var(--stone-line);
+  border-radius:8px; font-size:11.5px;
+}
+.campaign-strip-left{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; color: var(--ink-dim); }
+.campaign-strip-item b{ color: var(--accent); }
+.campaign-strip-sep{ color: var(--ink-faint); }
+.campaign-strip-name-btn{
+  background:none; border:1px solid transparent; color: var(--ink-dim); font-family: var(--font-mono);
+  font-size:11.5px; cursor:pointer; padding:2px 4px; border-radius:4px; transition: all 0.15s ease;
+}
+.campaign-strip-name-btn:hover{ color: var(--accent); border-color: var(--stone-line); }
+.campaign-strip-signout{
+  background:none; border:1px solid var(--stone-line); color: var(--ink-faint); font-family: var(--font-mono);
+  font-size:11px; cursor:pointer; padding:5px 10px; border-radius:6px; transition: all 0.15s ease;
+}
+.campaign-strip-signout:hover{ color: var(--danger); border-color: var(--danger); }

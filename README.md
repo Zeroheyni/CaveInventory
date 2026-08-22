@@ -4,8 +4,9 @@ Site estático (Vite + JS puro + Supabase) pra um grupo de RPG gerenciar invent�
 
 ## Fases
 
-- **Fase 1 (atual):** setup do projeto, login/cadastro, criação de campanha com código de convite, entrada via código, deploy no GitHub Pages.
-- **Fase 2:** portar a UI de inventário pessoal e a área pública (com Realtime), permissões de compartimento.
+- **Fase 1:** setup do projeto, login/cadastro, criação de campanha com código de convite, entrada via código, deploy no GitHub Pages. ✅
+- **Fase 2a (atual):** inventário pessoal ([`src/screens/character.js`](src/screens/character.js)) — itens, recipientes aninhados, equipados, moedas, temas, desfazer, log, busca, seleção em lote, cópia formatada. Um blob JSON por personagem em `characters.data`. O modo Transporte mostra só o Espaço Pessoal por enquanto (o botão de mover pro Público e a aba Público ficam escondidos — ainda não existe backend relacional pra eles).
+- **Fase 2b:** área pública (compartimentos, recipientes e itens em tabelas relacionais) com Realtime, permissões de compartimento, `is_transport_admin`.
 - **Fase 3:** bot do Discord via Database Webhook + Edge Function.
 
 ## Setup do banco (Supabase)

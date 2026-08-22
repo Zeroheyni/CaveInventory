@@ -2,7 +2,7 @@ import { supabase } from './supabaseClient.js';
 import { getMyProfile, getCampaign } from './campaign.js';
 import { renderLogin } from './screens/login.js';
 import { renderOnboarding } from './screens/onboarding.js';
-import { renderLoggedIn } from './screens/loggedIn.js';
+import { renderCharacterScreen } from './screens/character.js';
 
 const app = document.getElementById('app');
 
@@ -37,7 +37,7 @@ export async function renderApp() {
     return;
   }
 
-  renderLoggedIn(app, renderApp, { session, profile, campaign });
+  renderCharacterScreen(app, { session, profile, campaign });
 }
 
 function renderFatalError(err) {
