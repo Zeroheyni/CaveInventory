@@ -3,6 +3,7 @@ import { getMyProfile, getCampaign } from './campaign.js';
 import { renderLogin } from './screens/login.js';
 import { renderOnboarding } from './screens/onboarding.js';
 import { renderCharacterScreen } from './screens/character.js';
+import { renderAdminScreen } from './screens/admin.js';
 
 const app = document.getElementById('app');
 
@@ -21,6 +22,11 @@ export async function renderApp() {
     profile = await getMyProfile(session.user.id);
   } catch (err) {
     renderFatalError(err);
+    return;
+  }
+
+  if (profile && profile.is_superadmin) {
+    renderAdminScreen(app, { session, profile });
     return;
   }
 

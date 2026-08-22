@@ -1,9 +1,17 @@
 import { supabase } from '../supabaseClient.js';
 import { signOut } from '../auth.js';
 
-export function renderCharacterScreen(app, { session, profile, campaign }) {
+let activeChannel = null;
+
+export function renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, ownerName, onBack }) {
   const campaignId = campaign.id;
   const userId = session.user.id;
+  const isAdminView = !!presetCharacterId;
+
+  if (activeChannel) {
+    supabase.removeChannel(activeChannel);
+    activeChannel = null;
+  }
 
   app.innerHTML = `
 <div class="wrap">
@@ -466,31 +474,37 @@ export function renderCharacterScreen(app, { session, profile, campaign }) {
   let activeTagFilter = null;
 
   async function loadState(){
-    const { data: rows } = await supabase
-      .from('characters')
-      .select('*')
-      .eq('campaign_id', campaignId)
-      .eq('owner_id', userId)
-      .limit(1);
-    let row = rows && rows[0];
-    if(!row){
-      const { data: created } = await supabase
+    let row;
+    if(presetCharacterId){
+      const { data } = await supabase.from('characters').select('*').eq('id', presetCharacterId).maybeSingle();
+      row = data;
+    } else {
+      const { data: rows } = await supabase
         .from('characters')
-        .insert({
-          campaign_id: campaignId,
-          owner_id: userId,
-          data: {
-            items: [], containers: [], order: [],
-            equipSlots: state.equipSlots, equip: state.equip,
-            transportPersonal: [], transportPersonalMaxCarga: 100,
-            transportPublic: [], transportPublicMaxCarga: 50,
-            currencyPublic: { bronze:0, silver:0, gold:0, platinum:0 },
-            compartments: [], theme: 'caverna-azul'
-          }
-        })
-        .select()
-        .single();
-      row = created;
+        .select('*')
+        .eq('campaign_id', campaignId)
+        .eq('owner_id', userId)
+        .limit(1);
+      row = rows && rows[0];
+      if(!row){
+        const { data: created } = await supabase
+          .from('characters')
+          .insert({
+            campaign_id: campaignId,
+            owner_id: userId,
+            data: {
+              items: [], containers: [], order: [],
+              equipSlots: state.equipSlots, equip: state.equip,
+              transportPersonal: [], transportPersonalMaxCarga: 100,
+              transportPublic: [], transportPublicMaxCarga: 50,
+              currencyPublic: { bronze:0, silver:0, gold:0, platinum:0 },
+              compartments: [], theme: 'caverna-azul'
+            }
+          })
+          .select()
+          .single();
+        row = created;
+      }
     }
     characterId = row.id;
     characterName = row.name || 'Personagem';
@@ -542,9 +556,44 @@ export function renderCharacterScreen(app, { session, profile, campaign }) {
     applyTheme(state.theme, false);
     renderAll();
     renderCampaignStrip();
+    subscribeRealtime();
 
     document.body.style.pointerEvents = '';
     document.body.style.opacity = '';
+  }
+
+  let lastWrittenUpdatedAt = null;
+
+  function subscribeRealtime(){
+    activeChannel = supabase
+      .channel('character-' + characterId)
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'characters', filter: `id=eq.${characterId}` }, (payload) => {
+        const row = payload.new;
+        if(!row || row.updated_at === lastWrittenUpdatedAt) return; // eco da nossa própria gravação
+        applyRemoteRow(row);
+      })
+      .subscribe();
+  }
+
+  function applyRemoteRow(row){
+    characterName = row.name || 'Personagem';
+    const d = row.data || {};
+    state.items = Array.isArray(d.items) ? d.items : [];
+    state.containers = Array.isArray(d.containers) ? d.containers : [];
+    state.order = Array.isArray(d.order) ? d.order : [];
+    state.equipSlots = Array.isArray(d.equipSlots) ? d.equipSlots : state.equipSlots;
+    state.equip = (d.equip && typeof d.equip === 'object') ? d.equip : state.equip;
+    state.transportPersonal = Array.isArray(d.transportPersonal) ? d.transportPersonal : [];
+    state.transportPublic = Array.isArray(d.transportPublic) ? d.transportPublic : [];
+    state.transportPersonalMaxCarga = d.transportPersonalMaxCarga !== undefined ? d.transportPersonalMaxCarga : 100;
+    state.transportPublicMaxCarga = d.transportPublicMaxCarga !== undefined ? d.transportPublicMaxCarga : 50;
+    state.compartments = Array.isArray(d.compartments) ? d.compartments : [];
+    state.currencyPublic = (d.currencyPublic && typeof d.currencyPublic === 'object') ? d.currencyPublic : { bronze:0, silver:0, gold:0, platinum:0 };
+    state.maxCarga = (row.max_carga !== undefined && row.max_carga !== null) ? row.max_carga : 60;
+    state.currency = (row.currency && typeof row.currency === 'object') ? row.currency : { bronze:0, silver:0, gold:0, platinum:0 };
+    renderAll();
+    renderCampaignStrip();
+    flashStatus('ATUALIZADO POR OUTRO DISPOSITIVO');
   }
 
   function saveState(){
@@ -553,6 +602,8 @@ export function renderCharacterScreen(app, { session, profile, campaign }) {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(async ()=>{
       try{
+        const updatedAt = new Date().toISOString();
+        lastWrittenUpdatedAt = updatedAt;
         await supabase.from('characters').update({
           data: {
             items: state.items, containers: state.containers, order: state.order,
@@ -565,7 +616,7 @@ export function renderCharacterScreen(app, { session, profile, campaign }) {
           currency: state.currency,
           max_carga: state.maxCarga,
           name: characterName,
-          updated_at: new Date().toISOString(),
+          updated_at: updatedAt,
         }).eq('id', characterId);
         if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // sincronizado';
       }catch(e){ console.error('falha ao salvar', e); if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // erro ao gravar'; }
@@ -582,19 +633,22 @@ export function renderCharacterScreen(app, { session, profile, campaign }) {
   function round(n){ return Math.round(n * 100) / 100; }
   function escapeHtml(str){ const d = document.createElement('div'); d.textContent = str; return d.innerHTML; }
 
-  // ---- faixa da campanha (nome da campanha, personagem, papel, sair) ----
+  // ---- faixa da campanha (nome da campanha, personagem, papel, sair/voltar) ----
   function renderCampaignStrip(){
     const el = document.getElementById('campaign-strip');
     if(!el) return;
+    const roleLabel = isAdminView
+      ? `MODO ADMIN${ownerName ? ' — ' + escapeHtml(ownerName) : ''}`
+      : (profile.role === 'master' ? 'MESTRE' : 'JOGADOR');
     el.innerHTML = `
       <div class="campaign-strip-left">
         <span class="campaign-strip-item"><b>${escapeHtml(campaign.name)}</b></span>
         <span class="campaign-strip-sep">·</span>
-        <span class="campaign-strip-item">${profile.role === 'master' ? 'MESTRE' : 'JOGADOR'}</span>
+        <span class="campaign-strip-item">${roleLabel}</span>
         <span class="campaign-strip-sep">·</span>
         <button type="button" class="campaign-strip-name-btn" id="character-name-btn" title="renomear personagem">${escapeHtml(characterName)} ✎</button>
       </div>
-      <button type="button" class="campaign-strip-signout" id="campaign-signout-btn">sair</button>
+      <button type="button" class="campaign-strip-signout" id="campaign-signout-btn">${isAdminView ? '← voltar ao painel' : 'sair'}</button>
     `;
     document.getElementById('character-name-btn').addEventListener('click', ()=>{
       const next = window.prompt('Nome do personagem', characterName);
@@ -606,6 +660,11 @@ export function renderCharacterScreen(app, { session, profile, campaign }) {
       }
     });
     document.getElementById('campaign-signout-btn').addEventListener('click', async ()=>{
+      if(isAdminView){
+        if(activeChannel){ supabase.removeChannel(activeChannel); activeChannel = null; }
+        onBack();
+        return;
+      }
       await signOut();
       window.location.reload();
     });

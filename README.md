@@ -8,6 +8,7 @@ Site estático (Vite + JS puro + Supabase) pra um grupo de RPG gerenciar invent�
 - **Fase 2a (atual):** inventário pessoal ([`src/screens/character.js`](src/screens/character.js)) — itens, recipientes aninhados, equipados, moedas, temas, desfazer, log, busca, seleção em lote, cópia formatada. Um blob JSON por personagem em `characters.data`. O modo Transporte mostra só o Espaço Pessoal por enquanto (o botão de mover pro Público e a aba Público ficam escondidos — ainda não existe backend relacional pra eles).
 - **Fase 2b:** área pública (compartimentos, recipientes e itens em tabelas relacionais) com Realtime, permissões de compartimento, `is_transport_admin`.
 - **Fase 3:** bot do Discord via Database Webhook + Edge Function.
+- **Painel de super-admin** ([`src/screens/admin.js`](src/screens/admin.js)): fora da numeração de fases — é uma conta especial (`profiles.is_superadmin`), independente de qualquer campanha, que vê/cria/apaga todas as campanhas do sistema e abre o inventário de qualquer jogador (com edição e atualização ao vivo via Realtime). Só quem tiver essa flag marcada direto no banco cai nesse painel; ver `db/005_patch_superadmin.sql`.
 
 ## Setup do banco (Supabase)
 
@@ -18,6 +19,12 @@ No SQL Editor do seu projeto Supabase, rode **nesta ordem**:
 3. [`db/002_patch_rls_recursion.sql`](db/002_patch_rls_recursion.sql) — corrige recursão infinita ("stack depth limit exceeded") nas funções auxiliares de RLS (`current_campaign_id`, `is_master`, etc.), que consultavam `profiles` sem `SECURITY DEFINER` dentro de uma política da própria `profiles`.
 4. [`db/003_patch_ambiguous_column.sql`](db/003_patch_ambiguous_column.sql) — corrige "column reference campaign_id is ambiguous" em `create_campaign()`: a coluna de retorno `campaign_id` colidia com a coluna de mesmo nome em `profiles`.
 5. [`db/004_patch_ambiguous_column_v2.sql`](db/004_patch_ambiguous_column_v2.sql) — a colisão do patch anterior também acontecia em `on conflict (campaign_id)` (não só na cláusula que eu tinha corrigido). A correção definitiva renomeia as colunas de retorno da função pra não colidir com nenhuma coluna de tabela. **Este patch usa `DROP FUNCTION` antes de recriar — rode as duas instruções (`drop function ...` e o resto) uma de cada vez, não junto**, porque se a segunda falhar dentro da mesma execução o banco desfaz o DROP também.
+6. [`db/005_patch_superadmin.sql`](db/005_patch_superadmin.sql) — cria a flag `profiles.is_superadmin`, as políticas de RLS que deixam um super-admin ver/criar/editar/apagar qualquer campanha, perfil ou personagem, e habilita Realtime em `characters`. Depois de rodar, marque sua própria conta como super-admin (troque o e-mail):
+   ```sql
+   insert into profiles (id, username, role, is_superadmin)
+   select id, 'Admin', 'master', true from auth.users where email = 'seu-email@exemplo.com'
+   on conflict (id) do update set is_superadmin = true;
+   ```
 
 A chave usada no cliente é a **publishable key** (`sb_publishable_...`, em Settings → API), configurada em [`src/config.js`](src/config.js). Ela não é secreta — todo o acesso é controlado por RLS no banco.
 
