@@ -14,6 +14,7 @@ No SQL Editor do seu projeto Supabase, rode **nesta ordem**:
 
 1. [`db/schema.sql`](db/schema.sql) — tabelas, RLS e Realtime.
 2. [`db/001_patch_auth_flow.sql`](db/001_patch_auth_flow.sql) — corrige políticas de RLS que faltavam para o fluxo de cadastro/onboarding funcionar (o schema original não tinha política de INSERT em `campaigns`/`profiles`; ver comentário no topo do arquivo).
+3. [`db/002_patch_rls_recursion.sql`](db/002_patch_rls_recursion.sql) — corrige recursão infinita ("stack depth limit exceeded") nas funções auxiliares de RLS (`current_campaign_id`, `is_master`, etc.), que consultavam `profiles` sem `SECURITY DEFINER` dentro de uma política da própria `profiles`.
 
 A chave usada no cliente é a **publishable key** (`sb_publishable_...`, em Settings → API), configurada em [`src/config.js`](src/config.js). Ela não é secreta — todo o acesso é controlado por RLS no banco.
 
