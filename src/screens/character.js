@@ -1,5 +1,7 @@
 import { supabase } from '../supabaseClient.js';
 import { signOut } from '../auth.js';
+import { renderPublicAreaScreen } from './publicArea.js';
+import { createPublicItem, createPublicContainer } from '../publicArea.js';
 
 let activeChannel = null;
 
@@ -648,7 +650,10 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         <span class="campaign-strip-sep">·</span>
         <button type="button" class="campaign-strip-name-btn" id="character-name-btn" title="renomear personagem">${escapeHtml(characterName)} ✎</button>
       </div>
-      <button type="button" class="campaign-strip-signout" id="campaign-signout-btn">${isAdminView ? '← voltar ao painel' : 'sair'}</button>
+      <div style="display:flex; gap:8px;">
+        ${!isAdminView ? '<button type="button" class="public-nav-btn" id="public-area-btn">🚐 Baú compartilhado</button>' : ''}
+        <button type="button" class="campaign-strip-signout" id="campaign-signout-btn">${isAdminView ? '← voltar ao painel' : 'sair'}</button>
+      </div>
     `;
     document.getElementById('character-name-btn').addEventListener('click', ()=>{
       const next = window.prompt('Nome do personagem', characterName);
@@ -659,6 +664,13 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         saveState();
       }
     });
+    const publicAreaBtn = document.getElementById('public-area-btn');
+    if(publicAreaBtn){
+      publicAreaBtn.addEventListener('click', ()=>{
+        if(activeChannel){ supabase.removeChannel(activeChannel); activeChannel = null; }
+        renderPublicAreaScreen(app, { session, profile, campaign, onBack: () => renderCharacterScreen(app, { session, profile, campaign }) });
+      });
+    }
     document.getElementById('campaign-signout-btn').addEventListener('click', async ()=>{
       if(isAdminView){
         if(activeChannel){ supabase.removeChannel(activeChannel); activeChannel = null; }
@@ -668,6 +680,42 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       await signOut();
       window.location.reload();
     });
+  }
+
+  // ---- mover do Espaço Pessoal pro Baú Compartilhado (Público) ----
+  async function movePersonalEntryToPublic(type, id){
+    const name = entryName(type, id);
+    const position = Math.floor(Date.now() / 1000);
+    if(type === 'item'){
+      const it = state.items.find(i => i.id === id);
+      if(!it) return;
+      removeFromEverywhere('item', id);
+      state.items = state.items.filter(i => i.id !== id);
+      renderAll(); saveState();
+      try{
+        await createPublicItem({
+          campaign_id: campaignId, name: it.name, weight: it.weight, qty: it.qty, tag: it.tag,
+          max_uses: it.maxUses, uses: it.uses, max_durability: it.maxDurability, durability: it.durability,
+          description: it.description, damage: it.damage, range: it.range,
+          container_id: null, compartment_id: null, position, updated_by: userId,
+        });
+        addLog(`"${name}" movido pro Baú Compartilhado`);
+      }catch(err){ window.alert('Falha ao mover pro Baú Compartilhado: ' + err.message); }
+    } else {
+      const c = state.containers.find(cc => cc.id === id);
+      if(!c) return;
+      if(c.contents.length > 0){ flashStatus('ESVAZIE O RECIPIENTE ANTES DE MOVER'); return; }
+      removeFromEverywhere('container', id);
+      state.containers = state.containers.filter(cc => cc.id !== id);
+      renderAll(); saveState();
+      try{
+        await createPublicContainer({
+          campaign_id: campaignId, name: c.name, own_weight: c.ownWeight, max_slots: c.maxSlots, tag: c.tag,
+          parent_container_id: null, compartment_id: null, position, updated_by: userId,
+        });
+        addLog(`"${name}" movido pro Baú Compartilhado`);
+      }catch(err){ window.alert('Falha ao mover pro Baú Compartilhado: ' + err.message); }
+    }
   }
 
   // ---- estrutura / hierarquia ----
@@ -1097,8 +1145,9 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     const returnBtn = (listKey === 'transport-personal' || listKey === 'transport-public')
       ? `<button class="icon-btn" data-return-to-inventory data-return-type="item" data-return-id="${it.id}" title="voltar pro inventário">${BACKPACK_ICON}</button>`
       : '';
-    // "mover pro Público" removido por enquanto — a área pública chega na Fase 2b
-    const swapBtn = '';
+    const swapBtn = listKey === 'transport-personal'
+      ? `<button class="icon-btn" data-swap-world data-swap-type="item" data-swap-id="${it.id}" title="mover pro Baú Compartilhado (Público)">${SWAP_ICON}</button>`
+      : '';
     const sel = selectedEntries.has('item:' + it.id) ? 'is-selected' : '';
     return `<div class="top-card" draggable="true" data-entry data-entry-type="item" data-id="${it.id}" data-list="${listKey}"><div class="item-card ${itemBorderClass(it)} ${it.pinned ? 'is-pinned' : ''} ${sel}"><div class="drag-handle" title="arraste">⋮⋮</div>${renderItemInner(it, {isFirst, isLast})}${swapBtn}${returnBtn}</div></div>`;
   }
@@ -1143,8 +1192,9 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     const returnBtn = (!nested && (listAttr === 'transport-personal' || listAttr === 'transport-public'))
       ? `<button class="icon-btn" data-return-to-inventory data-return-type="container" data-return-id="${c.id}" title="voltar pro inventário">${BACKPACK_ICON}</button>`
       : '';
-    // "mover pro Público" removido por enquanto — a área pública chega na Fase 2b
-    const swapBtn = '';
+    const swapBtn = (!nested && listAttr === 'transport-personal')
+      ? `<button class="icon-btn" data-swap-world data-swap-type="container" data-swap-id="${c.id}" title="mover pro Baú Compartilhado (Público)">${SWAP_ICON}</button>`
+      : '';
     const guardarHtml = nested ? '' : renderGuardarMenu('container', c.id);
     const contributeNote = nested ? `<div class="container-meta contribute-note"><span>contribui com <b>${Math.floor(total/2)}</b> carga pro recipiente pai (reduzida pela metade)</span></div>` : '';
     const wrapClass = nested ? 'nested-container-card' : 'top-card container-top';
@@ -1799,13 +1849,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     }
     const swapBtn = e.target.closest('button[data-swap-world]');
     if(swapBtn){
-      const type = swapBtn.dataset.swapType, id = swapBtn.dataset.swapId, target = swapBtn.dataset.swapTarget;
-      const name = entryName(type, id);
-      removeFromEverywhere(type, id);
-      resolveList(target).push({type, id});
-      sanitizeAmmoLinks();
-      addLog(`"${name}" movido pra ${target === 'transport-public' ? 'Público' : 'Espaço Pessoal'}`);
-      renderAll(); saveState();
+      movePersonalEntryToPublic(swapBtn.dataset.swapType, swapBtn.dataset.swapId);
       return;
     }
     const toggleMenuBtn = e.target.closest('button[data-toggle-menu]');

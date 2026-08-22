@@ -2,6 +2,7 @@ import './styles/theme.css';
 import './styles/auth.css';
 import './styles/campaign-strip.css';
 import './styles/admin.css';
+import './styles/publicArea.css';
 import { supabase } from './supabaseClient.js';
 import { renderApp } from './router.js';
 
