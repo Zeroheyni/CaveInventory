@@ -1,0 +1,32 @@
+.auth-shell{ max-width: 380px; margin: 12vh auto 0; }
+.auth-card{
+  background: var(--stone-800); border:1px solid var(--stone-line); border-radius:10px;
+  padding:24px; box-shadow: 0 14px 32px rgba(0,0,0,0.4);
+}
+.auth-tabs{ display:flex; gap:8px; margin-bottom:18px; }
+.auth-tab{
+  flex:1; padding:9px 8px; text-align:center; background: transparent; border:1px solid var(--stone-line);
+  border-radius:6px; color: var(--ink-faint); font-family: var(--font-display); font-size:11px;
+  letter-spacing:0.08em; cursor:pointer; transition: all 0.15s ease;
+}
+.auth-tab.active{ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); }
+.auth-field{ margin-bottom:14px; }
+.auth-field label{ display:block; font-size:10.5px; letter-spacing:0.08em; color: var(--ink-faint); margin-bottom:5px; }
+.auth-field input{
+  width:100%; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
+  font-family: var(--font-mono); font-size:13.5px; padding:9px 10px; border-radius:5px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+.auth-field input:focus{ outline:none; border-color: var(--accent-core); box-shadow: 0 0 0 2px var(--accent-faint); }
+.auth-submit{ width:100%; margin-top:4px; }
+.auth-error{ color: var(--danger); font-size:12px; margin:10px 0 0; line-height:1.5; }
+.auth-hint{ color: var(--ink-faint); font-size:11px; margin-top:14px; text-align:center; line-height:1.5; }
+.auth-invite-code{
+  font-family: var(--font-display); font-size:20px; letter-spacing:0.12em; color: var(--accent);
+  background: var(--stone-900); border:1px solid var(--stone-line); border-radius:6px;
+  padding:10px 14px; text-align:center; margin:10px 0 16px; user-select:all;
+}
+.auth-summary-row{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--stone-line); font-size:12.5px; }
+.auth-summary-row:last-child{ border-bottom:none; }
+.auth-summary-row span:first-child{ color: var(--ink-dim); }
+.auth-summary-row b{ color: var(--accent); }
