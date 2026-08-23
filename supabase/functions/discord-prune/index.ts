@@ -7,7 +7,7 @@ import { serviceClient, isAuthorized } from '../_shared/db.ts';
 import { pruneChannel } from '../_shared/discord.ts';
 import { handleCorsPreflight, corsResponse } from '../_shared/cors.ts';
 
-export async function pruneAllChannels(): Promise<Record<string, number>> {
+export async function pruneAllChannels(): Promise<Record<string, { found: number; deleted: number; errors: string[] }>> {
   const client = serviceClient();
   const byChannelKeep = new Map<string, Set<string>>();
 
@@ -32,7 +32,7 @@ export async function pruneAllChannels(): Promise<Record<string, number>> {
     byChannelKeep.set(channelId, set);
   }
 
-  const results: Record<string, number> = {};
+  const results: Record<string, { found: number; deleted: number; errors: string[] }> = {};
   for (const [channelId, keepIds] of byChannelKeep) {
     results[channelId] = await pruneChannel(channelId, keepIds);
   }

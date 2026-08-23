@@ -69,20 +69,59 @@ async function getBotUserId(): Promise<string> {
   return cachedBotUserId;
 }
 
-export async function listChannelMessages(channelId: string, limit = 100): Promise<{ id: string; author: { id: string } }[]> {
-  return await discordFetch(`/channels/${channelId}/messages?limit=${limit}`, { method: 'GET' });
+export async function listChannelMessages(channelId: string, limit = 100, before?: string): Promise<{ id: string; author: { id: string } }[]> {
+  const query = before ? `?limit=${limit}&before=${before}` : `?limit=${limit}`;
+  return await discordFetch(`/channels/${channelId}/messages${query}`, { method: 'GET' });
+}
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+// Apagar mensagem é MUITO mais limitado (~5 a cada 5s por canal) do que
+// editar/criar — disparar várias exclusões em paralelo (como o resto deste
+// arquivo faz de propósito pra ficar rápido) só derruba quase tudo em 429.
+// Aqui vai sequencial e respeita o retry_after que o próprio Discord manda.
+async function deleteMessageRateLimited(channelId: string, messageId: string): Promise<{ ok: true } | { ok: false; error: string }> {
+  for (let attempt = 0; attempt < 8; attempt++) {
+    const res = await fetch(`${API}/channels/${channelId}/messages/${messageId}`, { method: 'DELETE', headers: botHeaders() });
+    if (res.status === 429) {
+      const body = await res.json().catch(() => ({ retry_after: 1 }));
+      await sleep(Math.ceil((body.retry_after ?? 1) * 1000) + 50);
+      continue;
+    }
+    if (res.ok) return { ok: true };
+    return { ok: false, error: `${res.status}: ${await res.text()}` };
+  }
+  return { ok: false, error: 'esgotou tentativas de rate limit' };
 }
 
 // Apaga só as PRÓPRIAS mensagens do bot num canal que não estejam no
 // conjunto "manter" (os IDs que estão de verdade sendo usados agora pelas
 // tabelas de rastreio) — nunca mexe em mensagem de outra pessoa. Serve pra
 // limpar sobras de teste/relink sem apagar nada essencial.
-export async function pruneChannel(channelId: string, keepIds: Set<string>): Promise<number> {
+export async function pruneChannel(channelId: string, keepIds: Set<string>): Promise<{ found: number; deleted: number; errors: string[] }> {
   const botId = await getBotUserId();
-  const messages = await listChannelMessages(channelId, 100);
-  const toDelete = messages.filter((m) => m.author?.id === botId && !keepIds.has(m.id));
-  await Promise.all(toDelete.map((m) => deleteMessage(channelId, m.id)));
-  return toDelete.length;
+  let found = 0;
+  let deleted = 0;
+  const errors: string[] = [];
+  // pagina pra trás (mais antiga) até o canal não ter mais 100 mensagens
+  // pra devolver — um canal de teste bem usado facilmente passa desse limite
+  let before: string | undefined;
+  while (true) {
+    const page = await listChannelMessages(channelId, 100, before);
+    if (page.length === 0) break;
+    const toDelete = page.filter((m) => m.author?.id === botId && !keepIds.has(m.id));
+    found += toDelete.length;
+    for (const m of toDelete) {
+      const result = await deleteMessageRateLimited(channelId, m.id);
+      if (result.ok) deleted++;
+      else errors.push(result.error);
+    }
+    before = page[page.length - 1].id;
+    if (page.length < 100) break;
+  }
+  return { found, deleted, errors: [...new Set(errors)] };
 }
 
 // Sincroniza uma lista de mensagens de uma "seção" (ex: inventário de um
