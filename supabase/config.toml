@@ -1,0 +1,14 @@
+project_id = "oswkabxzlnytgspxizyn"
+
+# As três functions são chamadas sem JWT do Supabase: os triggers do Postgres
+# mandam um segredo compartilhado (x-sync-secret), o painel do mestre manda
+# um JWT de usuário (checado à mão em _shared/db.ts:isAuthorized), e o
+# Discord manda uma assinatura Ed25519 própria (discord-interactions).
+[functions.discord-sync-character]
+verify_jwt = false
+
+[functions.discord-sync-public]
+verify_jwt = false
+
+[functions.discord-interactions]
+verify_jwt = false

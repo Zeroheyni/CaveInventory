@@ -6,6 +6,10 @@ import {
   createCampaignAsAdmin,
   deleteCampaignAsAdmin,
   createPlayerAccount,
+  listDiscordConfigs,
+  setCampaignDiscordChannel,
+  listCharacterDiscordConfigs,
+  setCharacterDiscordChannel,
 } from '../admin.js';
 import { renderCharacterScreen } from './character.js';
 
@@ -16,11 +20,14 @@ export function renderAdminScreen(app, { session, profile }) {
   let charactersByCampaign = new Map();
   let confirmingDelete = null;
   let lastCreatedAccount = null;
+  let discordChannelByCampaign = new Map();
+  let discordChannelByCharacter = new Map();
 
   async function load() {
-    const [camps, profs] = await Promise.all([listAllCampaigns(), listAllProfiles()]);
+    const [camps, profs, discordConfigs] = await Promise.all([listAllCampaigns(), listAllProfiles(), listDiscordConfigs()]);
     campaigns = camps;
     profilesById = new Map(profs.map((p) => [p.id, p]));
+    discordChannelByCampaign = new Map(discordConfigs.map((c) => [c.campaign_id, c.channel_id]));
     charactersByCampaign.clear();
     render();
   }
@@ -178,6 +185,12 @@ export function renderAdminScreen(app, { session, profile }) {
                 <button type="button" class="admin-danger-btn ${isConfirming ? 'confirm-pending' : ''}" data-delete-campaign="${c.id}">${isConfirming ? 'confirmar?' : 'excluir'}</button>
               </div>
             </div>
+            <div class="admin-discord-row">
+              <label>🤖 Canal do Discord (transporte público)</label>
+              <input type="text" class="admin-discord-input" data-discord-campaign="${c.id}" placeholder="ID do canal" value="${escapeHtml(discordChannelByCampaign.get(c.id) || '')}" />
+              <button type="button" class="btn btn-ghost" data-save-discord-campaign="${c.id}">vincular</button>
+              <span class="admin-discord-feedback" data-discord-feedback-campaign="${c.id}"></span>
+            </div>
             ${isOpen ? `<div class="admin-character-list" id="admin-chars-${c.id}"><p class="admin-empty">Carregando...</p></div>` : ''}
           </div>
         `;
@@ -189,6 +202,9 @@ export function renderAdminScreen(app, { session, profile }) {
     });
     listEl.querySelectorAll('button[data-delete-campaign]').forEach((btn) => {
       btn.addEventListener('click', () => onDeleteClick(btn.dataset.deleteCampaign));
+    });
+    listEl.querySelectorAll('button[data-save-discord-campaign]').forEach((btn) => {
+      btn.addEventListener('click', () => onSaveCampaignDiscord(btn.dataset.saveDiscordCampaign));
     });
 
     expanded.forEach((campaignId) => {
@@ -222,6 +238,9 @@ export function renderAdminScreen(app, { session, profile }) {
       return;
     }
 
+    const discordConfigs = await listCharacterDiscordConfigs(characters.map((ch) => ch.id));
+    discordConfigs.forEach((c) => discordChannelByCharacter.set(c.character_id, c.channel_id));
+
     el.innerHTML = characters
       .map((ch) => {
         const owner = profilesById.get(ch.owner_id);
@@ -230,6 +249,12 @@ export function renderAdminScreen(app, { session, profile }) {
           <div class="admin-character-row">
             <span>${escapeHtml(ch.name || 'Personagem')} <span class="admin-owner-tag">(${escapeHtml(ownerLabel)})</span></span>
             <button type="button" class="btn btn-ghost" data-open-character="${ch.id}" data-owner-name="${escapeHtml(ownerLabel)}">abrir inventário</button>
+          </div>
+          <div class="admin-discord-row">
+            <label>🤖 Canal do Discord (inventário)</label>
+            <input type="text" class="admin-discord-input" data-discord-character="${ch.id}" placeholder="ID do canal" value="${escapeHtml(discordChannelByCharacter.get(ch.id) || '')}" />
+            <button type="button" class="btn btn-ghost" data-save-discord-character="${ch.id}">vincular</button>
+            <span class="admin-discord-feedback" data-discord-feedback-character="${ch.id}"></span>
           </div>
         `;
       })
@@ -247,6 +272,39 @@ export function renderAdminScreen(app, { session, profile }) {
         });
       });
     });
+    el.querySelectorAll('button[data-save-discord-character]').forEach((btn) => {
+      btn.addEventListener('click', () => onSaveCharacterDiscord(btn.dataset.saveDiscordCharacter));
+    });
+  }
+
+  async function onSaveCampaignDiscord(campaignId) {
+    const input = document.querySelector(`input[data-discord-campaign="${campaignId}"]`);
+    const feedback = document.querySelector(`span[data-discord-feedback-campaign="${campaignId}"]`);
+    const channelId = input.value.trim();
+    if (!channelId) { input.focus(); return; }
+    feedback.textContent = 'vinculando...';
+    try {
+      await setCampaignDiscordChannel(campaignId, channelId);
+      discordChannelByCampaign.set(campaignId, channelId);
+      feedback.textContent = 'vinculado ✓';
+    } catch (err) {
+      feedback.textContent = 'erro: ' + err.message;
+    }
+  }
+
+  async function onSaveCharacterDiscord(characterId) {
+    const input = document.querySelector(`input[data-discord-character="${characterId}"]`);
+    const feedback = document.querySelector(`span[data-discord-feedback-character="${characterId}"]`);
+    const channelId = input.value.trim();
+    if (!channelId) { input.focus(); return; }
+    feedback.textContent = 'vinculando...';
+    try {
+      await setCharacterDiscordChannel(characterId, channelId);
+      discordChannelByCharacter.set(characterId, channelId);
+      feedback.textContent = 'vinculado ✓';
+    } catch (err) {
+      feedback.textContent = 'erro: ' + err.message;
+    }
   }
 
   let deleteConfirmTimeout = null;

@@ -41,3 +41,12 @@
 .admin-character-list{ margin-top:12px; padding-top:12px; border-top:1px solid var(--stone-line); display:flex; flex-direction:column; gap:8px; }
 .admin-character-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px; color: var(--ink-dim); }
 .admin-owner-tag{ color: var(--ink-faint); font-size:11px; }
+
+.admin-discord-row{ display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+.admin-discord-row label{ font-size:11px; color: var(--ink-faint); white-space:nowrap; }
+.admin-discord-input{
+  flex:1; min-width:140px; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
+  font-family: var(--font-mono); font-size:12.5px; padding:6px 8px; border-radius:5px;
+}
+.admin-discord-input:focus{ outline:none; border-color: var(--accent-core); box-shadow: 0 0 0 2px var(--accent-faint); }
+.admin-discord-feedback{ font-size:11px; color: var(--ink-faint); white-space:nowrap; }

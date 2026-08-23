@@ -24,6 +24,37 @@ export async function listCharactersInCampaign(campaignId) {
   return data;
 }
 
+// ---- vínculo com o bot do Discord (Fase 3) ----
+
+export async function listDiscordConfigs() {
+  const { data, error } = await supabase.from('discord_config').select('campaign_id, channel_id');
+  if (error) throw error;
+  return data;
+}
+
+export async function setCampaignDiscordChannel(campaignId, channelId) {
+  const { error } = await supabase.from('discord_config').upsert({ campaign_id: campaignId, channel_id: channelId });
+  if (error) throw error;
+  // dispara uma sincronização imediata pra dar feedback na hora ao mestre
+  await supabase.functions.invoke('discord-sync-public', { body: { campaign_id: campaignId } });
+}
+
+export async function listCharacterDiscordConfigs(characterIds) {
+  if (!characterIds.length) return [];
+  const { data, error } = await supabase
+    .from('discord_character_config')
+    .select('character_id, channel_id')
+    .in('character_id', characterIds);
+  if (error) throw error;
+  return data;
+}
+
+export async function setCharacterDiscordChannel(characterId, channelId) {
+  const { error } = await supabase.from('discord_character_config').upsert({ character_id: characterId, channel_id: channelId });
+  if (error) throw error;
+  await supabase.functions.invoke('discord-sync-character', { body: { character_id: characterId } });
+}
+
 export async function createCampaignAsAdmin(name) {
   const { data, error } = await supabase.from('campaigns').insert({ name }).select().single();
   if (error) throw error;
