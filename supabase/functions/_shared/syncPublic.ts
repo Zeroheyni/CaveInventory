@@ -3,9 +3,17 @@
 // discord-sync-public (trigger/painel do mestre) e discord-interactions.
 import { serviceClient } from './db.ts';
 import { syncMessageList, deleteMessage } from './discord.ts';
+import { withSyncLock } from './lock.ts';
 import { buildPublicCompartmentText, buildPublicAvulsoText, splitIntoChunks, type PublicItem, type PublicContainer } from './format.ts';
 
 export async function syncPublicArea(campaignId: string) {
+  // mesma race de syncCharacter: sem a trava, mudanças rápidas em
+  // itens/compartimentos da área pública disparam sincronizações em
+  // paralelo que duplicam mensagem (ver db/013_patch_discord_sync_lock.sql).
+  await withSyncLock(`public:${campaignId}`, () => syncPublicAreaInner(campaignId));
+}
+
+async function syncPublicAreaInner(campaignId: string) {
   const client = serviceClient();
   const { data: config } = await client.from('discord_config').select('channel_id').eq('campaign_id', campaignId).maybeSingle();
   if (!config) return; // mestre ainda não vinculou o canal de transporte pra essa campanha

@@ -2,9 +2,18 @@
 // mestre) e discord-interactions (clique no botão "🔄 atualizar").
 import { serviceClient } from './db.ts';
 import { syncMessageList } from './discord.ts';
+import { withSyncLock } from './lock.ts';
 import { buildCharacterInventoryText, buildCharacterTransportPersonalText, splitIntoChunks } from './format.ts';
 
 export async function syncCharacter(characterId: string) {
+  // sem a trava, autosave rápido dispara várias execuções em paralelo pro
+  // mesmo personagem -- todas leem os mesmos IDs de mensagem (ainda vazios,
+  // se o canal acabou de ser vinculado) e cada uma cria sua própria
+  // mensagem nova, deixando o resto de sobra pra sempre.
+  await withSyncLock(`char:${characterId}`, () => syncCharacterInner(characterId));
+}
+
+async function syncCharacterInner(characterId: string) {
   const client = serviceClient();
   const { data: character, error } = await client.from('characters').select('id, max_carga, currency, data').eq('id', characterId).single();
   if (error || !character) return; // personagem sumiu (excluído) — nada a fazer

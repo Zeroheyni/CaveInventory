@@ -1177,7 +1177,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       const noResults = isOpen && !itemOptsHtml && !containerOptsHtml;
 
       return `
-        <div class="slot-card ${equippedLabel ? 'filled' : ''}">
+        <div class="slot-card ${equippedLabel ? 'filled' : ''} ${isOpen ? 'dropdown-open' : ''}">
           <button class="slot-remove" data-remove-slot="${slot.key}" title="excluir slot">✕</button>
           <div class="slot-head"><div class="slot-icon">${icon}</div><div class="slot-name-wrap"><div class="slot-name">${escapeHtml(slot.label)}</div>${reduceBadge}</div></div>
           <div class="equip-search-wrap">
@@ -1190,7 +1190,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
                 ${noResults ? '<div class="equip-search-empty">nada encontrado</div>' : ''}
               </div>` : ''}
           </div>
-          <div class="slot-detail">${detail}</div>
+          ${isOpen ? '' : `<div class="slot-detail">${detail}</div>`}
         </div>`;
     }).join('');
   }
