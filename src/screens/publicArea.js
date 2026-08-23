@@ -30,6 +30,12 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
   const campaignId = campaign.id;
   const userId = session.user.id;
   let maxCarga = campaign.max_carga_publico;
+  // Embutida na MESMA página que character.js, que usa muitos dos mesmos IDs
+  // (f-name, search-input, currency-transfer-btn, etc. — os dois telas
+  // compartilham o mesmo formulário de item/recipiente). document.getElementById
+  // sempre pegaria o elemento de character.js (primeiro no documento), então
+  // toda busca por ID aqui precisa ficar restrita à própria subárvore do embed.
+  const $ = (id) => app.querySelector('#' + id);
 
   if (activeChannel) {
     supabase.removeChannel(activeChannel);
@@ -370,13 +376,13 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     if (addMode === 'item') renderItemForm();
     if (addMode === 'container') renderContainerForm();
     wireStaticHandlers();
-    const maxCargaInput = document.getElementById('public-maxcarga-input');
+    const maxCargaInput = $('public-maxcarga-input');
     if (maxCargaInput) {
       maxCargaInput.addEventListener('change', async () => {
         const value = Math.max(0, parseFloat(maxCargaInput.value) || 0);
         maxCarga = value;
         await updateCampaignMaxCarga(campaignId, value);
-        document.getElementById('gauge-readout').textContent = `${round(publicTotalWeight())} / ${maxCarga} CARGA`;
+        $('gauge-readout').textContent = `${round(publicTotalWeight())} / ${maxCarga} CARGA`;
       });
     }
   }
@@ -395,7 +401,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
   }
 
   function renderMembersPanel() {
-    const el = document.getElementById('members-panel');
+    const el = $('members-panel');
     if (!el) return;
     el.innerHTML = `
       <div class="members-panel-head">MEMBROS DA CAMPANHA</div>
@@ -428,7 +434,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
   }
 
   function renderTagChips() {
-    const row = document.getElementById('tag-chip-row');
+    const row = $('tag-chip-row');
     if (!row) return;
     row.innerHTML = TAG_ORDER.map(
       (k) => `<button type="button" class="tag-chip ${activeTagFilter === k ? 'active' : ''}" data-tagfilter="${k}">${TAG_ICONS[k]}<span>${TAGS[k].label}</span></button>`
@@ -599,7 +605,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
   }
 
   function renderAvulsoList() {
-    const list = document.getElementById('avulso-list');
+    const list = $('avulso-list');
     if (!list) return;
     const entries = childrenOf({ containerId: null, compartmentId: null });
     if (entries.length === 0) {
@@ -664,7 +670,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
   }
 
   function renderCompartmentsList() {
-    const el = document.getElementById('compartments-list');
+    const el = $('compartments-list');
     if (!el) return;
     el.innerHTML = compartments.map(renderCompartmentCard).join('');
     if (!el.dataset.bound) {
@@ -759,7 +765,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
   // ---- formulário de item ----
   function renderItemForm() {
     const editing = editingItemId ? itemsById().get(editingItemId) : null;
-    const slot = document.getElementById('item-form-slot');
+    const slot = $('item-form-slot');
     slot.innerHTML = `
       <div class="add-card" id="item-form-wrap">
         <div class="add-card-head">
@@ -803,44 +809,44 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     if (editing) selectedItemTag = editing.tag;
     renderTagPicker('item-tag-picker', selectedItemTag, (tag) => {
       selectedItemTag = tag;
-      document.getElementById('weapon-stats-form-wrap').classList.toggle('show', tag === 'arma');
+      $('weapon-stats-form-wrap').classList.toggle('show', tag === 'arma');
     });
 
-    document.getElementById('item-form-close').addEventListener('click', () => {
+    $('item-form-close').addEventListener('click', () => {
       addMode = null;
       editingItemId = null;
       render();
     });
-    document.getElementById('cancel-edit').addEventListener('click', () => {
+    $('cancel-edit').addEventListener('click', () => {
       editingItemId = null;
       renderItemForm();
     });
-    document.getElementById('f-has-uses').addEventListener('change', (e) => {
-      document.getElementById('uses-input-wrap').classList.toggle('show', e.target.checked);
+    $('f-has-uses').addEventListener('change', (e) => {
+      $('uses-input-wrap').classList.toggle('show', e.target.checked);
     });
-    document.getElementById('f-has-durability').addEventListener('change', (e) => {
-      document.getElementById('durability-input-wrap').classList.toggle('show', e.target.checked);
+    $('f-has-durability').addEventListener('change', (e) => {
+      $('durability-input-wrap').classList.toggle('show', e.target.checked);
     });
-    document.getElementById('f-has-description').addEventListener('change', (e) => {
-      document.getElementById('f-description').style.display = e.target.checked ? 'block' : 'none';
+    $('f-has-description').addEventListener('change', (e) => {
+      $('f-description').style.display = e.target.checked ? 'block' : 'none';
     });
-    document.getElementById('submit-item').addEventListener('click', async () => {
-      const name = document.getElementById('f-name').value.trim();
+    $('submit-item').addEventListener('click', async () => {
+      const name = $('f-name').value.trim();
       if (!name) return;
-      const weight = Math.max(0, parseFloat(document.getElementById('f-weight').value) || 0);
-      const qty = Math.max(1, parseInt(document.getElementById('f-qty').value) || 1);
-      const hasUses = document.getElementById('f-has-uses').checked;
-      const maxUses = hasUses ? Math.max(1, parseInt(document.getElementById('f-uses').value) || 1) : null;
-      const hasDurability = document.getElementById('f-has-durability').checked;
-      const durMax = hasDurability ? Math.max(1, parseInt(document.getElementById('f-durability-max').value) || 1) : null;
+      const weight = Math.max(0, parseFloat($('f-weight').value) || 0);
+      const qty = Math.max(1, parseInt($('f-qty').value) || 1);
+      const hasUses = $('f-has-uses').checked;
+      const maxUses = hasUses ? Math.max(1, parseInt($('f-uses').value) || 1) : null;
+      const hasDurability = $('f-has-durability').checked;
+      const durMax = hasDurability ? Math.max(1, parseInt($('f-durability-max').value) || 1) : null;
       const durCur = hasDurability
-        ? Math.max(0, Math.min(durMax, parseInt(document.getElementById('f-durability-current').value) || 0))
+        ? Math.max(0, Math.min(durMax, parseInt($('f-durability-current').value) || 0))
         : null;
-      const hasDescription = document.getElementById('f-has-description').checked;
-      const description = hasDescription ? document.getElementById('f-description').value.trim() || null : null;
+      const hasDescription = $('f-has-description').checked;
+      const description = hasDescription ? $('f-description').value.trim() || null : null;
       const isWeapon = selectedItemTag === 'arma';
-      const damage = isWeapon ? document.getElementById('f-damage').value.trim() || null : null;
-      const range = isWeapon ? document.getElementById('f-range').value.trim() || null : null;
+      const damage = isWeapon ? $('f-damage').value.trim() || null : null;
+      const range = isWeapon ? $('f-range').value.trim() || null : null;
 
       if (editingItemId) {
         await updatePublicItem(editingItemId, {
@@ -863,7 +869,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
   }
 
   function renderTagPicker(elId, selected, onPick) {
-    const wrap = document.getElementById(elId);
+    const wrap = $(elId);
     wrap.innerHTML = TAG_ORDER.map(
       (k) => `<button type="button" class="tag-pick-btn ${k === selected ? 'selected' : ''}" data-tag="${k}">${TAG_ICONS[k]}<span>${TAGS[k].label}</span></button>`
     ).join('');
@@ -877,7 +883,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
 
   function renderContainerForm() {
     const editing = editingContainerId ? containersById().get(editingContainerId) : null;
-    const slot = document.getElementById('container-form-slot');
+    const slot = $('container-form-slot');
     slot.innerHTML = `
       <div class="add-card" id="container-form-wrap">
         <div class="add-card-head">
@@ -901,20 +907,20 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     renderTagPicker('container-tag-picker', selectedContainerTag, (tag) => {
       selectedContainerTag = tag;
     });
-    document.getElementById('container-form-close').addEventListener('click', () => {
+    $('container-form-close').addEventListener('click', () => {
       addMode = null;
       editingContainerId = null;
       render();
     });
-    document.getElementById('cancel-container-edit').addEventListener('click', () => {
+    $('cancel-container-edit').addEventListener('click', () => {
       editingContainerId = null;
       renderContainerForm();
     });
-    document.getElementById('submit-container').addEventListener('click', async () => {
-      const name = document.getElementById('c-name').value.trim();
+    $('submit-container').addEventListener('click', async () => {
+      const name = $('c-name').value.trim();
       if (!name) return;
-      const ownWeight = Math.max(0, parseFloat(document.getElementById('c-weight').value) || 0);
-      const maxSlots = Math.max(1, parseInt(document.getElementById('c-slots').value) || 1);
+      const ownWeight = Math.max(0, parseFloat($('c-weight').value) || 0);
+      const maxSlots = Math.max(1, parseInt($('c-slots').value) || 1);
       if (editingContainerId) {
         await updatePublicContainer(editingContainerId, { name, own_weight: ownWeight, max_slots: maxSlots, tag: selectedContainerTag });
         editingContainerId = null;
@@ -932,8 +938,8 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
 
   // ---- handlers estáticos (fora das listas) ----
   function wireStaticHandlers() {
-    const addTriggerBtn = document.getElementById('add-trigger');
-    const addMenu = document.getElementById('add-menu');
+    const addTriggerBtn = $('add-trigger');
+    const addMenu = $('add-menu');
     addTriggerBtn.addEventListener('click', () => {
       addMenu.style.display = addMenu.style.display === 'none' ? 'flex' : 'none';
     });
@@ -953,23 +959,23 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
       }
     });
 
-    document.getElementById('search-toggle').addEventListener('click', () => {
-      document.getElementById('search-panel').classList.toggle('open');
-      document.getElementById('search-toggle').classList.toggle('open');
+    $('search-toggle').addEventListener('click', () => {
+      $('search-panel').classList.toggle('open');
+      $('search-toggle').classList.toggle('open');
     });
-    const searchInput = document.getElementById('search-input');
+    const searchInput = $('search-input');
     searchInput.addEventListener('input', () => {
       searchQuery = searchInput.value;
       renderAvulsoList();
       renderCompartmentsList();
     });
-    document.getElementById('search-clear').addEventListener('click', () => {
+    $('search-clear').addEventListener('click', () => {
       searchQuery = '';
       searchInput.value = '';
       renderAvulsoList();
       renderCompartmentsList();
     });
-    document.getElementById('tag-chip-row').addEventListener('click', (e) => {
+    $('tag-chip-row').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-tagfilter]');
       if (!btn) return;
       activeTagFilter = activeTagFilter === btn.dataset.tagfilter ? null : btn.dataset.tagfilter;
@@ -979,25 +985,25 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     });
 
     // moedas avulsas
-    const currencyStrip = document.getElementById('currency-strip');
-    const currencyMenu = document.getElementById('currency-edit-menu');
+    const currencyStrip = $('currency-strip');
+    const currencyMenu = $('currency-edit-menu');
     currencyStrip.addEventListener('click', () => {
       currencyMenu.style.display = currencyMenu.style.display === 'none' ? 'flex' : 'none';
     });
-    document.getElementById('currency-save-btn').addEventListener('click', async () => {
+    $('currency-save-btn').addEventListener('click', async () => {
       const newCur = {
-        bronze: Math.max(0, parseInt(document.getElementById('currency-input-bronze').value) || 0),
-        silver: Math.max(0, parseInt(document.getElementById('currency-input-silver').value) || 0),
-        gold: Math.max(0, parseInt(document.getElementById('currency-input-gold').value) || 0),
-        platinum: Math.max(0, parseInt(document.getElementById('currency-input-platinum').value) || 0),
+        bronze: Math.max(0, parseInt($('currency-input-bronze').value) || 0),
+        silver: Math.max(0, parseInt($('currency-input-silver').value) || 0),
+        gold: Math.max(0, parseInt($('currency-input-gold').value) || 0),
+        platinum: Math.max(0, parseInt($('currency-input-platinum').value) || 0),
       };
       normalizeCurrency(newCur);
       await updatePublicCurrency(campaignId, newCur);
       await load();
     });
 
-    const transferBtn = document.getElementById('currency-transfer-btn');
-    const transferMenuEl = document.getElementById('currency-transfer-menu');
+    const transferBtn = $('currency-transfer-btn');
+    const transferMenuEl = $('currency-transfer-menu');
     function closeTransferMenu() {
       transferMenuOpen = false;
       transferMenuEl.style.display = 'none';
@@ -1006,7 +1012,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
       transferMenuOpen = !transferMenuOpen;
       transferMenuEl.style.display = transferMenuOpen ? 'flex' : 'none';
     });
-    document.getElementById('currency-transfer-close').addEventListener('click', closeTransferMenu);
+    $('currency-transfer-close').addEventListener('click', closeTransferMenu);
     // document.addEventListener não é limpo entre renders (o botão/menu são
     // recriados a cada render, mas o document é o mesmo) — anexa só 1 vez
     if (!outsideClickBound) {
@@ -1015,30 +1021,30 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
         if (transferMenuOpen && !e.target.closest('#currency-transfer-menu') && !e.target.closest('#currency-transfer-btn')) closeTransferMenu();
       });
     }
-    document.getElementById('currency-transfer-confirm').addEventListener('click', onTransferConfirm);
+    $('currency-transfer-confirm').addEventListener('click', onTransferConfirm);
 
     // compartimentos
-    const compartmentTriggerBtn = document.getElementById('compartment-trigger');
+    const compartmentTriggerBtn = $('compartment-trigger');
     if (compartmentTriggerBtn) {
       compartmentTriggerBtn.addEventListener('click', () => {
         openCompartmentForm = true;
-        document.getElementById('compartment-trigger-wrap').style.display = 'none';
-        document.getElementById('compartment-form-wrap').style.display = 'block';
-        document.getElementById('compartment-name-input').focus();
+        $('compartment-trigger-wrap').style.display = 'none';
+        $('compartment-form-wrap').style.display = 'block';
+        $('compartment-name-input').focus();
       });
     }
-    const compartmentClose = document.getElementById('compartment-form-close');
+    const compartmentClose = $('compartment-form-close');
     if (compartmentClose) {
       compartmentClose.addEventListener('click', () => {
         openCompartmentForm = false;
-        document.getElementById('compartment-trigger-wrap').style.display = 'block';
-        document.getElementById('compartment-form-wrap').style.display = 'none';
+        $('compartment-trigger-wrap').style.display = 'block';
+        $('compartment-form-wrap').style.display = 'none';
       });
     }
-    const compartmentSubmit = document.getElementById('compartment-submit-btn');
+    const compartmentSubmit = $('compartment-submit-btn');
     if (compartmentSubmit) {
       compartmentSubmit.addEventListener('click', async () => {
-        const input = document.getElementById('compartment-name-input');
+        const input = $('compartment-name-input');
         const name = input.value.trim();
         if (!name) return;
         await createCompartment(campaignId, name, userId);
@@ -1048,30 +1054,30 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     }
 
     // seleção em lote
-    document.getElementById('batch-move-avulso').addEventListener('click', () => batchMove('avulso'));
-    document.getElementById('batch-move-personal').addEventListener('click', () => batchMove('personal'));
-    document.getElementById('batch-delete-btn').addEventListener('click', onBatchDeleteClick);
-    document.getElementById('batch-cancel-btn').addEventListener('click', () => {
+    $('batch-move-avulso').addEventListener('click', () => batchMove('avulso'));
+    $('batch-move-personal').addEventListener('click', () => batchMove('personal'));
+    $('batch-delete-btn').addEventListener('click', onBatchDeleteClick);
+    $('batch-cancel-btn').addEventListener('click', () => {
       selectedEntries.clear();
       renderAvulsoList();
       renderCompartmentsList();
       updateSelectionBar();
     });
 
-    attachDropHandlers(document.getElementById('avulso-list'));
-    bindItemEntryHandlers(document.getElementById('avulso-list'));
+    attachDropHandlers($('avulso-list'));
+    bindItemEntryHandlers($('avulso-list'));
     attachAvulsoDrop();
   }
 
   async function onTransferConfirm() {
     const amounts = {
-      bronze: Math.max(0, parseInt(document.getElementById('transfer-input-bronze').value) || 0),
-      silver: Math.max(0, parseInt(document.getElementById('transfer-input-silver').value) || 0),
-      gold: Math.max(0, parseInt(document.getElementById('transfer-input-gold').value) || 0),
-      platinum: Math.max(0, parseInt(document.getElementById('transfer-input-platinum').value) || 0),
+      bronze: Math.max(0, parseInt($('transfer-input-bronze').value) || 0),
+      silver: Math.max(0, parseInt($('transfer-input-silver').value) || 0),
+      gold: Math.max(0, parseInt($('transfer-input-gold').value) || 0),
+      platinum: Math.max(0, parseInt($('transfer-input-platinum').value) || 0),
     };
-    const fromKey = document.getElementById('transfer-from-select').value;
-    const toKey = document.getElementById('transfer-to-select').value;
+    const fromKey = $('transfer-from-select').value;
+    const toKey = $('transfer-to-select').value;
     if (fromKey === toKey) return;
     const bronzeValue = (c) => (c.bronze || 0) + (c.silver || 0) * 100 + (c.gold || 0) * 10000 + (c.platinum || 0) * 1000000;
     const fromCurrency = (c) => (c ? bronzeValue(c) : 0);
@@ -1129,8 +1135,8 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
   }
 
   function updateSelectionBar() {
-    const bar = document.getElementById('selection-bar');
-    const countEl = document.getElementById('selection-count');
+    const bar = $('selection-bar');
+    const countEl = $('selection-count');
     if (!bar) return;
     bar.style.display = selectedEntries.size > 0 ? 'flex' : 'none';
     if (countEl) countEl.textContent = selectedEntries.size + ' selecionado(s)';
@@ -1152,7 +1158,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
   let batchDeleteConfirming = false;
   let batchDeleteTimeout = null;
   function onBatchDeleteClick() {
-    const btn = document.getElementById('batch-delete-btn');
+    const btn = $('batch-delete-btn');
     if (!batchDeleteConfirming) {
       batchDeleteConfirming = true;
       btn.classList.add('confirm-pending');
@@ -1343,7 +1349,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
 
   // avulso também é um alvo de drop (mover pra fora de tudo)
   function attachAvulsoDrop() {
-    const list = document.getElementById('avulso-list');
+    const list = $('avulso-list');
     if (!list) return;
     list.addEventListener('dragover', (e) => {
       if (!dragSource) return;
