@@ -10,6 +10,7 @@ import {
   setCampaignDiscordChannel,
   listCharacterDiscordConfigs,
   setCharacterDiscordChannel,
+  deletePlayerAccount,
 } from '../admin.js';
 import { renderCharacterScreen } from './character.js';
 
@@ -19,6 +20,7 @@ export function renderAdminScreen(app, { session, profile }) {
   let expanded = new Set(); // ids de campanhas com a lista de personagens aberta
   let charactersByCampaign = new Map();
   let confirmingDelete = null;
+  let confirmingDeleteCharacter = null;
   let lastCreatedAccount = null;
   let discordChannelByCampaign = new Map();
   let discordChannelByCharacter = new Map();
@@ -245,10 +247,14 @@ export function renderAdminScreen(app, { session, profile }) {
       .map((ch) => {
         const owner = profilesById.get(ch.owner_id);
         const ownerLabel = owner ? owner.username : 'jogador desconhecido';
+        const isConfirmingChar = confirmingDeleteCharacter === ch.id;
         return `
           <div class="admin-character-row">
             <span>${escapeHtml(ch.name || 'Personagem')} <span class="admin-owner-tag">(${escapeHtml(ownerLabel)})</span></span>
-            <button type="button" class="btn btn-ghost" data-open-character="${ch.id}" data-owner-name="${escapeHtml(ownerLabel)}">abrir inventário</button>
+            <div style="display:flex; gap:6px;">
+              <button type="button" class="btn btn-ghost" data-open-character="${ch.id}" data-owner-name="${escapeHtml(ownerLabel)}">abrir inventário</button>
+              <button type="button" class="admin-danger-btn ${isConfirmingChar ? 'confirm-pending' : ''}" data-delete-character="${ch.id}" title="excluir a conta de ${escapeHtml(ownerLabel)} (apelido, senha e personagem — não dá pra desfazer)">${isConfirmingChar ? 'confirmar?' : 'excluir conta'}</button>
+            </div>
           </div>
           <div class="admin-discord-row">
             <label>🤖 Canal do Discord (inventário)</label>
@@ -274,6 +280,9 @@ export function renderAdminScreen(app, { session, profile }) {
     });
     el.querySelectorAll('button[data-save-discord-character]').forEach((btn) => {
       btn.addEventListener('click', () => onSaveCharacterDiscord(btn.dataset.saveDiscordCharacter));
+    });
+    el.querySelectorAll('button[data-delete-character]').forEach((btn) => {
+      btn.addEventListener('click', () => onDeleteCharacterClick(campaignId, btn.dataset.deleteCharacter));
     });
   }
 
@@ -323,6 +332,28 @@ export function renderAdminScreen(app, { session, profile }) {
     deleteConfirmTimeout = setTimeout(() => {
       confirmingDelete = null;
       renderList();
+    }, 3000);
+  }
+
+  let deleteCharacterConfirmTimeout = null;
+  function onDeleteCharacterClick(campaignId, characterId) {
+    if (confirmingDeleteCharacter === characterId) {
+      clearTimeout(deleteCharacterConfirmTimeout);
+      confirmingDeleteCharacter = null;
+      deletePlayerAccount(characterId)
+        .then(() => {
+          charactersByCampaign.delete(campaignId);
+          return load();
+        })
+        .catch((err) => window.alert('Erro ao excluir conta: ' + err.message));
+      return;
+    }
+    confirmingDeleteCharacter = characterId;
+    renderCharacterList(campaignId);
+    clearTimeout(deleteCharacterConfirmTimeout);
+    deleteCharacterConfirmTimeout = setTimeout(() => {
+      confirmingDeleteCharacter = null;
+      renderCharacterList(campaignId);
     }, 3000);
   }
 

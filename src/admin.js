@@ -66,6 +66,14 @@ export async function deleteCampaignAsAdmin(campaignId) {
   if (error) throw error;
 }
 
+// Exclui só UMA conta de jogador (perfil + personagem + login), sem apagar
+// a campanha inteira — via db/011_patch_delete_player_account.sql (a conta
+// de auth.users só pode ser apagada por uma função SECURITY DEFINER).
+export async function deletePlayerAccount(characterId) {
+  const { error } = await supabase.rpc('delete_player_account', { p_character_id: characterId });
+  if (error) throw error;
+}
+
 // Cria uma conta de jogador (apelido + senha, sem e-mail de verdade) já
 // vinculada a uma campanha específica. Só o mestre chama isso.
 //
