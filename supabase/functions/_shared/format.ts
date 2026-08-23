@@ -290,7 +290,7 @@ function scopeWeight(scopeId: string | null, items: PublicItem[], containers: Pu
 
 export function buildPublicCompartmentText(
   compartmentName: string,
-  compartmentId: string,
+  compartmentId: string | null,
   items: PublicItem[],
   containers: PublicContainer[],
   currency: PublicCurrency,
@@ -328,7 +328,10 @@ export function buildPublicCompartmentText(
 }
 
 export function buildPublicAvulsoText(items: PublicItem[], containers: PublicContainer[], currency: PublicCurrency): string {
-  return buildPublicCompartmentText('Avulso', 'avulso', items, containers, currency).replace('📦 AVULSO', '🌐 AVULSO');
+  // null é o valor real de compartment_id pros itens soltos — usar a string
+  // 'avulso' aqui (como antes) nunca batia com nenhum item de verdade, então
+  // a seção avulso no Discord ficava sempre "(vazio)" mesmo com item dentro.
+  return buildPublicCompartmentText('Avulso', null, items, containers, currency).replace('📦 AVULSO', '🌐 AVULSO');
 }
 
 // ============================================================
