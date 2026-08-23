@@ -1,7 +1,7 @@
 import { supabase } from '../supabaseClient.js';
 import { signOut } from '../auth.js';
 import { renderPublicAreaScreen } from './publicArea.js';
-import { createPublicItem, createPublicContainer } from '../publicArea.js';
+import { createPublicItem, createPublicContainer, listCampaignPlayers, transferCurrencyRpc } from '../publicArea.js';
 
 let activeChannel = null;
 
@@ -78,6 +78,20 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       <div class="currency-edit-row"><span class="coin-badge coin-platinum"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="currency-input-platinum" min="0" step="1" value="0"></div>
       <div class="currency-hint">100 bronze = 1 prata · 100 prata = 1 ouro · 100 ouro = 1 platina</div>
       <button class="btn" id="currency-save-btn">salvar</button>
+    </div>
+    <button class="currency-transfer-btn" id="currency-transfer-btn" title="transferir moedas">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h13M17 4l3 3-3 3"/><path d="M17 17H4M7 20l-3-3 3-3"/></svg>
+    </button>
+    <div class="currency-transfer-menu" id="currency-transfer-menu" style="display:none;">
+      <button type="button" class="icon-btn" id="currency-transfer-close" title="fechar" style="align-self:flex-end;">✕</button>
+      <div class="field" style="margin-bottom:8px;"><label style="font-size:9px;">Para</label><select class="transfer-select" id="transfer-to-select"><option value="avulso">Público (avulso)</option></select></div>
+      <div class="currency-edit-row"><span class="coin-badge coin-bronze"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="transfer-input-bronze" min="0" step="1" value="0"></div>
+      <div class="currency-edit-row"><span class="coin-badge coin-silver"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="transfer-input-silver" min="0" step="1" value="0"></div>
+      <div class="currency-edit-row"><span class="coin-badge coin-gold"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="transfer-input-gold" min="0" step="1" value="0"></div>
+      <div class="currency-edit-row"><span class="coin-badge coin-platinum"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="transfer-input-platinum" min="0" step="1" value="0"></div>
+      <div class="currency-hint">se faltar de uma moeda específica, quebra as maiores automaticamente.</div>
+      <p class="admin-error" id="transfer-error" style="display:none;"></p>
+      <button class="btn" id="currency-transfer-confirm">transferir</button>
     </div>
   </div>
 
@@ -2039,6 +2053,59 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     menu.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') save(); });
   }
   setupCurrencyWidget(() => state.currency, '', 'currency-wrap', null, 'Pessoal');
+
+  // ---- transferir moeda: pra público (avulso) ou pra outro jogador da campanha ----
+  let transferMenuOpen = false;
+  let transferPlayersLoaded = false;
+  const transferBtn = document.getElementById('currency-transfer-btn');
+  const transferMenu = document.getElementById('currency-transfer-menu');
+  const transferToSelect = document.getElementById('transfer-to-select');
+  const transferErrorEl = document.getElementById('transfer-error');
+  function closeTransferMenu(){ transferMenuOpen = false; transferMenu.style.display = 'none'; }
+  transferBtn.addEventListener('click', async ()=>{
+    transferMenuOpen = !transferMenuOpen;
+    transferMenu.style.display = transferMenuOpen ? 'flex' : 'none';
+    if(transferMenuOpen && !transferPlayersLoaded){
+      transferPlayersLoaded = true;
+      try{
+        const players = await listCampaignPlayers(campaignId);
+        players.filter(p => p.character_id !== characterId).forEach(p => {
+          const opt = document.createElement('option');
+          opt.value = p.character_id;
+          opt.textContent = `${p.character_name} (${p.username})`;
+          transferToSelect.appendChild(opt);
+        });
+      }catch(err){ transferPlayersLoaded = false; }
+    }
+  });
+  document.getElementById('currency-transfer-close').addEventListener('click', closeTransferMenu);
+  document.addEventListener('click', (e)=>{
+    if(transferMenuOpen && !e.target.closest('#currency-transfer-menu') && !e.target.closest('#currency-transfer-btn')) closeTransferMenu();
+  });
+  document.getElementById('currency-transfer-confirm').addEventListener('click', async ()=>{
+    transferErrorEl.style.display = 'none';
+    const amounts = {
+      bronze: Math.max(0, parseInt(document.getElementById('transfer-input-bronze').value) || 0),
+      silver: Math.max(0, parseInt(document.getElementById('transfer-input-silver').value) || 0),
+      gold: Math.max(0, parseInt(document.getElementById('transfer-input-gold').value) || 0),
+      platinum: Math.max(0, parseInt(document.getElementById('transfer-input-platinum').value) || 0),
+    };
+    const toValue = transferToSelect.value;
+    try{
+      const target = transferToSelect.options[transferToSelect.selectedIndex].textContent;
+      await transferCurrencyRpc(characterId, toValue === 'avulso' ? { toAvulso: true } : { toCharacterId: toValue }, amounts);
+      ['bronze','silver','gold','platinum'].forEach(k => { document.getElementById('transfer-input-' + k).value = 0; });
+      closeTransferMenu();
+      addLog(`Moedas transferidas pra ${target}`);
+      flashStatus('MOEDAS TRANSFERIDAS');
+      const { data: freshRow } = await supabase.from('characters').select('currency').eq('id', characterId).single();
+      if(freshRow && freshRow.currency) state.currency = freshRow.currency;
+      renderCurrency();
+    }catch(err){
+      transferErrorEl.textContent = err.message;
+      transferErrorEl.style.display = 'block';
+    }
+  });
 
   document.querySelectorAll('#inventory-mode-wrap .tabs .tab-btn').forEach(btn => {
     btn.addEventListener('click', ()=>{

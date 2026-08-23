@@ -159,3 +159,24 @@ export async function updateCharacterData(characterId, data) {
     .eq('id', characterId);
   if (error) throw error;
 }
+
+// ---- transferir moeda: pessoal -> avulso (público) ou pessoal -> outro jogador ----
+// débito+crédito atômicos via função do banco (db/010_patch_currency_transfer.sql) —
+// evita transferência "pela metade" que uma escrita em duas etapas do cliente sofre.
+export async function listCampaignPlayers(campaignId) {
+  const { data, error } = await supabase.rpc('list_campaign_players', { p_campaign_id: campaignId });
+  if (error) throw error;
+  return data;
+}
+export async function transferCurrencyRpc(fromCharacterId, { toCharacterId = null, toAvulso = false }, amounts) {
+  const { error } = await supabase.rpc('transfer_currency', {
+    p_from_character_id: fromCharacterId,
+    p_to_character_id: toCharacterId,
+    p_to_avulso: toAvulso,
+    p_bronze: amounts.bronze || 0,
+    p_silver: amounts.silver || 0,
+    p_gold: amounts.gold || 0,
+    p_platinum: amounts.platinum || 0,
+  });
+  if (error) throw error;
+}
