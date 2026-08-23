@@ -113,6 +113,12 @@ export async function updatePublicCurrency(campaignId, currency) {
   if (error) throw error;
 }
 
+// ---- capacidade máxima do público (só o mestre mexe) ----
+export async function updateCampaignMaxCarga(campaignId, value) {
+  const { error } = await supabase.from('campaigns').update({ max_carga_publico: value }).eq('id', campaignId);
+  if (error) throw error;
+}
+
 // ---- permissões de compartimento ----
 export async function grantCompartmentPermission(compartmentId, userId, grantedBy) {
   const { error } = await supabase

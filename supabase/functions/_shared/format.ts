@@ -30,6 +30,17 @@ export function round(n: number): number {
   return Math.round(n * 100) / 100;
 }
 
+export type Currency = { bronze: number; silver: number; gold: number; platinum: number } | null | undefined;
+
+// caixinha padrão de moedas, reaproveitada pelo inventário do personagem e
+// pelas seções da área pública — só aparece se houver alguma moeda > 0
+export function currencyBox(currency: Currency): string[] {
+  if (!currency) return [];
+  const { bronze, silver, gold, platinum } = currency;
+  if (!bronze && !silver && !gold && !platinum) return [];
+  return ['╔══ 💰 MOEDAS ══╗', ` ${bronze}b  ${silver}s  ${gold}o  ${platinum}p`, '╚═══════════════╝'];
+}
+
 // nomes vêm de input livre do jogador — nunca deixa um item quebrar o code block do Discord
 function sanitize(str: string | null | undefined): string {
   return (str ?? '').replace(/`/g, "'");
@@ -140,7 +151,7 @@ function slotEquipLabel(data: CharData, val: string | undefined): string {
   return '—';
 }
 
-export function buildCharacterInventoryText(maxCarga: number, data: CharData): string {
+export function buildCharacterInventoryText(maxCarga: number, data: CharData, currency?: Currency): string {
   const lines: string[] = [];
   const total = round(totalWeight(data));
   const max = round(maxCarga);
@@ -178,6 +189,8 @@ export function buildCharacterInventoryText(maxCarga: number, data: CharData): s
   lines.push('╔════════ EQUIPAMENTO ═══════╗');
   (data.equipSlots ?? []).forEach((slot) => lines.push(`${slot.label}: ${slotEquipLabel(data, data.equip?.[slot.key])}`));
   lines.push('╚═══════════════════════════╝');
+  const coinLines = currencyBox(currency);
+  if (coinLines.length) { lines.push(''); lines.push(...coinLines); }
   return lines.join('\n');
 }
 
@@ -232,12 +245,6 @@ function publicItemLine(it: PublicItem): string {
   const durTxt = it.max_durability !== null && it.max_durability !== undefined ? ` (DU: ${it.durability}/${it.max_durability})` : '';
   return `${sanitize(it.name)}${qtyTxt}${durTxt}`;
 }
-function currencyLine(cur: PublicCurrency): string | null {
-  if (!cur) return null;
-  if (!cur.bronze && !cur.silver && !cur.gold && !cur.platinum) return null;
-  return `💰 Moedas: ${cur.bronze}b ${cur.silver}s ${cur.gold}o ${cur.platinum}p`;
-}
-
 function publicEffectiveUnitWeight(it: PublicItem): number {
   return it.container_id ? Math.floor(it.weight / 2) : it.weight;
 }
@@ -292,8 +299,6 @@ export function buildPublicCompartmentText(
   const total = round(scopeWeight(compartmentId, items, containers));
   lines.push(`╔═ 📦 ${sanitize(compartmentName).toUpperCase()} ═╗`);
   lines.push(` ⚖️ Carga: ${total}`);
-  const curLine = currencyLine(currency);
-  if (curLine) lines.push(` ${curLine}`);
   lines.push('─────────────────────────────');
 
   const rootItems = items.filter((it) => it.container_id === null && it.compartment_id === compartmentId);
@@ -317,6 +322,8 @@ export function buildPublicCompartmentText(
   }
   while (lines.length && lines[lines.length - 1] === '') lines.pop();
   lines.push('╚═══════════════════════════╝');
+  const coinLines = currencyBox(currency);
+  if (coinLines.length) { lines.push(''); lines.push(...coinLines); }
   return lines.join('\n');
 }
 

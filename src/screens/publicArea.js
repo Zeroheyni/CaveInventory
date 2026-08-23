@@ -13,6 +13,7 @@ import {
   updateCompartment,
   deleteCompartment,
   updatePublicCurrency,
+  updateCampaignMaxCarga,
   grantCompartmentPermission,
   revokeCompartmentPermission,
   setTransportAdmin,
@@ -22,9 +23,13 @@ import {
 
 let activeChannel = null;
 
-export function renderPublicAreaScreen(app, { session, profile, campaign, onBack }) {
+// Embutida como aba "PÚBLICO" dentro do Baú do Veículo (character.js) — não é
+// mais uma tela cheia à parte, então não desenha wrap/header/footer/campaign-strip
+// próprios (o character.js já tem os dele em volta).
+export function renderPublicAreaScreen(app, { session, profile, campaign }) {
   const campaignId = campaign.id;
   const userId = session.user.id;
+  let maxCarga = campaign.max_carga_publico;
 
   if (activeChannel) {
     supabase.removeChannel(activeChannel);
@@ -253,17 +258,11 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, onBack
 
   // ---- render ----
   function render() {
-    app.innerHTML = `
-      <div class="wrap">
-        <div class="campaign-strip" id="campaign-strip"></div>
-
-        <div class="header">
-          <div>
-            <div class="title"><span class="dot"></span>ÁREA PÚBLICA</div>
-            <div class="id">${escapeHtml(campaign.name)} // baú compartilhado</div>
-          </div>
-        </div>
-
+    const maxCargaHtml =
+      profile.role === 'master'
+        ? `<div class="gauge-bottom"><div class="gauge-max"><label for="public-maxcarga-input">CAPACIDADE MÁX.</label><input type="number" id="public-maxcarga-input" min="0" step="0.5" value="${maxCarga}"></div></div>`
+        : '';
+    const bodyHtml = `
         ${canManage() ? '<div class="members-panel" id="members-panel"></div>' : ''}
 
         <div class="currency-wrap" id="currency-wrap" style="display:flex; align-items:flex-start; gap:8px;">
@@ -299,8 +298,9 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, onBack
         <div class="gauge-panel" id="gauge-panel">
           <div class="gauge-top">
             <span class="gauge-label">CARGA PÚBLICA TOTAL</span>
-            <span class="gauge-readout" id="gauge-readout">${round(publicTotalWeight())} CARGA</span>
+            <span class="gauge-readout" id="gauge-readout">${round(publicTotalWeight())} / ${maxCarga} CARGA</span>
           </div>
+          ${maxCargaHtml}
         </div>
 
         <div class="search-toggle-wrap">
@@ -348,20 +348,19 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, onBack
         </div>
 
         <div id="compartments-list"></div>
-
-        <footer>ÁREA PÚBLICA — COMPARTILHADA COM A CAMPANHA</footer>
-      </div>
-
-      <div class="selection-bar" id="selection-bar" style="display:${selectedEntries.size > 0 ? 'flex' : 'none'};">
-        <span class="selection-count" id="selection-count">${selectedEntries.size} selecionado(s)</span>
-        <button class="selection-btn" id="batch-move-avulso">→ Avulso</button>
-        <button class="selection-btn" id="batch-move-personal">→ Pessoal</button>
-        <button class="selection-btn danger" id="batch-delete-btn">Excluir</button>
-        <button class="selection-btn cancel-btn" id="batch-cancel-btn">✕</button>
-      </div>
     `;
 
-    renderCampaignStrip();
+    app.innerHTML = `
+        ${bodyHtml}
+        <div class="selection-bar" id="selection-bar" style="display:${selectedEntries.size > 0 ? 'flex' : 'none'};">
+          <span class="selection-count" id="selection-count">${selectedEntries.size} selecionado(s)</span>
+          <button class="selection-btn" id="batch-move-avulso">→ Avulso</button>
+          <button class="selection-btn" id="batch-move-personal">→ Pessoal</button>
+          <button class="selection-btn danger" id="batch-delete-btn">Excluir</button>
+          <button class="selection-btn cancel-btn" id="batch-cancel-btn">✕</button>
+        </div>
+      `;
+
     if (canManage()) renderMembersPanel();
     renderTagChips();
     renderAvulsoList();
@@ -369,6 +368,15 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, onBack
     if (addMode === 'item') renderItemForm();
     if (addMode === 'container') renderContainerForm();
     wireStaticHandlers();
+    const maxCargaInput = document.getElementById('public-maxcarga-input');
+    if (maxCargaInput) {
+      maxCargaInput.addEventListener('change', async () => {
+        const value = Math.max(0, parseFloat(maxCargaInput.value) || 0);
+        maxCarga = value;
+        await updateCampaignMaxCarga(campaignId, value);
+        document.getElementById('gauge-readout').textContent = `${round(publicTotalWeight())} / ${maxCarga} CARGA`;
+      });
+    }
   }
 
   function coinSvg() {
@@ -382,26 +390,6 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, onBack
       ...compartments.filter((c) => hasCompartmentAccess(c.id)).map((c) => ({ value: 'comp:' + c.id, label: c.name })),
     ];
     return opts.map((o) => `<option value="${o.value}">${escapeHtml(o.label)}</option>`).join('');
-  }
-
-  function renderCampaignStrip() {
-    const el = document.getElementById('campaign-strip');
-    if (!el) return;
-    el.innerHTML = `
-      <div class="campaign-strip-left">
-        <span class="campaign-strip-item"><b>${escapeHtml(campaign.name)}</b></span>
-        <span class="campaign-strip-sep">·</span>
-        <span class="campaign-strip-item">ÁREA PÚBLICA</span>
-      </div>
-      <button type="button" class="campaign-strip-signout" id="back-btn">← voltar ao personagem</button>
-    `;
-    document.getElementById('back-btn').addEventListener('click', () => {
-      if (activeChannel) {
-        supabase.removeChannel(activeChannel);
-        activeChannel = null;
-      }
-      onBack();
-    });
   }
 
   function renderMembersPanel() {

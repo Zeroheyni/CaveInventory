@@ -79,19 +79,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       <div class="currency-hint">100 bronze = 1 prata · 100 prata = 1 ouro · 100 ouro = 1 platina</div>
       <button class="btn" id="currency-save-btn">salvar</button>
     </div>
-    <button class="currency-transfer-btn" id="currency-transfer-btn" title="transferir moedas entre pessoal e público" style="display:none;">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h13M17 4l3 3-3 3"/><path d="M17 17H4M7 20l-3-3 3-3"/></svg>
-    </button>
-    <div class="currency-transfer-menu" id="currency-transfer-menu" style="display:none;">
-      <div class="field" style="margin-bottom:8px;"><label style="font-size:9px;">De</label><select class="transfer-select" id="transfer-from-select"></select></div>
-      <div class="field" style="margin-bottom:8px;"><label style="font-size:9px;">Para</label><select class="transfer-select" id="transfer-to-select"></select></div>
-      <div class="currency-edit-row"><span class="coin-badge coin-bronze"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="transfer-input-bronze" min="0" step="1" value="0"></div>
-      <div class="currency-edit-row"><span class="coin-badge coin-silver"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="transfer-input-silver" min="0" step="1" value="0"></div>
-      <div class="currency-edit-row"><span class="coin-badge coin-gold"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="transfer-input-gold" min="0" step="1" value="0"></div>
-      <div class="currency-edit-row"><span class="coin-badge coin-platinum"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="transfer-input-platinum" min="0" step="1" value="0"></div>
-      <div class="currency-hint">funciona entre Pessoal, Público (avulso) e qualquer compartimento. Se faltar de uma moeda específica, quebra as maiores automaticamente (ex: pedir 150 de bronze com só 1 ouro guardado funciona — o troco sobra sozinho).</div>
-      <button class="btn" id="currency-transfer-confirm">transferir</button>
-    </div>
   </div>
 
   <div id="inventory-mode-wrap">
@@ -237,8 +224,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   <div id="transport-mode-wrap" style="display:none;">
     <div class="tabs transport-subtabs">
       <button class="tab-btn transport-subtab-btn active" data-transport-tab="personal">ESPAÇO PESSOAL</button>
+      <button class="tab-btn transport-subtab-btn" data-transport-tab="public">PÚBLICO</button>
     </div>
-    <div class="section-hint">A área Pública (baú compartilhado com o grupo) chega na Fase 2b.</div>
 
     <div class="panel active" id="panel-transport-personal">
       <div class="gauge-panel" id="gauge-panel-personal">
@@ -255,57 +242,12 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
           <span class="overload-warn" id="overload-warn-personal">⚠ SOBRECARGA DETECTADA</span>
         </div>
       </div>
-      <div class="section-hint">Espaço pessoal — guardado aqui não conta na carga do inventário, não pode ser equipado e não serve de munição pra armas de fora. Use o ícone de mochila pra devolver ao inventário, ou o ícone de troca pra mover pro Público.</div>
+      <div class="section-hint">Espaço pessoal — guardado aqui não conta na carga do inventário, não pode ser equipado e não serve de munição pra armas de fora. Use o ícone de mochila pra devolver ao inventário.</div>
       <div class="unified-list" id="transport-personal-list"></div>
     </div>
 
     <div class="panel" id="panel-transport-public">
-      <div class="currency-wrap" id="currency-wrap-public">
-        <button class="currency-strip" id="currency-strip-public" title="clique para editar as moedas do público">
-          <span class="coin-badge coin-bronze"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="1"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="1"/></svg><b id="coin-bronze-val-public">0</b></span>
-          <span class="coin-badge coin-silver"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="1"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1"/></svg><b id="coin-silver-val-public">0</b></span>
-          <span class="coin-badge coin-gold"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="1"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="rgba(0,0,0,0.22)" stroke-width="1"/></svg><b id="coin-gold-val-public">0</b></span>
-          <span class="coin-badge coin-platinum"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="1.2"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="1"/></svg><b id="coin-platinum-val-public">0</b></span>
-        </button>
-        <div class="currency-edit-menu" id="currency-edit-menu-public" style="display:none;">
-          <div class="currency-edit-row"><span class="coin-badge coin-bronze"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="currency-input-bronze-public" min="0" step="1" value="0"></div>
-          <div class="currency-edit-row"><span class="coin-badge coin-silver"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="currency-input-silver-public" min="0" step="1" value="0"></div>
-          <div class="currency-edit-row"><span class="coin-badge coin-gold"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="currency-input-gold-public" min="0" step="1" value="0"></div>
-          <div class="currency-edit-row"><span class="coin-badge coin-platinum"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="currency-input-platinum-public" min="0" step="1" value="0"></div>
-          <div class="currency-hint">100 bronze = 1 prata · 100 prata = 1 ouro · 100 ouro = 1 platina<br>o número mostrado na faixa é a soma de tudo (avulso + compartimentos). Aqui você edita só a parte avulsa.</div>
-          <button class="btn" id="currency-save-btn-public">salvar</button>
-        </div>
-      </div>
-      <div class="gauge-panel" id="gauge-panel-public">
-        <div class="gauge-top">
-          <span class="gauge-label">CARGA PÚBLICA</span>
-          <span class="gauge-readout" id="gauge-readout-public">0 / 50 CARGA</span>
-        </div>
-        <div class="gauge-track"><div class="gauge-fill" id="gauge-fill-public" style="width:0%"></div></div>
-        <div class="gauge-bottom">
-          <div class="gauge-max">
-            <label for="max-carga-input-public">CAPACIDADE MÁX.</label>
-            <input type="number" id="max-carga-input-public" min="0" step="0.5" value="50">
-          </div>
-          <span class="overload-warn" id="overload-warn-public">⚠ SOBRECARGA DETECTADA</span>
-        </div>
-      </div>
-      <div class="section-hint">Espaço público — carga própria, separada do pessoal. Use o ícone de troca em um item pra movê-lo de volta pro Espaço Pessoal, ou a mochila pra devolver direto ao inventário.</div>
-
-      <div class="add-trigger-wrap" id="compartment-trigger-wrap">
-        <button class="btn add-trigger-btn" id="compartment-trigger">+ novo compartimento</button>
-      </div>
-      <div class="add-card" id="compartment-form-wrap" style="display:none;">
-        <div class="add-card-head">
-          <h3>// NOVO COMPARTIMENTO</h3>
-          <button class="icon-btn" id="compartment-form-close" title="fechar">✕</button>
-        </div>
-        <div class="field" style="margin-bottom:14px;"><label for="compartment-name-input">Nome</label><input type="text" id="compartment-name-input" placeholder="ex: Ala médica"></div>
-        <div class="form-actions"><button class="btn" id="compartment-submit-btn">criar compartimento</button></div>
-      </div>
-      <div id="compartments-list"></div>
-
-      <div class="unified-list" id="transport-public-list"></div>
+      <div id="public-area-embed"></div>
     </div>
 
     <footer>BAÚ DO VEÍCULO — SEPARADO DO INVENTÁRIO PRINCIPAL</footer>
@@ -428,15 +370,12 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   let characterName = 'Personagem';
 
   let state = {
-    maxCarga: 60, transportPersonalMaxCarga: 100, transportPublicMaxCarga: 50, theme: 'caverna-azul',
+    maxCarga: 60, transportPersonalMaxCarga: 100, theme: 'caverna-azul',
     currency: { bronze: 0, silver: 0, gold: 0, platinum: 0 },
-    currencyPublic: { bronze: 0, silver: 0, gold: 0, platinum: 0 },
-    compartments: [],
     items: [],
     containers: [],
     order: [],
     transportPersonal: [],
-    transportPublic: [],
     equipSlots: [
       {key:'mao', label:'MÃO', icon:'mao', reduceWeight:false},
       {key:'vestindo', label:'VESTINDO', icon:'vestindo', reduceWeight:false},
@@ -465,8 +404,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   let slotFormOpen = false;
   let searchQuery = '';
   let currentMode = 'inventory'; // 'inventory' | 'transport'
-  let compCurrencyEditFor = null;
-  let renamingCompartmentId = null;
   const confirmingDeletes = new Set();
   const selectedEntries = new Set(); // chaves "item:ID" / "container:ID" selecionadas com Ctrl+clique
   let undoStack = [];
@@ -498,9 +435,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
               items: [], containers: [], order: [],
               equipSlots: state.equipSlots, equip: state.equip,
               transportPersonal: [], transportPersonalMaxCarga: 100,
-              transportPublic: [], transportPublicMaxCarga: 50,
-              currencyPublic: { bronze:0, silver:0, gold:0, platinum:0 },
-              compartments: [], theme: 'caverna-azul'
+              theme: 'caverna-azul'
             }
           })
           .select()
@@ -518,23 +453,12 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     state.equipSlots = Array.isArray(d.equipSlots) ? d.equipSlots : state.equipSlots;
     state.equip = (d.equip && typeof d.equip === 'object') ? d.equip : state.equip;
     state.transportPersonal = Array.isArray(d.transportPersonal) ? d.transportPersonal : [];
-    state.transportPublic = Array.isArray(d.transportPublic) ? d.transportPublic : [];
     state.transportPersonalMaxCarga = d.transportPersonalMaxCarga !== undefined ? d.transportPersonalMaxCarga : 100;
-    state.transportPublicMaxCarga = d.transportPublicMaxCarga !== undefined ? d.transportPublicMaxCarga : 50;
-    state.compartments = Array.isArray(d.compartments) ? d.compartments : [];
-    state.currencyPublic = (d.currencyPublic && typeof d.currencyPublic === 'object') ? d.currencyPublic : { bronze:0, silver:0, gold:0, platinum:0 };
     state.theme = d.theme || 'caverna-azul';
     state.maxCarga = (row.max_carga !== undefined && row.max_carga !== null) ? row.max_carga : 60;
     state.currency = (row.currency && typeof row.currency === 'object') ? row.currency : { bronze:0, silver:0, gold:0, platinum:0 };
 
     ['bronze','silver','gold','platinum'].forEach(k => { if(typeof state.currency[k] !== 'number' || isNaN(state.currency[k])) state.currency[k] = 0; });
-    ['bronze','silver','gold','platinum'].forEach(k => { if(typeof state.currencyPublic[k] !== 'number' || isNaN(state.currencyPublic[k])) state.currencyPublic[k] = 0; });
-    state.compartments.forEach(comp => {
-      if(comp.collapsed === undefined) comp.collapsed = false;
-      if(!Array.isArray(comp.contents)) comp.contents = [];
-      if(!comp.currency || typeof comp.currency !== 'object') comp.currency = { bronze:0, silver:0, gold:0, platinum:0 };
-      ['bronze','silver','gold','platinum'].forEach(k => { if(typeof comp.currency[k] !== 'number' || isNaN(comp.currency[k])) comp.currency[k] = 0; });
-    });
     state.items.forEach(it => {
       if(!it.tag) it.tag = 'outro';
       if(it.durability === undefined) it.durability = null;
@@ -586,11 +510,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     state.equipSlots = Array.isArray(d.equipSlots) ? d.equipSlots : state.equipSlots;
     state.equip = (d.equip && typeof d.equip === 'object') ? d.equip : state.equip;
     state.transportPersonal = Array.isArray(d.transportPersonal) ? d.transportPersonal : [];
-    state.transportPublic = Array.isArray(d.transportPublic) ? d.transportPublic : [];
     state.transportPersonalMaxCarga = d.transportPersonalMaxCarga !== undefined ? d.transportPersonalMaxCarga : 100;
-    state.transportPublicMaxCarga = d.transportPublicMaxCarga !== undefined ? d.transportPublicMaxCarga : 50;
-    state.compartments = Array.isArray(d.compartments) ? d.compartments : [];
-    state.currencyPublic = (d.currencyPublic && typeof d.currencyPublic === 'object') ? d.currencyPublic : { bronze:0, silver:0, gold:0, platinum:0 };
     state.maxCarga = (row.max_carga !== undefined && row.max_carga !== null) ? row.max_carga : 60;
     state.currency = (row.currency && typeof row.currency === 'object') ? row.currency : { bronze:0, silver:0, gold:0, platinum:0 };
     renderAll();
@@ -611,8 +531,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
             items: state.items, containers: state.containers, order: state.order,
             equipSlots: state.equipSlots, equip: state.equip,
             transportPersonal: state.transportPersonal, transportPersonalMaxCarga: state.transportPersonalMaxCarga,
-            transportPublic: state.transportPublic, transportPublicMaxCarga: state.transportPublicMaxCarga,
-            currencyPublic: state.currencyPublic, compartments: state.compartments,
             theme: state.theme
           },
           currency: state.currency,
@@ -651,7 +569,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         <button type="button" class="campaign-strip-name-btn" id="character-name-btn" title="renomear personagem">${escapeHtml(characterName)} ✎</button>
       </div>
       <div style="display:flex; gap:8px;">
-        ${!isAdminView || profile.role === 'master' ? '<button type="button" class="public-nav-btn" id="public-area-btn">🚐 Baú compartilhado</button>' : ''}
         <button type="button" class="campaign-strip-signout" id="campaign-signout-btn">${isAdminView ? '← voltar ao painel' : 'sair'}</button>
       </div>
     `;
@@ -664,16 +581,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         saveState();
       }
     });
-    const publicAreaBtn = document.getElementById('public-area-btn');
-    if(publicAreaBtn){
-      publicAreaBtn.addEventListener('click', ()=>{
-        if(activeChannel){ supabase.removeChannel(activeChannel); activeChannel = null; }
-        renderPublicAreaScreen(app, {
-          session, profile, campaign,
-          onBack: () => renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, ownerName, onBack }),
-        });
-      });
-    }
     document.getElementById('campaign-signout-btn').addEventListener('click', async ()=>{
       if(isAdminView){
         if(activeChannel){ supabase.removeChannel(activeChannel); activeChannel = null; }
@@ -785,14 +692,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       return c ? sum + containerIntrinsicTotal(c) : sum;
     }, 0);
   }
-  function compartmentWeight(comp){
-    // itens dentro do compartimento pesam normal (cheio) — o compartimento não reduz carga, só organiza
-    return transportListWeight(comp.contents);
-  }
-  function publicTotalWeight(){
-    return transportListWeight(state.transportPublic) + state.compartments.reduce((sum, comp) => sum + compartmentWeight(comp), 0);
-  }
-
   function renderGauge(){
     const total = totalWeight();
     const max = state.maxCarga || 0;
@@ -822,7 +721,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   }
   function renderTransportGauge(){
     renderTransportSubGauge(transportListWeight(state.transportPersonal), state.transportPersonalMaxCarga, 'personal');
-    renderTransportSubGauge(publicTotalWeight(), state.transportPublicMaxCarga, 'public');
   }
 
   // ---- moedas (bronze -> prata -> ouro -> platina, base 100) ----
@@ -838,25 +736,14 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     document.getElementById('coin-gold-val' + suffix).textContent = c.gold;
     document.getElementById('coin-platinum-val' + suffix).textContent = c.platinum;
   }
-  function publicCurrencyTotal(){
-    const total = { bronze:0, silver:0, gold:0, platinum:0 };
-    ['bronze','silver','gold','platinum'].forEach(k => { total[k] += state.currencyPublic[k]; });
-    state.compartments.forEach(comp => { ['bronze','silver','gold','platinum'].forEach(k => { total[k] += comp.currency[k]; }); });
-    normalizeCurrencyObj(total);
-    return total;
-  }
   function renderCurrency(){
     renderCurrencyObj(state.currency, '');
-    renderCurrencyObj(publicCurrencyTotal(), '-public');
   }
 
   // ---- movimentação ----
   function resolveList(listKey){
     if(listKey === 'top') return state.order;
     if(listKey === 'transport-personal') return state.transportPersonal;
-    if(listKey === 'transport-public') return state.transportPublic;
-    const comp = state.compartments.find(c => c.id === listKey);
-    if(comp) return comp.contents;
     const c = state.containers.find(c => c.id === listKey);
     return c ? c.contents : [];
   }
@@ -868,17 +755,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       curType = 'container'; curId = parent.id;
     }
     if(state.transportPersonal.some(e => e.type === curType && e.id === curId)) return state.transportPersonal;
-    if(state.transportPublic.some(e => e.type === curType && e.id === curId)) return state.transportPublic;
-    for(const comp of state.compartments){
-      if(comp.contents.some(e => e.type === curType && e.id === curId)) return comp.contents;
-    }
     return state.order;
   }
   function getWorld(type, id){
     const home = currentTopLevelHome(type, id);
     if(home === state.transportPersonal) return 'personal';
-    if(home === state.transportPublic) return 'public';
-    if(state.compartments.some(comp => comp.contents === home)) return 'public'; // compartimentos são parte do mundo público
     return 'main';
   }
   function isInTransport(type, id){
@@ -912,7 +793,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   function removeFromEverywhere(type, id){
     state.order = state.order.filter(e => !(e.type === type && e.id === id));
     state.transportPersonal = state.transportPersonal.filter(e => !(e.type === type && e.id === id));
-    state.transportPublic = state.transportPublic.filter(e => !(e.type === type && e.id === id));
     state.containers.forEach(c => { c.contents = c.contents.filter(e => !(e.type === type && e.id === id)); });
   }
   function moveTopLevel(type, id, dir){
@@ -940,18 +820,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   }
   function extractEntry(parentId, type, id){
     const parent = state.containers.find(c => c.id === parentId);
-    if(parent){
-      parent.contents = parent.contents.filter(e => !(e.type === type && e.id === id));
-      const grandParent = findParentContainer('container', parentId);
-      if(grandParent){ grandParent.contents.push({type, id}); return; }
-      currentTopLevelHome('container', parentId).push({type, id});
-      return;
-    }
-    const comp = state.compartments.find(c => c.id === parentId);
-    if(comp){
-      comp.contents = comp.contents.filter(e => !(e.type === type && e.id === id));
-      state.transportPublic.push({type, id}); // sai do compartimento pro público solto
-    }
+    if(!parent) return;
+    parent.contents = parent.contents.filter(e => !(e.type === type && e.id === id));
+    const grandParent = findParentContainer('container', parentId);
+    if(grandParent){ grandParent.contents.push({type, id}); return; }
+    currentTopLevelHome('container', parentId).push({type, id});
   }
   function removeContainer(id){
     const c = state.containers.find(c => c.id === id);
@@ -1249,74 +1122,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     list.innerHTML = sorted.map((entry, idx) => renderEntry(entry, { nested:false, isFirst: idx === 0, isLast: idx === sorted.length - 1, depth: 0, listKey })).join('');
   }
 
-  const COIN_SVG = '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(0,0,0,0.28)" stroke-width="1"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="rgba(0,0,0,0.2)" stroke-width="1"/></svg>';
-  const COMPARTMENT_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="M3 11h18"/><circle cx="12" cy="15" r="1" fill="currentColor" stroke="none"/></svg>';
-
-  function renderCompartmentCard(comp){
-    const collapsed = !!comp.collapsed;
-    const total = round(compartmentWeight(comp));
-    const editOpen = compCurrencyEditFor === comp.id;
-    const isRenaming = renamingCompartmentId === comp.id;
-    const deleteKey = 'comp:' + comp.id;
-    const deleteConfirming = confirmingDeletes.has(deleteKey);
-    const currencyHtml = `
-      <div class="comp-currency-wrap">
-        <button class="comp-currency-strip" data-comp-currency-toggle="${comp.id}" title="clique para editar as moedas deste compartimento">
-          <span class="coin-badge coin-bronze">${COIN_SVG}<b>${comp.currency.bronze}</b></span>
-          <span class="coin-badge coin-silver">${COIN_SVG}<b>${comp.currency.silver}</b></span>
-          <span class="coin-badge coin-gold">${COIN_SVG}<b>${comp.currency.gold}</b></span>
-          <span class="coin-badge coin-platinum">${COIN_SVG}<b>${comp.currency.platinum}</b></span>
-        </button>
-        ${editOpen ? `
-          <div class="currency-edit-menu">
-            <div class="currency-edit-row"><span class="coin-badge coin-bronze">${COIN_SVG}</span><input type="number" min="0" step="1" id="comp-currency-bronze-${comp.id}" value="${comp.currency.bronze}"></div>
-            <div class="currency-edit-row"><span class="coin-badge coin-silver">${COIN_SVG}</span><input type="number" min="0" step="1" id="comp-currency-silver-${comp.id}" value="${comp.currency.silver}"></div>
-            <div class="currency-edit-row"><span class="coin-badge coin-gold">${COIN_SVG}</span><input type="number" min="0" step="1" id="comp-currency-gold-${comp.id}" value="${comp.currency.gold}"></div>
-            <div class="currency-edit-row"><span class="coin-badge coin-platinum">${COIN_SVG}</span><input type="number" min="0" step="1" id="comp-currency-platinum-${comp.id}" value="${comp.currency.platinum}"></div>
-            <div class="currency-hint">100 bronze = 1 prata · 100 prata = 1 ouro · 100 ouro = 1 platina</div>
-            <button class="btn" data-comp-currency-save="${comp.id}">salvar</button>
-          </div>` : ''}
-      </div>`;
-
-    let contentsHtml = '';
-    if(comp.contents.length === 0){
-      contentsHtml = '<div class="container-empty-txt">vazio — arraste itens ou recipientes para cá</div>';
-    } else {
-      const sorted = sortPinnedFirst(comp.contents);
-      contentsHtml = sorted.map((entry, idx) => renderEntry(entry, { nested:true, containerId: comp.id, isFirst: idx===0, isLast: idx===sorted.length-1, depth:1 })).join('');
-    }
-
-    return `
-      <div class="compartment-card" data-compartment-id="${comp.id}">
-        <div class="compartment-header">
-          <button class="collapse-toggle ${collapsed ? 'is-collapsed' : ''}" data-comp-toggle="${comp.id}" title="${collapsed ? 'expandir' : 'recolher'}">▾</button>
-          <div class="compartment-icon">${COMPARTMENT_ICON}</div>
-          ${isRenaming
-            ? `<input type="text" class="compartment-rename-input" id="comp-rename-input-${comp.id}" value="${escapeHtml(comp.name)}">
-               <button class="icon-btn" data-comp-rename-save="${comp.id}" title="salvar nome"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l4 4L19 6"/></svg></button>`
-            : `<div class="compartment-name">${escapeHtml(comp.name)}</div>
-               <button class="icon-btn" data-comp-rename-start="${comp.id}" title="renomear">✎</button>`
-          }
-          <div class="compartment-actions">
-            <button class="icon-btn danger ${deleteConfirming ? 'confirm-pending' : ''}" data-comp-remove="${comp.id}" title="${deleteConfirming ? 'clique de novo para confirmar' : 'excluir compartimento (devolve o conteúdo pro público solto)'}">${deleteConfirming ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12l4 4L19 6"/></svg>' : '✕'}</button>
-          </div>
-        </div>
-        ${currencyHtml}
-        <div class="compartment-meta"><b>${total}</b> carga total dentro (sem redução)</div>
-        <div class="container-dropzone ${collapsed ? 'is-collapsed' : ''}" data-container-id="${comp.id}"><div class="dropzone-inner">${contentsHtml}</div></div>
-      </div>`;
-  }
-
-  function renderCompartmentsList(){
-    const el = document.getElementById('compartments-list');
-    if(!el) return;
-    el.innerHTML = state.compartments.map(comp => renderCompartmentCard(comp)).join('');
-  }
-
   function renderTransportList(){
     renderTransportSubList(state.transportPersonal, 'transport-personal-list', 'transport-personal', 'ESPAÇO PESSOAL VAZIO<br>arraste um item até o ícone do veículo, na aba Itens, pra guardar aqui');
-    renderCompartmentsList();
-    renderTransportSubList(state.transportPublic, 'transport-public-list', 'transport-public', 'PÚBLICO VAZIO<br>use o ícone de troca em um item do espaço pessoal pra movê-lo pra cá');
   }
 
   function renderTagChips(){
@@ -1427,7 +1234,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       <div class="summary-row"><span>Equipados</span><b>${equippedCount}/${state.equipSlots.length}</b></div>
       <div class="summary-row"><span>Fixados</span><b>${pinnedCount}</b></div>
       <div class="summary-row"><span>No veículo</span><b>${transportItemsCount}</b></div>
-      <div class="summary-row"><span>Compartimentos</span><b>${state.compartments.length}</b></div>
     `;
   }
 
@@ -1454,8 +1260,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     const prev = undoStack.pop();
     state = JSON.parse(prev);
     confirmingDeletes.clear();
-    renamingCompartmentId = null;
-    compCurrencyEditFor = null;
     renderAll();
     updateUndoButton();
     saveState();
@@ -1794,33 +1598,15 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   }
 
   function handleListKeydown(e){
-    if(e.key === 'Escape'){
-      if(renamingCompartmentId){ renamingCompartmentId = null; renderTransportList(); }
-      return;
-    }
     if(e.key !== 'Enter') return;
     const durInput = e.target.closest('.durability-edit-menu input');
     if(durInput){
       const btn = durInput.closest('.durability-edit-menu').querySelector('button[data-durability-save]');
       if(btn) btn.click();
-      return;
-    }
-    const compInput = e.target.closest('.comp-currency-wrap .currency-edit-menu input');
-    if(compInput){
-      const btn = compInput.closest('.currency-edit-menu').querySelector('button[data-comp-currency-save]');
-      if(btn) btn.click();
-      return;
-    }
-    const renameInput = e.target.closest('.compartment-rename-input');
-    if(renameInput){
-      const btn = renameInput.closest('.compartment-header').querySelector('button[data-comp-rename-save]');
-      if(btn) btn.click();
     }
   }
   document.getElementById('unified-list').addEventListener('keydown', handleListKeydown);
   document.getElementById('transport-personal-list').addEventListener('keydown', handleListKeydown);
-  document.getElementById('transport-public-list').addEventListener('keydown', handleListKeydown);
-  document.getElementById('compartments-list').addEventListener('keydown', handleListKeydown);
 
   function handleListClick(e){
     const copyTextBtn = e.target.closest('button[data-copy-text]');
@@ -1867,87 +1653,12 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         state.containers.forEach(c => { if(c.id !== containerId) c.contents = c.contents.filter(e2 => !(e2.type === type && e2.id === id)); });
         state.order = state.order.filter(e2 => !(e2.type === type && e2.id === id));
         state.transportPersonal = state.transportPersonal.filter(e2 => !(e2.type === type && e2.id === id));
-        state.transportPublic = state.transportPublic.filter(e2 => !(e2.type === type && e2.id === id));
         openMenuFor = null; renderAll(); saveState();
       } else { flashStatus('RECIPIENTE CHEIO'); }
       return;
     }
     const toggleBtn = e.target.closest('button[data-caction="toggle"]');
     if(toggleBtn){ const c = state.containers.find(c => c.id === toggleBtn.dataset.id); if(c){ c.collapsed = !c.collapsed; renderAll(); saveState(); } return; }
-
-    const compToggleBtn = e.target.closest('button[data-comp-toggle]');
-    if(compToggleBtn){
-      const comp = state.compartments.find(c => c.id === compToggleBtn.dataset.compToggle);
-      if(comp){ comp.collapsed = !comp.collapsed; renderAll(); saveState(); }
-      return;
-    }
-    const compRenameStartBtn = e.target.closest('button[data-comp-rename-start]');
-    if(compRenameStartBtn){
-      renamingCompartmentId = compRenameStartBtn.dataset.compRenameStart;
-      renderTransportList();
-      const inp = document.getElementById('comp-rename-input-' + renamingCompartmentId);
-      if(inp) setTimeout(()=>{ inp.focus(); inp.select(); }, 10);
-      return;
-    }
-    const compRenameSaveBtn = e.target.closest('button[data-comp-rename-save]');
-    if(compRenameSaveBtn){
-      const id = compRenameSaveBtn.dataset.compRenameSave;
-      const comp = state.compartments.find(c => c.id === id);
-      const inp = document.getElementById('comp-rename-input-' + id);
-      if(comp && inp){
-        const newName = inp.value.trim();
-        if(newName && newName !== comp.name){
-          addLog(`Compartimento "${comp.name}" renomeado para "${newName}"`);
-          comp.name = newName;
-        }
-      }
-      renamingCompartmentId = null;
-      renderAll(); saveState();
-      return;
-    }
-    const compRemoveBtn = e.target.closest('button[data-comp-remove]');
-    if(compRemoveBtn){
-      const id = compRemoveBtn.dataset.compRemove;
-      const key = 'comp:' + id;
-      if(!requestDeleteConfirm(key)) return;
-      const comp = state.compartments.find(c => c.id === id);
-      if(comp){
-        comp.contents.forEach(entry => state.transportPublic.push(entry)); // devolve o conteúdo pro público solto
-        ['bronze','silver','gold','platinum'].forEach(k => { state.currencyPublic[k] += comp.currency[k]; }); // devolve a moeda pro fundo geral
-        normalizeCurrencyObj(state.currencyPublic);
-        state.compartments = state.compartments.filter(c => c.id !== id);
-        addLog(`Compartimento "${comp.name}" excluído (conteúdo devolvido ao público)`);
-        renderAll(); saveState();
-      }
-      return;
-    }
-    const compCurrencyToggleBtn = e.target.closest('button[data-comp-currency-toggle]');
-    if(compCurrencyToggleBtn){
-      const id = compCurrencyToggleBtn.dataset.compCurrencyToggle;
-      compCurrencyEditFor = compCurrencyEditFor === id ? null : id;
-      renderTransportList();
-      if(compCurrencyEditFor === id){
-        const inp = document.getElementById('comp-currency-bronze-' + id);
-        if(inp) setTimeout(()=>{ inp.focus(); inp.select(); }, 10);
-      }
-      return;
-    }
-    const compCurrencySaveBtn = e.target.closest('button[data-comp-currency-save]');
-    if(compCurrencySaveBtn){
-      const id = compCurrencySaveBtn.dataset.compCurrencySave;
-      const comp = state.compartments.find(c => c.id === id);
-      if(comp){
-        comp.currency.bronze = Math.max(0, parseInt(document.getElementById('comp-currency-bronze-' + id).value) || 0);
-        comp.currency.silver = Math.max(0, parseInt(document.getElementById('comp-currency-silver-' + id).value) || 0);
-        comp.currency.gold = Math.max(0, parseInt(document.getElementById('comp-currency-gold-' + id).value) || 0);
-        comp.currency.platinum = Math.max(0, parseInt(document.getElementById('comp-currency-platinum-' + id).value) || 0);
-        normalizeCurrencyObj(comp.currency);
-        compCurrencyEditFor = null;
-        addLog(`Moedas do compartimento "${comp.name}" editadas`);
-        renderAll(); saveState();
-      }
-      return;
-    }
 
     const cActionBtn = e.target.closest('button[data-caction]');
     if(cActionBtn){
@@ -2079,8 +1790,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   }
   document.getElementById('unified-list').addEventListener('click', handleListClick);
   document.getElementById('transport-personal-list').addEventListener('click', handleListClick);
-  document.getElementById('transport-public-list').addEventListener('click', handleListClick);
-  document.getElementById('compartments-list').addEventListener('click', handleListClick);
 
   // ---- DRAG AND DROP ----
   function clearDragOver(){ document.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over')); }
@@ -2132,21 +1841,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   }
   attachDragHandlers(document.getElementById('unified-list'));
   attachDragHandlers(document.getElementById('transport-personal-list'));
-  attachDragHandlers(document.getElementById('transport-public-list'));
-  attachDragHandlers(document.getElementById('compartments-list'));
 
   function dropIntoContainer(containerId){
     const type = dragSource.type, id = dragSource.id;
     const cost = entrySlotCost(type, id);
     const originList = resolveList(dragSource.origin);
-    const comp = state.compartments.find(c => c.id === containerId);
-    if(comp){
-      removeFromEverywhere(type, id);
-      comp.contents.push({type, id});
-      sanitizeAmmoLinks();
-      dragSource = null; renderAll(); saveState();
-      return;
-    }
     removeFromEverywhere(type, id);
     const c = state.containers.find(c => c.id === containerId);
     if(c && containerUsedSlots(c) + cost <= c.maxSlots){ c.contents.push({type, id}); }
@@ -2156,7 +1855,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
 
   function dropOnEntry(entryEl, e){
     const targetType = entryEl.dataset.entryType, targetId = entryEl.dataset.id, targetList = entryEl.dataset.list;
-    const isContainerTarget = targetList !== 'top' && targetList !== 'transport-personal' && targetList !== 'transport-public';
+    const isContainerTarget = targetList !== 'top' && targetList !== 'transport-personal';
     if(dragSource.type === 'container' && isContainerTarget && wouldCreateCycle(dragSource.id, targetList)){ flashStatus('MOVIMENTO INVÁLIDO'); dragSource = null; return; }
     const rect = entryEl.getBoundingClientRect();
     const before = (e.clientY - rect.top) < rect.height / 2;
@@ -2235,32 +1934,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     resetSlotForm(); slotNameInput.focus(); renderAll(); saveState();
   });
 
-  // ---- botão "+" de novo compartimento (público) ----
-  let compartmentFormOpen = false;
-  const compartmentTriggerBtn = document.getElementById('compartment-trigger');
-  const compartmentFormWrap = document.getElementById('compartment-form-wrap');
-  const compartmentNameInput = document.getElementById('compartment-name-input');
-  function updateCompartmentFormUI(){
-    compartmentTriggerBtn.style.display = compartmentFormOpen ? 'none' : 'block';
-    compartmentFormWrap.style.display = compartmentFormOpen ? 'block' : 'none';
-  }
-  compartmentTriggerBtn.addEventListener('click', ()=>{
-    compartmentFormOpen = true; updateCompartmentFormUI();
-    compartmentNameInput.value = ''; compartmentNameInput.focus();
-  });
-  document.getElementById('compartment-form-close').addEventListener('click', ()=>{
-    compartmentFormOpen = false; updateCompartmentFormUI();
-  });
-  document.getElementById('compartment-submit-btn').addEventListener('click', ()=>{
-    const name = compartmentNameInput.value.trim();
-    if(!name){ compartmentNameInput.focus(); return; }
-    state.compartments.push({ id: uid(), name, collapsed:false, currency:{bronze:0,silver:0,gold:0,platinum:0}, contents:[] });
-    compartmentNameInput.value = '';
-    addLog(`Compartimento "${name}" criado`);
-    renderAll(); saveState();
-  });
-  compartmentNameInput.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') document.getElementById('compartment-submit-btn').click(); });
-
   document.getElementById('slots-grid').addEventListener('click', (e)=>{
     const removeBtn = e.target.closest('button[data-remove-slot]');
     if(removeBtn){
@@ -2331,10 +2004,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     state.transportPersonalMaxCarga = Math.max(0, parseFloat(e.target.value) || 0);
     renderTransportGauge(); saveState();
   });
-  document.getElementById('max-carga-input-public').addEventListener('input', (e)=>{
-    state.transportPublicMaxCarga = Math.max(0, parseFloat(e.target.value) || 0);
-    renderTransportGauge(); saveState();
-  });
 
   // ---- moedas ----
   function setupCurrencyWidget(getCurrencyObj, suffix, wrapId, statusMsg, logLabel){
@@ -2370,103 +2039,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     menu.addEventListener('keydown', (e)=>{ if(e.key === 'Enter') save(); });
   }
   setupCurrencyWidget(() => state.currency, '', 'currency-wrap', null, 'Pessoal');
-  setupCurrencyWidget(() => state.currencyPublic, '-public', 'currency-wrap-public', 'MOEDAS DO PÚBLICO ATUALIZADAS', 'Público (avulso)');
-
-  // ---- transferir moedas entre pessoal, público avulso e compartimentos específicos ----
-  function currencyToBronzeValue(c){
-    return (c.bronze || 0) + (c.silver || 0) * 100 + (c.gold || 0) * 10000 + (c.platinum || 0) * 1000000;
-  }
-  function bronzeValueToCurrency(total){
-    total = Math.max(0, Math.round(total));
-    const platinum = Math.floor(total / 1000000); total %= 1000000;
-    const gold = Math.floor(total / 10000); total %= 10000;
-    const silver = Math.floor(total / 100); total %= 100;
-    return { bronze: total, silver, gold, platinum };
-  }
-  function transferCurrency(fromObj, toObj, amounts){
-    const requestedValue = currencyToBronzeValue(amounts);
-    if(requestedValue <= 0) return false;
-    const fromValue = currencyToBronzeValue(fromObj);
-    if(fromValue < requestedValue) return false; // não dá nem quebrando as moedas maiores
-
-    const newFrom = bronzeValueToCurrency(fromValue - requestedValue);
-    const newTo = bronzeValueToCurrency(currencyToBronzeValue(toObj) + requestedValue);
-    fromObj.bronze = newFrom.bronze; fromObj.silver = newFrom.silver; fromObj.gold = newFrom.gold; fromObj.platinum = newFrom.platinum;
-    toObj.bronze = newTo.bronze; toObj.silver = newTo.silver; toObj.gold = newTo.gold; toObj.platinum = newTo.platinum;
-    return true;
-  }
-  function resolveCurrencyTarget(value){
-    if(value === 'personal') return state.currency;
-    if(value === 'public') return state.currencyPublic;
-    if(value && value.indexOf('comp:') === 0){
-      const comp = state.compartments.find(c => c.id === value.slice(5));
-      return comp ? comp.currency : null;
-    }
-    return null;
-  }
-  function transferTargetLabel(value){
-    if(value === 'personal') return 'Pessoal';
-    if(value === 'public') return 'Público (avulso)';
-    if(value && value.indexOf('comp:') === 0){
-      const comp = state.compartments.find(c => c.id === value.slice(5));
-      return comp ? comp.name : 'compartimento';
-    }
-    return value;
-  }
-  function populateTransferSelects(){
-    const opts = [
-      { value: 'personal', label: 'Pessoal' },
-      { value: 'public', label: 'Público (avulso)' },
-      ...state.compartments.map(c => ({ value: 'comp:' + c.id, label: c.name }))
-    ];
-    const optHtml = opts.map(o => `<option value="${o.value}">${escapeHtml(o.label)}</option>`).join('');
-    const fromSel = document.getElementById('transfer-from-select');
-    const toSel = document.getElementById('transfer-to-select');
-    fromSel.innerHTML = optHtml;
-    toSel.innerHTML = optHtml;
-    fromSel.value = 'personal';
-    toSel.value = 'public';
-  }
-  const transferBtn = document.getElementById('currency-transfer-btn');
-  const transferMenu = document.getElementById('currency-transfer-menu');
-  transferBtn.addEventListener('click', ()=>{
-    const opening = transferMenu.style.display === 'none';
-    transferMenu.style.display = opening ? 'flex' : 'none';
-    if(opening){
-      populateTransferSelects();
-      ['bronze','silver','gold','platinum'].forEach(k => { document.getElementById('transfer-input-' + k).value = 0; });
-      setTimeout(()=> document.getElementById('transfer-input-bronze').focus(), 10);
-    }
-  });
-  document.getElementById('currency-transfer-confirm').addEventListener('click', ()=>{
-    const amounts = {
-      bronze: Math.max(0, parseInt(document.getElementById('transfer-input-bronze').value) || 0),
-      silver: Math.max(0, parseInt(document.getElementById('transfer-input-silver').value) || 0),
-      gold: Math.max(0, parseInt(document.getElementById('transfer-input-gold').value) || 0),
-      platinum: Math.max(0, parseInt(document.getElementById('transfer-input-platinum').value) || 0),
-    };
-    if(!amounts.bronze && !amounts.silver && !amounts.gold && !amounts.platinum){ flashStatus('INFORME ALGUM VALOR PRA TRANSFERIR'); return; }
-    const fromKey = document.getElementById('transfer-from-select').value;
-    const toKey = document.getElementById('transfer-to-select').value;
-    if(fromKey === toKey){ flashStatus('ORIGEM E DESTINO SÃO OS MESMOS'); return; }
-    const from = resolveCurrencyTarget(fromKey);
-    const to = resolveCurrencyTarget(toKey);
-    if(!from || !to){ flashStatus('DESTINO INVÁLIDO'); return; }
-    const ok = transferCurrency(from, to, amounts);
-    if(ok){
-      renderCurrency();
-      renderTransportList(); // atualiza os cartões de compartimento também, caso a moeda deles tenha mudado
-      transferMenu.style.display = 'none';
-      const summary = ['bronze','silver','gold','platinum'].filter(k => amounts[k] > 0).map(k => amounts[k] + ' ' + ({bronze:'bronze',silver:'prata',gold:'ouro',platinum:'platina'})[k]).join(', ');
-      flashStatus('ENVIADO: ' + transferTargetLabel(fromKey) + ' → ' + transferTargetLabel(toKey));
-      addLog(`Transferência: ${transferTargetLabel(fromKey)} → ${transferTargetLabel(toKey)} (${summary})`);
-      saveState();
-    } else {
-      flashStatus('SALDO INSUFICIENTE NA ORIGEM');
-    }
-  });
-  document.addEventListener('click', (e)=>{ if(!e.target.closest('#currency-wrap')) transferMenu.style.display = 'none'; });
-  document.addEventListener('click', (e)=>{ if(!e.target.closest('.comp-currency-wrap') && compCurrencyEditFor !== null){ compCurrencyEditFor = null; renderTransportList(); } });
 
   document.querySelectorAll('#inventory-mode-wrap .tabs .tab-btn').forEach(btn => {
     btn.addEventListener('click', ()=>{
@@ -2477,12 +2049,17 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     });
   });
 
+  let publicEmbedMounted = false;
   document.querySelectorAll('.transport-subtab-btn').forEach(btn => {
     btn.addEventListener('click', ()=>{
       document.querySelectorAll('.transport-subtab-btn').forEach(b => b.classList.remove('active'));
       document.querySelectorAll('#transport-mode-wrap .panel').forEach(p => p.classList.remove('active'));
       btn.classList.add('active');
       document.getElementById('panel-transport-' + btn.dataset.transportTab).classList.add('active');
+      if(btn.dataset.transportTab === 'public' && !publicEmbedMounted){
+        publicEmbedMounted = true;
+        renderPublicAreaScreen(document.getElementById('public-area-embed'), { session, profile, campaign });
+      }
     });
   });
 
@@ -2654,7 +2231,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     const lines = [];
     lines.push('╔══════ BAÚ DO VEÍCULO ══════╗');
     buildTransportSection(lines, state.transportPersonal, 'Espaço Pessoal', '🎒');
-    buildTransportSection(lines, state.transportPublic, 'Público', '🌐');
     while(lines.length && lines[lines.length-1] === '') lines.pop();
     lines.push('╚═══════════════════════════╝');
     return lines.join('\n');
