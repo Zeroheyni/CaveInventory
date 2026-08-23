@@ -66,6 +66,14 @@ export async function deleteCampaignAsAdmin(campaignId) {
   if (error) throw error;
 }
 
+// Fora de sessão, o Discord só atualiza no clique manual de "🔄 atualizar"
+// (menos ruído/edições constantes no canal); em sessão, volta a sincronizar
+// em tempo real a cada mudança -- ver db/014_patch_discord_live_session.sql.
+export async function setCampaignLiveSession(campaignId, live) {
+  const { error } = await supabase.from('campaigns').update({ discord_live_session: live }).eq('id', campaignId);
+  if (error) throw error;
+}
+
 // Exclui só UMA conta de jogador (perfil + personagem + login), sem apagar
 // a campanha inteira — via db/011_patch_delete_player_account.sql (a conta
 // de auth.users só pode ser apagada por uma função SECURITY DEFINER).

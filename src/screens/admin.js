@@ -11,6 +11,7 @@ import {
   listCharacterDiscordConfigs,
   setCharacterDiscordChannel,
   deletePlayerAccount,
+  setCampaignLiveSession,
 } from '../admin.js';
 import { renderCharacterScreen } from './character.js';
 
@@ -193,6 +194,12 @@ export function renderAdminScreen(app, { session, profile }) {
               <button type="button" class="btn btn-ghost" data-save-discord-campaign="${c.id}">vincular</button>
               <span class="admin-discord-feedback" data-discord-feedback-campaign="${c.id}"></span>
             </div>
+            <div class="admin-discord-row">
+              <label>🎲 Sessão do Discord</label>
+              <button type="button" class="btn ${c.discord_live_session ? 'btn-live-session' : 'btn-ghost'}" data-toggle-live-session="${c.id}" data-live="${c.discord_live_session}" title="em sessão, o Discord atualiza em tempo real a cada mudança; fora de sessão, só atualiza quando alguém clica em 🔄 atualizar">
+                ${c.discord_live_session ? '🟢 em sessão (tempo real)' : '⚪ fora de sessão (só no 🔄 atualizar)'}
+              </button>
+            </div>
             ${isOpen ? `<div class="admin-character-list" id="admin-chars-${c.id}"><p class="admin-empty">Carregando...</p></div>` : ''}
           </div>
         `;
@@ -207,6 +214,9 @@ export function renderAdminScreen(app, { session, profile }) {
     });
     listEl.querySelectorAll('button[data-save-discord-campaign]').forEach((btn) => {
       btn.addEventListener('click', () => onSaveCampaignDiscord(btn.dataset.saveDiscordCampaign));
+    });
+    listEl.querySelectorAll('button[data-toggle-live-session]').forEach((btn) => {
+      btn.addEventListener('click', () => onToggleLiveSession(btn.dataset.toggleLiveSession, btn.dataset.live !== 'true'));
     });
 
     expanded.forEach((campaignId) => {
@@ -284,6 +294,17 @@ export function renderAdminScreen(app, { session, profile }) {
     el.querySelectorAll('button[data-delete-character]').forEach((btn) => {
       btn.addEventListener('click', () => onDeleteCharacterClick(campaignId, btn.dataset.deleteCharacter));
     });
+  }
+
+  async function onToggleLiveSession(campaignId, live) {
+    try {
+      await setCampaignLiveSession(campaignId, live);
+      const c = campaigns.find((camp) => camp.id === campaignId);
+      if (c) c.discord_live_session = live;
+      renderList();
+    } catch (err) {
+      window.alert('Erro ao mudar sessão do Discord: ' + err.message);
+    }
   }
 
   async function onSaveCampaignDiscord(campaignId) {

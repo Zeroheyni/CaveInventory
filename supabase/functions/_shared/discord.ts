@@ -48,9 +48,39 @@ export async function sendMessage(channelId: string, content: string, customId: 
   return msg.id as string;
 }
 
-export async function editMessage(channelId: string, messageId: string, content: string, customId: string): Promise<void> {
+// Editar tratava QUALQUER falha (rate limit 429, erro transitório 5xx, etc.)
+// como "mensagem sumiu, apagada à mão" e recriava -- mas um 429/5xx não
+// significa que a mensagem sumiu, e recriar nesse caso só deixa a mensagem
+// antiga de sobra (raiz de duplicatas mesmo sem nenhuma concorrência
+// envolvida). Agora só um 404 de verdade sinaliza "recria"; 429 espera o
+// retry_after e tenta de novo; outros erros propagam sem recriar nada.
+export async function editMessage(
+  channelId: string,
+  messageId: string,
+  content: string,
+  customId: string,
+): Promise<{ ok: true } | { ok: false; notFound: boolean; error: string }> {
   const payload = { ...embedFor(content), components: refreshButtonRow(customId) };
-  await discordFetch(`/channels/${channelId}/messages/${messageId}`, { method: 'PATCH', body: JSON.stringify(payload) });
+  for (let attempt = 0; attempt < 5; attempt++) {
+    const res = await fetch(`${API}/channels/${channelId}/messages/${messageId}`, {
+      method: 'PATCH',
+      headers: botHeaders(),
+      body: JSON.stringify(payload),
+    });
+    if (res.status === 429) {
+      const body = await res.json().catch(() => ({ retry_after: 1 }));
+      await sleep(Math.ceil((body.retry_after ?? 1) * 1000) + 50);
+      continue;
+    }
+    if (res.ok) return { ok: true };
+    if (res.status === 404) return { ok: false, notFound: true, error: '404' };
+    if (res.status >= 500 && attempt < 4) {
+      await sleep(300 * (attempt + 1));
+      continue;
+    }
+    return { ok: false, notFound: false, error: `${res.status}: ${await res.text()}` };
+  }
+  return { ok: false, notFound: false, error: 'esgotou tentativas de rate limit' };
 }
 
 export async function deleteMessage(channelId: string, messageId: string): Promise<void> {
@@ -147,13 +177,11 @@ export async function syncMessageList(
         return null;
       }
       if (existingId) {
-        try {
-          await editMessage(channelId, existingId, content, customIdFor(i));
-          return existingId;
-        } catch {
-          // mensagem sumiu (apagada à mão) — recria
-          return await sendMessage(channelId, content, customIdFor(i));
-        }
+        const result = await editMessage(channelId, existingId, content, customIdFor(i));
+        if (result.ok) return existingId;
+        if (result.notFound) return await sendMessage(channelId, content, customIdFor(i)); // sumiu de verdade (apagada à mão) — recria
+        console.error(`falha ao editar mensagem ${existingId} no canal ${channelId}: ${result.error}`);
+        return existingId; // mantém o id antigo -- não duplica; a próxima sincronização tenta de novo
       }
       return await sendMessage(channelId, content, customIdFor(i));
     }),

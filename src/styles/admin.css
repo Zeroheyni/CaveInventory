@@ -43,6 +43,11 @@
 .admin-owner-tag{ color: var(--ink-faint); font-size:11px; }
 
 .admin-discord-row{ display:flex; align-items:center; gap:8px; margin-top:8px; flex-wrap:wrap; }
+.btn-live-session{
+  font-size:11px; padding:7px 11px; border-radius:16px; cursor:pointer; transition: all 0.15s ease;
+  color:#4ade80; border:1px solid #2f9e5f; background: rgba(74,222,128,0.12);
+}
+.btn-live-session:hover{ background: rgba(74,222,128,0.2); }
 .admin-discord-row label{ font-size:11px; color: var(--ink-faint); white-space:nowrap; }
 .admin-discord-input{
   flex:1; min-width:140px; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
