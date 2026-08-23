@@ -5,6 +5,7 @@ import {
   listCharactersInCampaign,
   createCampaignAsAdmin,
   deleteCampaignAsAdmin,
+  createPlayerAccount,
 } from '../admin.js';
 import { renderCharacterScreen } from './character.js';
 
@@ -14,6 +15,7 @@ export function renderAdminScreen(app, { session, profile }) {
   let expanded = new Set(); // ids de campanhas com a lista de personagens aberta
   let charactersByCampaign = new Map();
   let confirmingDelete = null;
+  let lastCreatedAccount = null;
 
   async function load() {
     const [camps, profs] = await Promise.all([listAllCampaigns(), listAllProfiles()]);
@@ -52,6 +54,37 @@ export function renderAdminScreen(app, { session, profile }) {
           <p class="admin-error" id="admin-error" style="display:none;"></p>
         </div>
 
+        <div class="admin-card">
+          <h3 class="admin-card-title">+ Nova conta de jogador</h3>
+          ${
+            lastCreatedAccount
+              ? `
+            <div class="admin-success">
+              <p>Conta criada! Passe pro seu amigo:</p>
+              <p><b>apelido:</b> ${escapeHtml(lastCreatedAccount.nickname)} &nbsp; <b>senha:</b> ${escapeHtml(lastCreatedAccount.password)}</p>
+              <button type="button" class="btn btn-ghost" id="account-success-dismiss">ok, entendi</button>
+            </div>
+          `
+              : ''
+          }
+          ${
+            campaigns.length === 0
+              ? '<p class="admin-empty">Crie uma campanha primeiro.</p>'
+              : `
+            <div class="form-grid" style="margin-bottom:12px;">
+              <div class="field"><label>Apelido</label><input type="text" id="account-nickname" placeholder="ex: João" /></div>
+              <div class="field"><label>Senha</label><input type="text" id="account-password" placeholder="ex: 1234" /></div>
+              <div class="field">
+                <label>Campanha</label>
+                <select id="account-campaign">${campaigns.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</select>
+              </div>
+            </div>
+            <button type="button" class="btn" id="account-create-btn">criar conta</button>
+          `
+          }
+          <p class="admin-error" id="account-error" style="display:none;"></p>
+        </div>
+
         <div class="admin-list" id="admin-list"></div>
       </div>
     `;
@@ -79,6 +112,42 @@ export function renderAdminScreen(app, { session, profile }) {
         errorEl.style.display = 'block';
       }
     });
+
+    const accountSuccessDismiss = document.getElementById('account-success-dismiss');
+    if (accountSuccessDismiss) {
+      accountSuccessDismiss.addEventListener('click', () => {
+        lastCreatedAccount = null;
+        render();
+      });
+    }
+
+    const accountCreateBtn = document.getElementById('account-create-btn');
+    if (accountCreateBtn) {
+      accountCreateBtn.addEventListener('click', async () => {
+        const nicknameInput = document.getElementById('account-nickname');
+        const passwordInput = document.getElementById('account-password');
+        const campaignSelect = document.getElementById('account-campaign');
+        const errorEl = document.getElementById('account-error');
+        errorEl.style.display = 'none';
+
+        const nickname = nicknameInput.value.trim();
+        const password = passwordInput.value;
+        if (!nickname || !password) {
+          errorEl.textContent = 'Preencha apelido e senha.';
+          errorEl.style.display = 'block';
+          return;
+        }
+        try {
+          await createPlayerAccount(nickname, password, campaignSelect.value);
+          charactersByCampaign.delete(campaignSelect.value);
+          lastCreatedAccount = { nickname, password };
+          await load();
+        } catch (err) {
+          errorEl.textContent = err.message;
+          errorEl.style.display = 'block';
+        }
+      });
+    }
 
     renderList();
   }

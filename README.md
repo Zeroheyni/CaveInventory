@@ -10,6 +10,7 @@ Site estático (Vite + JS puro + Supabase) pra um grupo de RPG gerenciar invent�
 - **Fase 2b — pendente de teste ao vivo:** essa fase foi construída e revisada linha a linha, mas o teste de ponta a ponta com múltiplas contas (mestre + jogador + admin do baú) esbarrou no limite de e-mails de teste do Supabase (rate limit do provedor de e-mail padrão) antes de terminar. Vale testar na prática assim que possível — especialmente drag-and-drop entre compartimentos trancados/destrancados e a transferência de moeda.
 - **Fase 3:** bot do Discord via Database Webhook + Edge Function.
 - **Painel de super-admin** ([`src/screens/admin.js`](src/screens/admin.js)): fora da numeração de fases — é uma conta especial (`profiles.is_superadmin`), independente de qualquer campanha, que vê/cria/apaga todas as campanhas do sistema e abre o inventário de qualquer jogador (com edição e atualização ao vivo via Realtime). Só quem tiver essa flag marcada direto no banco cai nesse painel; ver `db/005_patch_superadmin.sql`.
+- **Login por apelido + conta mestre** (substitui o cadastro por e-mail/código de convite): não há mais auto-cadastro nem confirmação de e-mail. Um único mestre (conta `Mestre`, veja abaixo) cria campanhas e contas de jogador (apelido + senha curta) já vinculadas a uma campanha específica; o jogador loga com apelido/senha e cai direto no personagem da campanha dele, sem código de convite. Ver [`src/nickname.js`](src/nickname.js) (apelido → e-mail sintético `@jogadores.local` + preenchimento de senha curta), [`src/auth.js`](src/auth.js) e a função `complete_player_account()` em `db/006_patch_player_account_creation.sql`.
 
 ## Setup do banco (Supabase)
 
@@ -26,10 +27,22 @@ No SQL Editor do seu projeto Supabase, rode **nesta ordem**:
    select id, 'Admin', 'master', true from auth.users where email = 'seu-email@exemplo.com'
    on conflict (id) do update set is_superadmin = true;
    ```
+7. [`db/006_patch_player_account_creation.sql`](db/006_patch_player_account_creation.sql) — cria `complete_player_account()`, usada pelo mestre pra criar contas de jogador já vinculadas a uma campanha (não há política de INSERT direta em `profiles`/`characters` pra isso, só via função `SECURITY DEFINER`, mesmo padrão do patch 1).
 
 A chave usada no cliente é a **publishable key** (`sb_publishable_...`, em Settings → API), configurada em [`src/config.js`](src/config.js). Ela não é secreta — todo o acesso é controlado por RLS no banco.
 
-> Se o seu projeto Supabase exigir confirmação de e-mail (padrão), confirme o e-mail antes de tentar entrar após criar a conta — ou desative "Confirm email" em Authentication → Providers → Email pra testar mais rápido.
+### Login por apelido — configuração obrigatória
+
+Esse projeto não usa e-mail de verdade nem auto-cadastro. É preciso:
+
+1. Em **Authentication → Sign In / Providers → Email**, desativar **"Confirm email"** (senão o `signUp()` interno de criação de conta de jogador vai exigir confirmação que nunca chega, já que os e-mails são sintéticos `@jogadores.local`).
+2. Criar a conta mestre manualmente (nickname `Mestre`, senha à sua escolha) — via console do navegador com o app aberto, chame `supabase.auth.signUp({ email: 'mestre@jogadores.local', password: 'suasenha-cave9x' })` (o sufixo `-cave9x` é o `PASSWORD_PAD` de `src/nickname.js`), depois rode:
+   ```sql
+   insert into profiles (id, username, role, is_superadmin)
+   select id, 'Mestre', 'master', true from auth.users where email = 'mestre@jogadores.local'
+   on conflict (id) do update set is_superadmin = true, username = 'Mestre', role = 'master';
+   ```
+   Depois disso, o mestre loga normalmente pela tela de login (apelido `Mestre` + a senha escolhida) e cai direto no painel — dali ele cria campanhas e contas de jogador pela própria UI.
 
 ## Rodando localmente
 
