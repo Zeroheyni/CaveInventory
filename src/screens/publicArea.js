@@ -651,7 +651,12 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
           </div>
         </div>
         ${accessPanel}
-        <div class="compartment-meta"><b>${total}</b> carga total dentro</div>
+        <div class="compartment-meta">
+          <span><b>${total}</b> carga total dentro</span>
+          <span class="compartment-currency" title="moedas deste compartimento (transfira pelo botão de transferir moedas)">
+            ${coinSvg()}<b>${comp.currency.bronze}</b>·${coinSvg()}<b>${comp.currency.silver}</b>·${coinSvg()}<b>${comp.currency.gold}</b>·${coinSvg()}<b>${comp.currency.platinum}</b>
+          </span>
+        </div>
         <div class="container-dropzone ${collapsed ? 'is-collapsed' : ''}" data-container-id="comp:${comp.id}" data-compartment-target="${comp.id}"><div class="dropzone-inner">${contentsHtml}</div></div>
       </div>`;
   }
@@ -1338,9 +1343,17 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     });
   }
 
+  // debounce: cada mutação nossa já chama load() diretamente (fica rápido pra
+  // quem agiu); sem isso, o eco da própria escrita chegando pelo Realtime
+  // dispara um SEGUNDO load()+render() completo logo em seguida, e se isso cair
+  // no meio de alguém preenchendo um formulário (ex: transferir moeda pra um
+  // compartimento), o DOM é reconstruído do zero e o que a pessoa tinha
+  // digitado/selecionado some. Um atraso curto + coalescer rajadas resolve.
+  let realtimeReloadTimer = null;
   load().then(() => {
     activeChannel = subscribePublicArea(campaignId, () => {
-      load();
+      clearTimeout(realtimeReloadTimer);
+      realtimeReloadTimer = setTimeout(() => { load(); }, 700);
     });
   });
 }

@@ -446,8 +446,11 @@
   .comp-currency-strip:hover{ border-color: var(--accent-deep); }
   .comp-currency-strip .coin-badge{ font-size:11px; }
   .comp-currency-strip .coin-badge svg{ width:12px; height:12px; }
-  .compartment-meta{ font-size:10.5px; color: var(--ink-faint); margin-bottom:8px; }
+  .compartment-meta{ display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:10.5px; color: var(--ink-faint); margin-bottom:8px; }
   .compartment-meta b{ color: var(--accent); font-weight:600; }
+  .compartment-currency{ display:inline-flex; align-items:center; gap:3px; }
+  .compartment-currency svg{ width:11px; height:11px; flex-shrink:0; }
+  .compartment-currency b{ color: var(--ink-dim); }
 
   /* ---------- GAUGE DE CARGA ---------- */
   .gauge-panel{

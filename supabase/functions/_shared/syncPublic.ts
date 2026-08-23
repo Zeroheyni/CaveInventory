@@ -25,14 +25,15 @@ export async function syncPublicArea(campaignId: string) {
 
   const targetCompartmentIds = new Set((compartments ?? []).map((c: any) => c.id));
 
-  // apaga seções órfãs (compartimento excluído)
-  for (const [compId, section] of sectionByCompartment) {
-    if (compId !== null && !targetCompartmentIds.has(compId)) {
-      for (const msgId of section.message_ids) await deleteMessage(config.channel_id, msgId);
+  // apaga seções órfãs (compartimento excluído) — em paralelo, uma seção não depende da outra
+  const orphanSections = Array.from(sectionByCompartment.entries()).filter(([compId]) => compId !== null && !targetCompartmentIds.has(compId));
+  await Promise.all(
+    orphanSections.map(async ([compId, section]) => {
+      await Promise.all(section.message_ids.map((msgId) => deleteMessage(config.channel_id, msgId)));
       await client.from('discord_public_messages').delete().eq('id', section.id);
       sectionByCompartment.delete(compId);
-    }
-  }
+    }),
+  );
 
   // grava o novo array de message_ids de uma seção — atualiza se já existe
   // linha de rastreio, insere se for a primeira vez (evita depender de
@@ -45,19 +46,23 @@ export async function syncPublicArea(campaignId: string) {
     }
   }
 
-  // avulso (compartment_id null) + moeda solta da campanha
-  const avulsoText = buildPublicAvulsoText(itemsList, containersList, currency ?? null);
-  const avulsoChunks = splitIntoChunks(avulsoText);
-  const avulsoSection = sectionByCompartment.get(null);
-  const avulsoIds = await syncMessageList(config.channel_id, avulsoSection?.message_ids ?? [], avulsoChunks, (i) => `rp:avulso:${campaignId}:${i}`);
-  await saveSection(null, avulsoSection, avulsoIds);
+  // avulso + cada compartimento em paralelo — seções independentes, sem
+  // motivo pra esperar uma terminar antes de começar a próxima
+  const avulsoTask = (async () => {
+    const avulsoText = buildPublicAvulsoText(itemsList, containersList, currency ?? null);
+    const avulsoChunks = splitIntoChunks(avulsoText);
+    const avulsoSection = sectionByCompartment.get(null);
+    const avulsoIds = await syncMessageList(config.channel_id, avulsoSection?.message_ids ?? [], avulsoChunks, (i) => `rp:avulso:${campaignId}:${i}`);
+    await saveSection(null, avulsoSection, avulsoIds);
+  })();
 
-  // um por compartimento
-  for (const comp of compartments ?? []) {
+  const compartmentTasks = (compartments ?? []).map(async (comp) => {
     const text = buildPublicCompartmentText(comp.name, comp.id, itemsList, containersList, comp.currency ?? null);
     const chunks = splitIntoChunks(text);
     const section = sectionByCompartment.get(comp.id);
     const ids = await syncMessageList(config.channel_id, section?.message_ids ?? [], chunks, (i) => `rp:${comp.id}:${campaignId}:${i}`);
     await saveSection(comp.id, section, ids);
-  }
+  });
+
+  await Promise.all([avulsoTask, ...compartmentTasks]);
 }

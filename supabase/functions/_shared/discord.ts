@@ -72,28 +72,28 @@ export async function syncMessageList(
   contents: string[],
   customIdFor: (index: number) => string,
 ): Promise<string[]> {
-  const result: string[] = [];
   const max = Math.max(existingIds.length, contents.length);
-  for (let i = 0; i < max; i++) {
-    const content = contents[i];
-    const existingId = existingIds[i];
-    if (content === undefined) {
-      if (existingId) await deleteMessage(channelId, existingId);
-      continue;
-    }
-    if (existingId) {
-      try {
-        await editMessage(channelId, existingId, content, customIdFor(i));
-        result.push(existingId);
-      } catch {
-        // mensagem sumiu (apagada à mão) — recria
-        const newId = await sendMessage(channelId, content, customIdFor(i));
-        result.push(newId);
+  // paralelo — cada índice mexe numa mensagem diferente, não há dependência
+  // entre eles, e isso corta a latência total de N syncs sequenciais pra ~1
+  const perIndex = await Promise.all(
+    Array.from({ length: max }, async (_, i) => {
+      const content = contents[i];
+      const existingId = existingIds[i];
+      if (content === undefined) {
+        if (existingId) await deleteMessage(channelId, existingId);
+        return null;
       }
-    } else {
-      const newId = await sendMessage(channelId, content, customIdFor(i));
-      result.push(newId);
-    }
-  }
-  return result;
+      if (existingId) {
+        try {
+          await editMessage(channelId, existingId, content, customIdFor(i));
+          return existingId;
+        } catch {
+          // mensagem sumiu (apagada à mão) — recria
+          return await sendMessage(channelId, content, customIdFor(i));
+        }
+      }
+      return await sendMessage(channelId, content, customIdFor(i));
+    }),
+  );
+  return perIndex.filter((id): id is string => id !== null);
 }
