@@ -59,6 +59,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
   let accessPanelFor = null;
   let dragSource = null;
   let transferMenuOpen = false;
+  let outsideClickBound = false;
 
   function canManage() {
     return profile.role === 'master' || profile.is_transport_admin;
@@ -284,6 +285,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h13M17 4l3 3-3 3"/><path d="M17 17H4M7 20l-3-3 3-3"/></svg>
           </button>
           <div class="currency-transfer-menu" id="currency-transfer-menu" style="display:${transferMenuOpen ? 'flex' : 'none'};">
+            <button type="button" class="icon-btn" id="currency-transfer-close" title="fechar" style="align-self:flex-end;">✕</button>
             <div class="field" style="margin-bottom:8px;"><label style="font-size:9px;">De</label><select class="transfer-select" id="transfer-from-select">${transferOptions()}</select></div>
             <div class="field" style="margin-bottom:8px;"><label style="font-size:9px;">Para</label><select class="transfer-select" id="transfer-to-select">${transferOptions()}</select></div>
             <div class="currency-edit-row"><span class="coin-badge coin-bronze">${coinSvg()}</span><input type="number" id="transfer-input-bronze" min="0" step="1" value="0"></div>
@@ -995,10 +997,24 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     });
 
     const transferBtn = document.getElementById('currency-transfer-btn');
+    const transferMenuEl = document.getElementById('currency-transfer-menu');
+    function closeTransferMenu() {
+      transferMenuOpen = false;
+      transferMenuEl.style.display = 'none';
+    }
     transferBtn.addEventListener('click', () => {
       transferMenuOpen = !transferMenuOpen;
-      document.getElementById('currency-transfer-menu').style.display = transferMenuOpen ? 'flex' : 'none';
+      transferMenuEl.style.display = transferMenuOpen ? 'flex' : 'none';
     });
+    document.getElementById('currency-transfer-close').addEventListener('click', closeTransferMenu);
+    // document.addEventListener não é limpo entre renders (o botão/menu são
+    // recriados a cada render, mas o document é o mesmo) — anexa só 1 vez
+    if (!outsideClickBound) {
+      outsideClickBound = true;
+      document.addEventListener('click', (e) => {
+        if (transferMenuOpen && !e.target.closest('#currency-transfer-menu') && !e.target.closest('#currency-transfer-btn')) closeTransferMenu();
+      });
+    }
     document.getElementById('currency-transfer-confirm').addEventListener('click', onTransferConfirm);
 
     // compartimentos
