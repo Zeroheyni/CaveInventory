@@ -12,3 +12,6 @@ verify_jwt = false
 
 [functions.discord-interactions]
 verify_jwt = false
+
+[functions.discord-prune]
+verify_jwt = false

@@ -61,6 +61,30 @@ export async function deleteMessage(channelId: string, messageId: string): Promi
   }
 }
 
+let cachedBotUserId: string | null = null;
+async function getBotUserId(): Promise<string> {
+  if (cachedBotUserId) return cachedBotUserId;
+  const me = await discordFetch('/users/@me', { method: 'GET' });
+  cachedBotUserId = me.id as string;
+  return cachedBotUserId;
+}
+
+export async function listChannelMessages(channelId: string, limit = 100): Promise<{ id: string; author: { id: string } }[]> {
+  return await discordFetch(`/channels/${channelId}/messages?limit=${limit}`, { method: 'GET' });
+}
+
+// Apaga só as PRÓPRIAS mensagens do bot num canal que não estejam no
+// conjunto "manter" (os IDs que estão de verdade sendo usados agora pelas
+// tabelas de rastreio) — nunca mexe em mensagem de outra pessoa. Serve pra
+// limpar sobras de teste/relink sem apagar nada essencial.
+export async function pruneChannel(channelId: string, keepIds: Set<string>): Promise<number> {
+  const botId = await getBotUserId();
+  const messages = await listChannelMessages(channelId, 100);
+  const toDelete = messages.filter((m) => m.author?.id === botId && !keepIds.has(m.id));
+  await Promise.all(toDelete.map((m) => deleteMessage(channelId, m.id)));
+  return toDelete.length;
+}
+
 // Sincroniza uma lista de mensagens de uma "seção" (ex: inventário de um
 // personagem, ou um compartimento público) contra o texto atual, já dividido
 // em pedaços por splitIntoChunks. Edita as que já existem, cria as que
