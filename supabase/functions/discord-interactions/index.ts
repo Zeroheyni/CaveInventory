@@ -48,10 +48,11 @@ Deno.serve(async (req) => {
 
   if (interaction.type === InteractionType.MESSAGE_COMPONENT) {
     const customId: string = interaction.data?.custom_id ?? '';
-    const task = handleRefresh(customId);
-    // @ts-ignore -- EdgeRuntime existe no runtime de Edge Functions do Supabase
-    if (typeof EdgeRuntime !== 'undefined' && EdgeRuntime.waitUntil) EdgeRuntime.waitUntil(task);
-    else await task;
+    // Espera o sync terminar antes de responder — mais simples e confiável
+    // do que rodar em segundo plano (EdgeRuntime.waitUntil não é garantido
+    // continuar executando após a resposta ser enviada). Nossos syncs são
+    // rápidos o bastante pra caber no prazo de 3s do Discord.
+    await handleRefresh(customId);
     return json({ type: InteractionResponseType.DEFERRED_UPDATE_MESSAGE });
   }
 
