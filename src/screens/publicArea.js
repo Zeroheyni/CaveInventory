@@ -299,6 +299,8 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
             <div class="currency-edit-row"><span class="coin-badge coin-gold">${coinSvg()}</span><input type="number" id="transfer-input-gold" min="0" step="1" value="0"></div>
             <div class="currency-edit-row"><span class="coin-badge coin-platinum">${coinSvg()}</span><input type="number" id="transfer-input-platinum" min="0" step="1" value="0"></div>
             <div class="currency-hint">se faltar de uma moeda específica, quebra as maiores automaticamente.</div>
+            <div class="transfer-balance" id="transfer-balance"></div>
+            <p class="admin-error" id="transfer-error" style="display:none;"></p>
             <button class="btn" id="currency-transfer-confirm">transferir</button>
           </div>
         </div>
@@ -762,6 +764,40 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     c.gold %= 100;
   }
 
+  // ---- helpers de moeda compartilhados entre o preview de saldo e a confirmação da transferência ----
+  function coinsToBronze(c) {
+    return (c?.bronze || 0) + (c?.silver || 0) * 100 + (c?.gold || 0) * 10000 + (c?.platinum || 0) * 1000000;
+  }
+  function bronzeToCoins(total) {
+    total = Math.max(0, Math.round(total));
+    const platinum = Math.floor(total / 1000000);
+    total %= 1000000;
+    const gold = Math.floor(total / 10000);
+    total %= 10000;
+    const silver = Math.floor(total / 100);
+    total %= 100;
+    return { bronze: total, silver, gold, platinum };
+  }
+  function coinsLabel(c) {
+    return `${c.bronze}b ${c.silver}s ${c.gold}g ${c.platinum}p`;
+  }
+  function resolveCurrencyByKey(key) {
+    if (key === 'avulso') return currency;
+    if (key === 'personal') return myCharacter ? myCharacter.currency : null;
+    const comp = compartments.find((c) => 'comp:' + c.id === key);
+    return comp ? comp.currency : null;
+  }
+  // Embutida na mesma página do character.js, que já tem o indicador de
+  // status no header (#save-status) — reaproveita em vez de criar outro.
+  let flashStatusTimer = null;
+  function flashStatus(msg) {
+    const el = document.getElementById('save-status');
+    if (!el) return;
+    el.textContent = 'TERMINAL DE CAMPO // ' + msg;
+    clearTimeout(flashStatusTimer);
+    flashStatusTimer = setTimeout(() => { el.textContent = 'TERMINAL DE CAMPO // sincronizado'; }, 1800);
+  }
+
   // ---- formulário de item ----
   function renderItemForm() {
     const editing = editingItemId ? itemsById().get(editingItemId) : null;
@@ -1004,6 +1040,25 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
 
     const transferBtn = $('currency-transfer-btn');
     const transferMenuEl = $('currency-transfer-menu');
+    const transferErrorEl = $('transfer-error');
+    const transferBalanceEl = $('transfer-balance');
+    function updateTransferBalance() {
+      const fromKey = $('transfer-from-select').value;
+      const from = resolveCurrencyByKey(fromKey);
+      const balance = coinsToBronze(from);
+      const requested = coinsToBronze({
+        bronze: parseInt($('transfer-input-bronze').value) || 0,
+        silver: parseInt($('transfer-input-silver').value) || 0,
+        gold: parseInt($('transfer-input-gold').value) || 0,
+        platinum: parseInt($('transfer-input-platinum').value) || 0,
+      });
+      const after = balance - requested;
+      transferBalanceEl.innerHTML = `
+        <span>saldo: <b>${coinsLabel(bronzeToCoins(balance))}</b></span>
+        <span class="transfer-balance-arrow">→</span>
+        <span class="transfer-balance-after ${after < 0 ? 'negative' : ''}"><b>${coinsLabel(bronzeToCoins(Math.max(0, after)))}</b>${after < 0 ? ' (insuficiente)' : ''}</span>
+      `;
+    }
     function closeTransferMenu() {
       transferMenuOpen = false;
       transferMenuEl.style.display = 'none';
@@ -1011,6 +1066,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     transferBtn.addEventListener('click', () => {
       transferMenuOpen = !transferMenuOpen;
       transferMenuEl.style.display = transferMenuOpen ? 'flex' : 'none';
+      if (transferMenuOpen) updateTransferBalance();
     });
     $('currency-transfer-close').addEventListener('click', closeTransferMenu);
     // document.addEventListener não é limpo entre renders (o botão/menu são
@@ -1021,7 +1077,11 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
         if (transferMenuOpen && !e.target.closest('#currency-transfer-menu') && !e.target.closest('#currency-transfer-btn')) closeTransferMenu();
       });
     }
-    $('currency-transfer-confirm').addEventListener('click', onTransferConfirm);
+    $('transfer-from-select').addEventListener('change', updateTransferBalance);
+    ['bronze', 'silver', 'gold', 'platinum'].forEach((k) => {
+      $('transfer-input-' + k).addEventListener('input', updateTransferBalance);
+    });
+    $('currency-transfer-confirm').addEventListener('click', () => onTransferConfirm(transferErrorEl));
 
     // compartimentos
     const compartmentTriggerBtn = $('compartment-trigger');
@@ -1069,7 +1129,8 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     attachAvulsoDrop();
   }
 
-  async function onTransferConfirm() {
+  async function onTransferConfirm(transferErrorEl) {
+    transferErrorEl.style.display = 'none';
     const amounts = {
       bronze: Math.max(0, parseInt($('transfer-input-bronze').value) || 0),
       silver: Math.max(0, parseInt($('transfer-input-silver').value) || 0),
@@ -1078,38 +1139,25 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     };
     const fromKey = $('transfer-from-select').value;
     const toKey = $('transfer-to-select').value;
-    if (fromKey === toKey) return;
-    const bronzeValue = (c) => (c.bronze || 0) + (c.silver || 0) * 100 + (c.gold || 0) * 10000 + (c.platinum || 0) * 1000000;
-    const fromCurrency = (c) => (c ? bronzeValue(c) : 0);
-    const requested = bronzeValue(amounts);
-    if (requested <= 0) return;
+    const fromLabel = $('transfer-from-select').options[$('transfer-from-select').selectedIndex].textContent;
+    const toLabel = $('transfer-to-select').options[$('transfer-to-select').selectedIndex].textContent;
+    const requested = coinsToBronze(amounts);
 
-    function resolveGet(key) {
-      if (key === 'avulso') return currency;
-      if (key === 'personal') return myCharacter ? myCharacter.currency : null;
-      const comp = compartments.find((c) => 'comp:' + c.id === key);
-      return comp ? comp.currency : null;
+    function showError(msg) {
+      transferErrorEl.textContent = msg;
+      transferErrorEl.style.display = 'block';
     }
 
-    const from = resolveGet(fromKey);
-    const to = resolveGet(toKey);
-    if (!from || !to) return;
-    if (fromCurrency(from) < requested) {
-      window.alert('Saldo insuficiente na origem.');
-      return;
-    }
-    const toBronze = (total) => {
-      total = Math.max(0, Math.round(total));
-      const platinum = Math.floor(total / 1000000);
-      total %= 1000000;
-      const gold = Math.floor(total / 10000);
-      total %= 10000;
-      const silver = Math.floor(total / 100);
-      total %= 100;
-      return { bronze: total, silver, gold, platinum };
-    };
-    const newFrom = toBronze(fromCurrency(from) - requested);
-    const newTo = toBronze(fromCurrency(to) + requested);
+    if (fromKey === toKey) return showError('origem e destino não podem ser os mesmos.');
+    if (requested <= 0) return showError('informe algum valor pra transferir.');
+
+    const from = resolveCurrencyByKey(fromKey);
+    const to = resolveCurrencyByKey(toKey);
+    if (!from || !to) return showError('origem ou destino inválido.');
+    if (coinsToBronze(from) < requested) return showError('saldo insuficiente na origem.');
+
+    const newFrom = bronzeToCoins(coinsToBronze(from) - requested);
+    const newTo = bronzeToCoins(coinsToBronze(to) + requested);
 
     async function writeCurrency(key, value) {
       if (key === 'personal') {
@@ -1127,10 +1175,11 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
       await writeCurrency(fromKey, newFrom);
       await writeCurrency(toKey, newTo);
     } catch (err) {
-      window.alert('Falha ao transferir (talvez você tenha perdido acesso a um dos dois destinos): ' + err.message);
+      return showError('falha ao transferir (talvez você tenha perdido acesso a um dos dois destinos): ' + err.message);
     }
 
     transferMenuOpen = false;
+    flashStatus(`MOEDAS TRANSFERIDAS: ${fromLabel} → ${toLabel}`);
     await load();
   }
 

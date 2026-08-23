@@ -90,6 +90,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       <div class="currency-edit-row"><span class="coin-badge coin-gold"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="transfer-input-gold" min="0" step="1" value="0"></div>
       <div class="currency-edit-row"><span class="coin-badge coin-platinum"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/></svg></span><input type="number" id="transfer-input-platinum" min="0" step="1" value="0"></div>
       <div class="currency-hint">se faltar de uma moeda específica, quebra as maiores automaticamente.</div>
+      <div class="transfer-balance" id="transfer-balance"></div>
       <p class="admin-error" id="transfer-error" style="display:none;"></p>
       <button class="btn" id="currency-transfer-confirm">transferir</button>
     </div>
@@ -2055,16 +2056,46 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   setupCurrencyWidget(() => state.currency, '', 'currency-wrap', null, 'Pessoal');
 
   // ---- transferir moeda: pra público (avulso) ou pra outro jogador da campanha ----
+  function coinsToBronze(c){ return (c?.bronze||0) + (c?.silver||0)*100 + (c?.gold||0)*10000 + (c?.platinum||0)*1000000; }
+  function bronzeToCoins(total){
+    total = Math.max(0, Math.round(total));
+    const platinum = Math.floor(total / 1000000); total %= 1000000;
+    const gold = Math.floor(total / 10000); total %= 10000;
+    const silver = Math.floor(total / 100); total %= 100;
+    return { bronze: total, silver, gold, platinum };
+  }
+  function coinsLabel(c){ return `${c.bronze}b ${c.silver}s ${c.gold}g ${c.platinum}p`; }
+
   let transferMenuOpen = false;
   let transferPlayersLoaded = false;
   const transferBtn = document.getElementById('currency-transfer-btn');
   const transferMenu = document.getElementById('currency-transfer-menu');
   const transferToSelect = document.getElementById('transfer-to-select');
   const transferErrorEl = document.getElementById('transfer-error');
+  const transferBalanceEl = document.getElementById('transfer-balance');
+  function transferAmounts(){
+    return {
+      bronze: Math.max(0, parseInt(document.getElementById('transfer-input-bronze').value) || 0),
+      silver: Math.max(0, parseInt(document.getElementById('transfer-input-silver').value) || 0),
+      gold: Math.max(0, parseInt(document.getElementById('transfer-input-gold').value) || 0),
+      platinum: Math.max(0, parseInt(document.getElementById('transfer-input-platinum').value) || 0),
+    };
+  }
+  function updateTransferBalance(){
+    const balance = coinsToBronze(state.currency);
+    const requested = coinsToBronze(transferAmounts());
+    const after = balance - requested;
+    transferBalanceEl.innerHTML = `
+      <span>saldo: <b>${coinsLabel(bronzeToCoins(balance))}</b></span>
+      <span class="transfer-balance-arrow">→</span>
+      <span class="transfer-balance-after ${after < 0 ? 'negative' : ''}"><b>${coinsLabel(bronzeToCoins(Math.max(0, after)))}</b>${after < 0 ? ' (insuficiente)' : ''}</span>
+    `;
+  }
   function closeTransferMenu(){ transferMenuOpen = false; transferMenu.style.display = 'none'; }
   transferBtn.addEventListener('click', async ()=>{
     transferMenuOpen = !transferMenuOpen;
     transferMenu.style.display = transferMenuOpen ? 'flex' : 'none';
+    if(transferMenuOpen) updateTransferBalance();
     if(transferMenuOpen && !transferPlayersLoaded){
       transferPlayersLoaded = true;
       try{
@@ -2082,14 +2113,23 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   document.addEventListener('click', (e)=>{
     if(transferMenuOpen && !e.target.closest('#currency-transfer-menu') && !e.target.closest('#currency-transfer-btn')) closeTransferMenu();
   });
+  ['bronze','silver','gold','platinum'].forEach(k => {
+    document.getElementById('transfer-input-' + k).addEventListener('input', updateTransferBalance);
+  });
   document.getElementById('currency-transfer-confirm').addEventListener('click', async ()=>{
     transferErrorEl.style.display = 'none';
-    const amounts = {
-      bronze: Math.max(0, parseInt(document.getElementById('transfer-input-bronze').value) || 0),
-      silver: Math.max(0, parseInt(document.getElementById('transfer-input-silver').value) || 0),
-      gold: Math.max(0, parseInt(document.getElementById('transfer-input-gold').value) || 0),
-      platinum: Math.max(0, parseInt(document.getElementById('transfer-input-platinum').value) || 0),
-    };
+    const amounts = transferAmounts();
+    const requested = coinsToBronze(amounts);
+    if(requested <= 0){
+      transferErrorEl.textContent = 'informe algum valor pra transferir.';
+      transferErrorEl.style.display = 'block';
+      return;
+    }
+    if(requested > coinsToBronze(state.currency)){
+      transferErrorEl.textContent = 'saldo insuficiente.';
+      transferErrorEl.style.display = 'block';
+      return;
+    }
     const toValue = transferToSelect.value;
     try{
       const target = transferToSelect.options[transferToSelect.selectedIndex].textContent;

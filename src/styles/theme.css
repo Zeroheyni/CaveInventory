@@ -427,6 +427,14 @@
   .transfer-dir-btn.active{ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); }
   .transfer-select{ width:100%; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink); font-family: var(--font-mono); font-size:12px; padding:7px 8px; border-radius:5px; }
   .transfer-select:focus{ outline:none; border-color: var(--accent-core); }
+  .transfer-balance{
+    display:flex; align-items:center; justify-content:space-between; gap:8px; background: var(--stone-900);
+    border:1px solid var(--stone-line); border-radius:6px; padding:7px 9px; font-family: var(--font-mono);
+    font-size:10.5px; color: var(--ink-faint);
+  }
+  .transfer-balance b{ color: var(--ink); font-weight:600; }
+  .transfer-balance .transfer-balance-after.negative{ color: var(--danger); }
+  .transfer-balance-arrow{ opacity:0.5; flex-shrink:0; }
 
   /* ---------- COMPARTIMENTOS ---------- */
   .compartment-card{
