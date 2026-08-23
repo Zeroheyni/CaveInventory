@@ -651,7 +651,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         <button type="button" class="campaign-strip-name-btn" id="character-name-btn" title="renomear personagem">${escapeHtml(characterName)} ✎</button>
       </div>
       <div style="display:flex; gap:8px;">
-        ${!isAdminView ? '<button type="button" class="public-nav-btn" id="public-area-btn">🚐 Baú compartilhado</button>' : ''}
+        ${!isAdminView || profile.role === 'master' ? '<button type="button" class="public-nav-btn" id="public-area-btn">🚐 Baú compartilhado</button>' : ''}
         <button type="button" class="campaign-strip-signout" id="campaign-signout-btn">${isAdminView ? '← voltar ao painel' : 'sair'}</button>
       </div>
     `;
@@ -668,7 +668,10 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     if(publicAreaBtn){
       publicAreaBtn.addEventListener('click', ()=>{
         if(activeChannel){ supabase.removeChannel(activeChannel); activeChannel = null; }
-        renderPublicAreaScreen(app, { session, profile, campaign, onBack: () => renderCharacterScreen(app, { session, profile, campaign }) });
+        renderPublicAreaScreen(app, {
+          session, profile, campaign,
+          onBack: () => renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, ownerName, onBack }),
+        });
       });
     }
     document.getElementById('campaign-signout-btn').addEventListener('click', async ()=>{
