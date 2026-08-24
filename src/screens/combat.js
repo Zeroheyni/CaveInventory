@@ -14,7 +14,7 @@ import {
   subscribeCombat,
   startCombat,
   endCombat,
-  advanceRound,
+  passTurn,
   addParticipant,
   removeParticipant,
   updateParticipantHp,
@@ -125,9 +125,9 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
     app.innerHTML = `
       <div class="combat-round-bar">
-        <span class="combat-round-label">RODADA <b>${combatState.round}</b></span>
+        <span class="combat-round-label">RODADA <b>${combatState.round}</b><span class="combat-turn-sub"> · turno ${combatState.turns_passed_this_round || 0}/${participants.length}</span></span>
         <div class="combat-round-actions">
-          ${isMaster ? `<button type="button" class="btn btn-ghost" id="combat-advance-round">avançar rodada</button>` : ''}
+          ${isMaster && participants.length > 0 ? `<button type="button" class="btn" id="combat-pass-turn">passar turno ▸</button>` : ''}
           ${isMaster ? `<button type="button" class="admin-danger-btn" id="combat-end-btn">encerrar combate</button>` : ''}
         </div>
       </div>
@@ -333,8 +333,28 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     await endCombat(campaignId);
     await load();
   }
-  async function onAdvanceRound() {
-    await advanceRound(campaignId, combatState.round);
+  async function onPassTurn() {
+    const ordered = participants.slice().sort((a, b) => a.position - b.position);
+    if (ordered.length === 0) return;
+    const snapshotState = { round: combatState.round, turns_passed_this_round: combatState.turns_passed_this_round || 0 };
+
+    // otimista -- aplica local (quem tá em 1º vai pro fim, resto sobe)
+    // antes do roundtrip, igual o resto do drag-and-drop já faz aqui.
+    const [first, ...rest] = ordered;
+    const newOrder = [...rest, first];
+    newOrder.forEach((p, i) => {
+      p.position = i;
+    });
+    const turnsPassed = snapshotState.turns_passed_this_round + 1;
+    if (turnsPassed >= ordered.length) {
+      combatState.round = snapshotState.round + 1;
+      combatState.turns_passed_this_round = 0;
+    } else {
+      combatState.turns_passed_this_round = turnsPassed;
+    }
+    render();
+
+    await passTurn(campaignId, newOrder, snapshotState);
   }
 
   let wired = false;
@@ -349,8 +369,8 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       const endBtn = e.target.closest('#combat-end-btn');
       if (endBtn) return onEndCombat();
 
-      const advanceBtn = e.target.closest('#combat-advance-round');
-      if (advanceBtn) return onAdvanceRound();
+      const passTurnBtn = e.target.closest('#combat-pass-turn');
+      if (passTurnBtn) return onPassTurn();
 
       const addTrigger = e.target.closest('#combat-add-trigger');
       if (addTrigger) {

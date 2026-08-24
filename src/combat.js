@@ -7,7 +7,7 @@ import { supabase } from './supabaseClient.js';
 export async function getCombatState(campaignId) {
   const { data, error } = await supabase.from('campaign_combat').select('*').eq('campaign_id', campaignId).maybeSingle();
   if (error) throw error;
-  return data || { campaign_id: campaignId, active: false, round: 1 };
+  return data || { campaign_id: campaignId, active: false, round: 1, turns_passed_this_round: 0 };
 }
 
 export async function getParticipants(campaignId) {
@@ -25,20 +25,39 @@ export function subscribeCombat(campaignId, onChange) {
 }
 
 export async function startCombat(campaignId) {
-  const { error } = await supabase.from('campaign_combat').upsert({ campaign_id: campaignId, active: true, round: 1 });
+  const { error } = await supabase.from('campaign_combat').upsert({ campaign_id: campaignId, active: true, round: 1, turns_passed_this_round: 0 });
   if (error) throw error;
 }
 
 export async function endCombat(campaignId) {
   const { error: e1 } = await supabase.from('combat_participants').delete().eq('campaign_id', campaignId);
   if (e1) throw e1;
-  const { error: e2 } = await supabase.from('campaign_combat').upsert({ campaign_id: campaignId, active: false, round: 1 });
+  const { error: e2 } = await supabase.from('campaign_combat').upsert({ campaign_id: campaignId, active: false, round: 1, turns_passed_this_round: 0 });
   if (e2) throw e2;
 }
 
-export async function advanceRound(campaignId, currentRound) {
-  const { error } = await supabase.from('campaign_combat').update({ round: currentRound + 1, updated_at: new Date().toISOString() }).eq('campaign_id', campaignId);
-  if (error) throw error;
+// "Passar o turno" -- quem está primeiro na lista vai pro final, todo
+// mundo sobe uma posição. Rodada != turno: uma rodada só fecha depois
+// que TODOS os participantes já tiveram seu turno passado uma vez
+// (turns_passed_this_round chega no total de participantes) -- aí a
+// rodada avança sozinha e a contagem de turnos zera de novo.
+// `newOrder` já vem pronto (rotacionado) de quem chamou -- não
+// recalcula aqui pra não rotacionar de novo em cima da atualização
+// otimista que a tela já aplicou nos mesmos objetos.
+export async function passTurn(campaignId, newOrder, combatState) {
+  if (newOrder.length === 0) return;
+  const writes = newOrder.map((p, i) => supabase.from('combat_participants').update({ position: i }).eq('id', p.id));
+
+  const turnsPassed = (combatState.turns_passed_this_round || 0) + 1;
+  const cycleComplete = turnsPassed >= newOrder.length;
+  const nextState = cycleComplete
+    ? { round: combatState.round + 1, turns_passed_this_round: 0 }
+    : { turns_passed_this_round: turnsPassed };
+  writes.push(supabase.from('campaign_combat').update({ ...nextState, updated_at: new Date().toISOString() }).eq('campaign_id', campaignId));
+
+  const results = await Promise.all(writes);
+  const failed = results.find((r) => r.error);
+  if (failed) throw failed.error;
 }
 
 // hiddenMode: 'visible' | 'countdown' | 'always'

@@ -27,6 +27,7 @@
 }
 .combat-round-label{ font-family: var(--font-display); font-size:12.5px; letter-spacing:0.1em; color: var(--ink); }
 .combat-round-label b{ color: var(--accent); }
+.combat-turn-sub{ font-size:10px; color: var(--ink-faint); letter-spacing:0.04em; }
 .combat-round-actions{ display:flex; gap:8px; flex-wrap:wrap; }
 
 .combat-self-card{
