@@ -36,7 +36,7 @@
 .ficha-bar-readout{ margin-left:auto; font-family: var(--font-mono); font-size:11px; color: var(--ink-faint); }
 .ficha-bar-block .combat-hp-bar{ height:11px; margin-bottom:7px; }
 .ficha-bar-controls{ display:flex; align-items:center; gap:6px; }
-.ficha-estamina-fill{ background: linear-gradient(90deg, #2a7f9e, #45b8de) !important; }
+.ficha-estamina-fill{ background: linear-gradient(90deg, #a8860a, #ffd93d) !important; }
 
 .ficha-section{ background: var(--stone-800); border:1px solid var(--stone-line); border-radius:10px; padding:14px 16px; margin-bottom:14px; }
 .ficha-section-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px; }

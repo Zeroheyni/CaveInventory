@@ -15,6 +15,8 @@ import {
   startCombat,
   endCombat,
   passTurn,
+  passTurnFixed,
+  toggleFixedInitiative,
   addParticipant,
   removeParticipant,
   updateParticipantHp,
@@ -57,7 +59,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       const [{ data: chars }, { data: profs }] = await Promise.all([
         supabase
           .from('characters')
-          .select('id, name, vitalidade, estamina, hp_current, estamina_current')
+          .select('id, name, vitalidade, estamina, hp_current, estamina_current, avatar_url')
           .eq('campaign_id', campaignId)
           .order('name'),
         supabase.from('profiles').select('id, username, role, can_see_others_hp, can_see_hidden_initiative').eq('campaign_id', campaignId),
@@ -107,6 +109,11 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     const left = p.reveal_at_round - combatState.round;
     return left > 0 ? `revela em ${left} rodada${left === 1 ? '' : 's'}` : 'revelando...';
   }
+  function avatarThumb(p) {
+    if (p.avatar_url) return `<img class="combat-avatar" src="${escapeHtml(p.avatar_url)}" alt="">`;
+    const letter = (p.display_name || '?').trim().charAt(0).toUpperCase();
+    return `<span class="combat-avatar combat-avatar-placeholder">${escapeHtml(letter)}</span>`;
+  }
 
   // ---- render ----
   function render() {
@@ -123,8 +130,11 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     const mySelf = participants.find((p) => p.character_id === characterId);
     const list = visibleParticipants().slice().sort((a, b) => a.position - b.position);
     const allSorted = participants.slice().sort((a, b) => a.position - b.position);
-    const currentTurn = allSorted[0] || null;
+    const currentTurn = combatState.fixed_initiative
+      ? allSorted.find((p) => p.id === combatState.current_turn_id) || allSorted[0] || null
+      : allSorted[0] || null;
     const currentTurnVisible = currentTurn && (isMaster || list.some((p) => p.id === currentTurn.id));
+    const rankMap = new Map(allSorted.map((p, i) => [p.id, i + 1]));
 
     app.innerHTML = `
       <div class="combat-round-bar">
@@ -133,6 +143,11 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           ${currentTurn ? `<span class="combat-turn-indicator"><span class="combat-turn-dot"></span>vez de: <b>${currentTurnVisible ? escapeHtml(currentTurn.display_name) : '???'}</b></span>` : ''}
         </div>
         <div class="combat-round-actions">
+          ${
+            participants.length > 0
+              ? `<button type="button" class="btn btn-ghost" id="combat-toggle-fixed" title="trava a ordem: em vez da lista girar a cada turno, só a borda verde caminha">${combatState.fixed_initiative ? '🔓 destravar iniciativa' : '🔒 fixar iniciativa'}</button>`
+              : ''
+          }
           ${isMaster && participants.length > 0 ? `<button type="button" class="btn" id="combat-pass-turn">passar turno ▸</button>` : ''}
           ${isMaster ? `<button type="button" class="admin-danger-btn" id="combat-end-btn">encerrar combate</button>` : ''}
         </div>
@@ -143,7 +158,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           ? `
         <div class="combat-self-card ${currentTurn && mySelf.id === currentTurn.id ? 'current-turn' : ''}">
           <div class="combat-self-card-head">
-            <span class="combat-self-name">${escapeHtml(mySelf.display_name)}${currentTurn && mySelf.id === currentTurn.id ? ' <span class="combat-turn-indicator" style="display:inline-flex;"><span class="combat-turn-dot"></span>sua vez!</span>' : ''}</span>
+            <span class="combat-self-name">${avatarThumb(mySelf)}<span class="combat-rank-badge">${rankMap.get(mySelf.id)}º</span>${escapeHtml(mySelf.display_name)}${currentTurn && mySelf.id === currentTurn.id ? ' <span class="combat-turn-indicator" style="display:inline-flex;"><span class="combat-turn-dot"></span>sua vez!</span>' : ''}</span>
             <span class="combat-hp-readout"><b>${mySelf.hp_current}</b> / ${mySelf.hp_max} HP</span>
           </div>
           <div class="combat-hp-bar"><div class="combat-hp-fill ${hpPct(mySelf) <= 25 ? 'low' : ''}" style="width:${hpPct(mySelf)}%"></div></div>
@@ -167,7 +182,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       }
 
       <div class="combat-list" id="combat-list">
-        ${list.length === 0 ? '<div class="combat-empty">ninguém na iniciativa ainda</div>' : list.map((p) => participantRow(p, currentTurn && p.id === currentTurn.id)).join('')}
+        ${list.length === 0 ? '<div class="combat-empty">ninguém na iniciativa ainda</div>' : list.map((p) => participantRow(p, currentTurn && p.id === currentTurn.id, rankMap.get(p.id))).join('')}
       </div>
 
       ${isMaster ? addParticipantSection() : ''}
@@ -175,12 +190,14 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     `;
   }
 
-  function participantRow(p, isCurrentTurn) {
+  function participantRow(p, isCurrentTurn, rank) {
     const hiddenLabel = isMaster ? hiddenStatusLabel(p) : null;
     const showHp = canSeeHp(p);
     return `
       <div class="combat-participant-row team-${p.team} ${isCurrentTurn ? 'current-turn' : ''}" data-row-pid="${p.id}" ${isMaster ? 'draggable="true"' : ''}>
         ${isMaster ? '<span class="combat-drag-handle" title="arraste pra reordenar">⋮⋮</span>' : ''}
+        <span class="combat-rank-badge" title="ordem na iniciativa">${rank}º</span>
+        ${avatarThumb(p)}
         <span class="combat-team-dot team-${p.team}"></span>
         <div class="combat-row-main">
           <div class="combat-row-name">${escapeHtml(p.display_name)}</div>
@@ -344,6 +361,25 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     if (ordered.length === 0) return;
     const snapshotState = { round: combatState.round, turns_passed_this_round: combatState.turns_passed_this_round || 0 };
 
+    if (combatState.fixed_initiative) {
+      // fixo -- a lista (position) não muda, só o ponteiro de quem tem
+      // a vez anda pro próximo da ordem parada, voltando pro início.
+      const currentId = combatState.current_turn_id || ordered[0].id;
+      const idx = Math.max(0, ordered.findIndex((p) => p.id === currentId));
+      const nextId = ordered[(idx + 1) % ordered.length].id;
+      const turnsPassed = snapshotState.turns_passed_this_round + 1;
+      if (turnsPassed >= ordered.length) {
+        combatState.round = snapshotState.round + 1;
+        combatState.turns_passed_this_round = 0;
+      } else {
+        combatState.turns_passed_this_round = turnsPassed;
+      }
+      combatState.current_turn_id = nextId;
+      render();
+      await passTurnFixed(campaignId, nextId, ordered.length, snapshotState);
+      return;
+    }
+
     // otimista -- aplica local (quem tá em 1º vai pro fim, resto sobe)
     // antes do roundtrip, igual o resto do drag-and-drop já faz aqui.
     const [first, ...rest] = ordered;
@@ -362,6 +398,10 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
     await passTurn(campaignId, newOrder, snapshotState);
   }
+  async function onToggleFixedInitiative() {
+    await toggleFixedInitiative(campaignId);
+    await load();
+  }
 
   let wired = false;
   function wireEvents() {
@@ -377,6 +417,9 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
       const passTurnBtn = e.target.closest('#combat-pass-turn');
       if (passTurnBtn) return onPassTurn();
+
+      const toggleFixedBtn = e.target.closest('#combat-toggle-fixed');
+      if (toggleFixedBtn) return onToggleFixedInitiative();
 
       const addTrigger = e.target.closest('#combat-add-trigger');
       if (addTrigger) {
@@ -579,6 +622,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           hiddenMode,
           revealInRounds,
           currentRound: combatState.round,
+          avatarUrl: char.avatar_url,
         },
         position,
       );

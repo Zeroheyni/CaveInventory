@@ -7,7 +7,7 @@ import { supabase } from './supabaseClient.js';
 export async function getCombatState(campaignId) {
   const { data, error } = await supabase.from('campaign_combat').select('*').eq('campaign_id', campaignId).maybeSingle();
   if (error) throw error;
-  return data || { campaign_id: campaignId, active: false, round: 1, turns_passed_this_round: 0 };
+  return data || { campaign_id: campaignId, active: false, round: 1, turns_passed_this_round: 0, fixed_initiative: false, current_turn_id: null };
 }
 
 export async function getParticipants(campaignId) {
@@ -25,14 +25,18 @@ export function subscribeCombat(campaignId, onChange) {
 }
 
 export async function startCombat(campaignId) {
-  const { error } = await supabase.from('campaign_combat').upsert({ campaign_id: campaignId, active: true, round: 1, turns_passed_this_round: 0 });
+  const { error } = await supabase
+    .from('campaign_combat')
+    .upsert({ campaign_id: campaignId, active: true, round: 1, turns_passed_this_round: 0, fixed_initiative: false, current_turn_id: null });
   if (error) throw error;
 }
 
 export async function endCombat(campaignId) {
   const { error: e1 } = await supabase.from('combat_participants').delete().eq('campaign_id', campaignId);
   if (e1) throw e1;
-  const { error: e2 } = await supabase.from('campaign_combat').upsert({ campaign_id: campaignId, active: false, round: 1, turns_passed_this_round: 0 });
+  const { error: e2 } = await supabase
+    .from('campaign_combat')
+    .upsert({ campaign_id: campaignId, active: false, round: 1, turns_passed_this_round: 0, fixed_initiative: false, current_turn_id: null });
   if (e2) throw e2;
 }
 
@@ -60,6 +64,29 @@ export async function passTurn(campaignId, newOrder, combatState) {
   if (failed) throw failed.error;
 }
 
+// Variante de "passar o turno" pro modo iniciativa fixa -- não mexe em
+// nenhuma position (a lista fica parada), só avança o ponteiro de
+// quem tem a vez (current_turn_id) -- a borda verde caminha sozinha.
+export async function passTurnFixed(campaignId, nextTurnId, participantCount, combatState) {
+  const turnsPassed = (combatState.turns_passed_this_round || 0) + 1;
+  const cycleComplete = turnsPassed >= participantCount;
+  const nextState = cycleComplete
+    ? { round: combatState.round + 1, turns_passed_this_round: 0 }
+    : { turns_passed_this_round: turnsPassed };
+  const { error } = await supabase
+    .from('campaign_combat')
+    .update({ ...nextState, current_turn_id: nextTurnId, updated_at: new Date().toISOString() })
+    .eq('campaign_id', campaignId);
+  if (error) throw error;
+}
+
+// mestre ou jogador -- validado dentro da função (RPC SECURITY
+// DEFINER, ver db/018_patch_combat_fixed_initiative.sql).
+export async function toggleFixedInitiative(campaignId) {
+  const { error } = await supabase.rpc('toggle_fixed_initiative', { p_campaign_id: campaignId });
+  if (error) throw error;
+}
+
 // hiddenMode: 'visible' | 'countdown' | 'always'
 // Pra NPC (characterId nulo), hpCurrent/staminaCurrent/staminaMax vêm
 // digitados pelo mestre. Pra personagem vinculado, quem chama já deve
@@ -68,7 +95,7 @@ export async function passTurn(campaignId, newOrder, combatState) {
 // o valor inicial.
 export async function addParticipant(
   campaignId,
-  { characterId, displayName, team, hpMax, hpCurrent, staminaMax, staminaCurrent, initiative, hiddenMode, revealInRounds, currentRound },
+  { characterId, displayName, team, hpMax, hpCurrent, staminaMax, staminaCurrent, initiative, hiddenMode, revealInRounds, currentRound, avatarUrl },
   position,
 ) {
   const hidden = hiddenMode !== 'visible';
@@ -87,6 +114,7 @@ export async function addParticipant(
     hidden,
     reveal_at_round,
     manually_revealed: false,
+    avatar_url: avatarUrl || null,
   });
   if (error) throw error;
 }
