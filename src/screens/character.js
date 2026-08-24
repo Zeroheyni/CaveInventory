@@ -575,6 +575,9 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     const roleLabel = isAdminView
       ? `MODO ADMIN${ownerName ? ' — ' + escapeHtml(ownerName) : ''}`
       : (profile.role === 'master' ? 'MESTRE' : 'JOGADOR');
+    const offSessionBadge = campaign.discord_live_session
+      ? ''
+      : `<span class="discord-offsession-badge" title="fora de sessão, o Discord só atualiza quando alguém clica em 🔄 atualizar lá — pode estar desatualizado">⚪ Discord fora de sessão</span>`;
     el.innerHTML = `
       <div class="campaign-strip-left">
         <span class="campaign-strip-item"><b>${escapeHtml(campaign.name)}</b></span>
@@ -582,6 +585,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         <span class="campaign-strip-item">${roleLabel}</span>
         <span class="campaign-strip-sep">·</span>
         <button type="button" class="campaign-strip-name-btn" id="character-name-btn" title="renomear personagem">${escapeHtml(characterName)} ✎</button>
+        ${offSessionBadge}
       </div>
       <div style="display:flex; gap:8px;">
         <button type="button" class="campaign-strip-signout" id="campaign-signout-btn">${isAdminView ? '← voltar ao painel' : 'sair'}</button>

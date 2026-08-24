@@ -16,3 +16,7 @@
   font-size:11px; cursor:pointer; padding:5px 10px; border-radius:6px; transition: all 0.15s ease;
 }
 .campaign-strip-signout:hover{ color: var(--danger); border-color: var(--danger); }
+.discord-offsession-badge{
+  font-size:10.5px; color: var(--warn); border:1px solid var(--warn); border-radius:12px;
+  padding:2px 9px; cursor:default; white-space:nowrap;
+}

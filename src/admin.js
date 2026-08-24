@@ -72,6 +72,15 @@ export async function deleteCampaignAsAdmin(campaignId) {
 export async function setCampaignLiveSession(campaignId, live) {
   const { error } = await supabase.from('campaigns').update({ discord_live_session: live }).eq('id', campaignId);
   if (error) throw error;
+  if (live) await syncCampaignAll(campaignId);
+}
+
+// Força uma sincronização completa (área pública + cada personagem
+// vinculado) de uma vez -- chamado ao ligar a sessão, pra corrigir o que
+// ficou desatualizado sem esperar a próxima edição de cada personagem.
+export async function syncCampaignAll(campaignId) {
+  const { error } = await supabase.functions.invoke('discord-sync-campaign-all', { body: { campaign_id: campaignId } });
+  if (error) throw error;
 }
 
 // Exclui só UMA conta de jogador (perfil + personagem + login), sem apagar

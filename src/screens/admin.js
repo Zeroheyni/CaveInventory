@@ -22,6 +22,7 @@ export function renderAdminScreen(app, { session, profile }) {
   let charactersByCampaign = new Map();
   let confirmingDelete = null;
   let confirmingDeleteCharacter = null;
+  let syncingLiveSession = null;
   let lastCreatedAccount = null;
   let discordChannelByCampaign = new Map();
   let discordChannelByCharacter = new Map();
@@ -196,9 +197,10 @@ export function renderAdminScreen(app, { session, profile }) {
             </div>
             <div class="admin-discord-row">
               <label>🎲 Sessão do Discord</label>
-              <button type="button" class="btn ${c.discord_live_session ? 'btn-live-session' : 'btn-ghost'}" data-toggle-live-session="${c.id}" data-live="${c.discord_live_session}" title="em sessão, o Discord atualiza em tempo real a cada mudança; fora de sessão, só atualiza quando alguém clica em 🔄 atualizar">
-                ${c.discord_live_session ? '🟢 em sessão (tempo real)' : '⚪ fora de sessão (só no 🔄 atualizar)'}
+              <button type="button" class="btn ${c.discord_live_session ? 'btn-live-session' : 'btn-ghost'}" data-toggle-live-session="${c.id}" data-live="${c.discord_live_session}" ${syncingLiveSession === c.id ? 'disabled' : ''} title="em sessão, o Discord atualiza em tempo real a cada mudança; fora de sessão, só atualiza quando alguém clica em 🔄 atualizar">
+                ${syncingLiveSession === c.id ? 'sincronizando tudo...' : (c.discord_live_session ? '🟢 em sessão (tempo real)' : '⚪ fora de sessão (só no 🔄 atualizar)')}
               </button>
+              <span class="admin-discord-feedback" data-live-session-feedback="${c.id}"></span>
             </div>
             ${isOpen ? `<div class="admin-character-list" id="admin-chars-${c.id}"><p class="admin-empty">Carregando...</p></div>` : ''}
           </div>
@@ -297,13 +299,26 @@ export function renderAdminScreen(app, { session, profile }) {
   }
 
   async function onToggleLiveSession(campaignId, live) {
+    const feedback = document.querySelector(`span[data-live-session-feedback="${campaignId}"]`);
+    if (live) {
+      syncingLiveSession = campaignId;
+      renderList();
+    }
     try {
       await setCampaignLiveSession(campaignId, live);
       const c = campaigns.find((camp) => camp.id === campaignId);
       if (c) c.discord_live_session = live;
+      syncingLiveSession = null;
       renderList();
+      if (live) {
+        const freshFeedback = document.querySelector(`span[data-live-session-feedback="${campaignId}"]`);
+        if (freshFeedback) freshFeedback.textContent = 'sincronizado ✓';
+      }
     } catch (err) {
-      window.alert('Erro ao mudar sessão do Discord: ' + err.message);
+      syncingLiveSession = null;
+      renderList();
+      if (feedback) feedback.textContent = 'erro: ' + err.message;
+      else window.alert('Erro ao mudar sessão do Discord: ' + err.message);
     }
   }
 
