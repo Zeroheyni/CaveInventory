@@ -296,7 +296,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
   </button>
   <div class="side-nav-items">
-    <button type="button" class="side-nav-item" id="combat-trigger" title="tela de combate">
+    <button type="button" class="side-nav-item active" id="inventory-nav-item" data-nav-mode="inventory" title="voltar pro inventário">
+      <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 8V6a5 5 0 0110 0v2"/><rect x="5" y="8" width="14" height="13" rx="2"/><rect x="9.5" y="12" width="5" height="4" rx="1"/></svg></span>
+      <span class="side-nav-label">Inventário</span>
+    </button>
+    <button type="button" class="side-nav-item" id="combat-trigger" data-nav-mode="combat" title="tela de combate">
       <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14.5 4.5l5 5-9 9-3 1 1-3 9-9z"/><path d="M13 6l5 5"/><path d="M5 19l2-2"/></svg></span>
       <span class="side-nav-label">Combate</span>
     </button>
@@ -1340,6 +1344,10 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     setMode('combat');
     sideNav.classList.remove('open');
   });
+  document.getElementById('inventory-nav-item').addEventListener('click', ()=>{
+    setMode('inventory');
+    sideNav.classList.remove('open');
+  });
 
   document.getElementById('theme-trigger').addEventListener('click', ()=>{
     const panel = document.getElementById('theme-panel');
@@ -2251,6 +2259,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       titleText.textContent = 'INVENTÁRIO';
       copyBtn.title = 'copiar inventário para a área de transferência';
     }
+    document.querySelectorAll('.side-nav-item').forEach(el => el.classList.toggle('active', el.dataset.navMode === mode));
   }
 
   // ---- ícone do veículo (baú de transporte, sem limite de carga, mundo à parte) ----

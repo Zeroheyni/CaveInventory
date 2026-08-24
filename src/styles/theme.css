@@ -798,6 +798,7 @@
     padding:10px 12px; border-radius:8px; cursor:pointer; white-space:nowrap; transition: all 0.15s ease;
   }
   .side-nav-item:hover{ background: var(--accent-faint); color: var(--accent); }
+  .side-nav-item.active{ color: var(--accent); background: var(--accent-faint); box-shadow: inset 2px 0 0 var(--accent-core); }
   .side-nav-icon{ width:18px; height:18px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
   .side-nav-icon svg{ width:100%; height:100%; }
 
