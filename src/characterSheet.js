@@ -77,6 +77,10 @@ export async function updateEstaminaCurrent(characterId, estaminaCurrent) {
 export async function setAvatarUrl(characterId, url) {
   const { error } = await supabase.from('characters').update({ avatar_url: url }).eq('id', characterId);
   if (error) throw error;
+  // combat_participants guarda um snapshot da foto (evita join só pra
+  // mostrar a fotinho no combate, ver db/018) -- sem isso, trocar a
+  // foto depois de já estar em combate nunca reflete lá.
+  await supabase.from('combat_participants').update({ avatar_url: url }).eq('character_id', characterId);
 }
 
 export async function uploadAvatar(characterId, file) {
