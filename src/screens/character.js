@@ -1,6 +1,7 @@
 import { supabase } from '../supabaseClient.js';
 import { signOut } from '../auth.js';
 import { renderPublicAreaScreen } from './publicArea.js';
+import { renderCombatScreen } from './combat.js';
 import { createPublicItem, createPublicContainer, listCampaignPlayers, transferCurrencyRpc } from '../publicArea.js';
 
 let activeChannel = null;
@@ -29,6 +30,9 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       <button class="undo-trigger-btn" id="undo-trigger" title="desfazer última ação (Ctrl+Z)" disabled>
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 109-9"/><path d="M3 4v5h5"/></svg>
         <span class="undo-count-badge" id="undo-count-badge" style="display:none;">0</span>
+      </button>
+      <button class="theme-trigger-btn" id="combat-trigger" title="tela de combate">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14.5 4.5l5 5-9 9-3 1 1-3 9-9z"/><path d="M13 6l5 5"/><path d="M5 19l2-2"/></svg>
       </button>
       <div class="log-picker-wrap" id="summary-picker-wrap">
         <button class="theme-trigger-btn" id="summary-trigger" title="ver resumo do inventário">
@@ -266,6 +270,20 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     </div>
 
     <footer>BAÚ DO VEÍCULO — SEPARADO DO INVENTÁRIO PRINCIPAL</footer>
+  </div>
+
+  <div id="combat-mode-wrap" style="display:none;">
+    <div class="combat-layout">
+      <div class="combat-tabs">
+        <button type="button" class="combat-tab-btn active" data-combat-tab="status">⚔ STATUS</button>
+      </div>
+      <div class="combat-page-wrap">
+        <div class="combat-page active" id="combat-page-status">
+          <div id="combat-embed"></div>
+        </div>
+      </div>
+    </div>
+    <footer>COMBATE — RASTREADOR DE HP E INICIATIVA</footer>
   </div>
 </div>
 
@@ -1304,6 +1322,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   }
   renderThemePanel();
 
+  document.getElementById('combat-trigger').addEventListener('click', ()=> setMode('combat'));
+
   document.getElementById('theme-trigger').addEventListener('click', ()=>{
     const panel = document.getElementById('theme-panel');
     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
@@ -2174,29 +2194,43 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     });
   });
 
-  // ---- alternância de modo (inventário <-> baú do veículo) ----
+  // ---- alternância de modo (inventário <-> baú do veículo <-> combate) ----
+  let combatMounted = false;
   function setMode(mode){
     currentMode = mode;
     const invWrap = document.getElementById('inventory-mode-wrap');
     const transWrap = document.getElementById('transport-mode-wrap');
+    const combatWrap = document.getElementById('combat-mode-wrap');
     const vehicleBtn = document.getElementById('vehicle-dropzone');
     const backpackBtn = document.getElementById('backpack-return-btn');
     const titleText = document.getElementById('main-title-text');
     const copyBtn = document.getElementById('copy-fab');
+    invWrap.style.display = 'none';
+    transWrap.style.display = 'none';
+    combatWrap.style.display = 'none';
+    vehicleBtn.style.display = 'none';
+    backpackBtn.style.display = 'none';
+    copyBtn.style.display = 'flex';
     if(mode === 'transport'){
-      invWrap.style.display = 'none';
       transWrap.style.display = 'block';
       transWrap.classList.remove('mode-fade-in'); void transWrap.offsetWidth; transWrap.classList.add('mode-fade-in');
-      vehicleBtn.style.display = 'none';
       backpackBtn.style.display = 'flex';
       titleText.textContent = 'BAÚ DO VEÍCULO';
       copyBtn.title = 'copiar baú do veículo para a área de transferência';
+    } else if(mode === 'combat'){
+      combatWrap.style.display = 'block';
+      combatWrap.classList.remove('mode-fade-in'); void combatWrap.offsetWidth; combatWrap.classList.add('mode-fade-in');
+      backpackBtn.style.display = 'flex';
+      titleText.textContent = 'COMBATE';
+      copyBtn.style.display = 'none';
+      if(!combatMounted){
+        combatMounted = true;
+        renderCombatScreen(document.getElementById('combat-embed'), { session, profile, campaign, characterId, characterName });
+      }
     } else {
-      transWrap.style.display = 'none';
       invWrap.style.display = 'block';
       invWrap.classList.remove('mode-fade-in'); void invWrap.offsetWidth; invWrap.classList.add('mode-fade-in');
       vehicleBtn.style.display = 'flex';
-      backpackBtn.style.display = 'none';
       titleText.textContent = 'INVENTÁRIO';
       copyBtn.title = 'copiar inventário para a área de transferência';
     }
