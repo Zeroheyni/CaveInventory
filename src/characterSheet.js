@@ -17,6 +17,14 @@ export function estaminaMax(char) {
 export function xpNeeded(level) {
   return 10 * level;
 }
+// classe da barra de HP (combat.css) por faixa de porcentagem --
+// usada por ficha.js, masterFicha.js e combat.js, todos com a mesma
+// barra .combat-hp-fill.
+export function hpBarClass(pct) {
+  if (pct < 20) return 'low';
+  if (pct < 50) return 'mid';
+  return '';
+}
 export function emptySheetData() {
   return { idade: '', genero: '', sexualidade: '', historia: '', modulos: [] };
 }

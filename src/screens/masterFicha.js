@@ -3,7 +3,7 @@
 // completa de qualquer um, e o menu de dar XP em massa (todos
 // marcados por padrão — o mestre só desmarca quem não deve ganhar).
 import { escapeHtml } from '../shared/gameData.js';
-import { listCampaignCharacterSheets, subscribeCampaignSheets, hpMax, estaminaMax, grantXp } from '../characterSheet.js';
+import { listCampaignCharacterSheets, subscribeCampaignSheets, hpMax, estaminaMax, grantXp, hpBarClass } from '../characterSheet.js';
 import { renderFichaScreen } from './ficha.js';
 
 export function renderMasterFichaScreen(app, { session, profile, campaign, onBack }) {
@@ -78,7 +78,7 @@ export function renderMasterFichaScreen(app, { session, profile, campaign, onBac
         ${c.avatar_url ? `<img class="ficha-dash-avatar" src="${escapeHtml(c.avatar_url)}" alt="">` : `<div class="ficha-dash-avatar"></div>`}
         <div class="ficha-dash-info">
           <div class="ficha-dash-name">${escapeHtml(c.name)} <span style="color:var(--ink-faint); font-weight:400;">Nv.${c.level}</span></div>
-          <div class="ficha-dash-bar-row"><span class="ficha-dash-bar-icon">❤</span><div class="combat-hp-bar"><div class="combat-hp-fill ${hpPct <= 25 ? 'low' : ''}" style="width:${hpPct}%"></div></div></div>
+          <div class="ficha-dash-bar-row"><span class="ficha-dash-bar-icon">❤</span><div class="combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hpPct)}" style="width:${hpPct}%"></div></div></div>
           <div class="ficha-dash-bar-row"><span class="ficha-dash-bar-icon">⚡</span><div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${ePct}%"></div></div></div>
         </div>
       </button>`;

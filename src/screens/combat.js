@@ -28,7 +28,7 @@ import {
   setPlayerCombatPermission,
   isVisibleToPlayer,
 } from '../combat.js';
-import { hpMax as charHpMax, estaminaMax as charEstaminaMax } from '../characterSheet.js';
+import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass } from '../characterSheet.js';
 
 let activeChannel = null;
 
@@ -161,7 +161,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             <span class="combat-self-name">${avatarThumb(mySelf)}<span class="combat-rank-badge">${rankMap.get(mySelf.id)}º</span>${escapeHtml(mySelf.display_name)}${currentTurn && mySelf.id === currentTurn.id ? ' <span class="combat-turn-indicator" style="display:inline-flex;"><span class="combat-turn-dot"></span>sua vez!</span>' : ''}</span>
             <span class="combat-hp-readout"><b>${mySelf.hp_current}</b> / ${mySelf.hp_max} HP</span>
           </div>
-          <div class="combat-hp-bar"><div class="combat-hp-fill ${hpPct(mySelf) <= 25 ? 'low' : ''}" style="width:${hpPct(mySelf)}%"></div></div>
+          <div class="combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hpPct(mySelf))}" style="width:${hpPct(mySelf)}%"></div></div>
           <div class="combat-hp-controls">
             <button type="button" class="combat-hp-btn" data-hp-delta="-1" data-pid="${mySelf.id}">−</button>
             <input type="number" class="combat-hp-input" data-hp-input data-pid="${mySelf.id}" value="${mySelf.hp_current}">
@@ -205,7 +205,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             ${
               showHp
                 ? `
-              <div class="combat-row-hpbar combat-hp-bar"><div class="combat-hp-fill ${hpPct(p) <= 25 ? 'low' : ''}" style="width:${hpPct(p)}%"></div></div>
+              <div class="combat-row-hpbar combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hpPct(p))}" style="width:${hpPct(p)}%"></div></div>
               <span class="combat-row-hptxt">${p.hp_current}/${p.hp_max}</span>`
                 : '<span class="combat-row-hptxt">HP oculto</span>'
             }

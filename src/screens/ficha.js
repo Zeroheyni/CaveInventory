@@ -15,6 +15,7 @@ import {
   hpMax,
   estaminaMax,
   xpNeeded,
+  hpBarClass,
   sheetDataOf,
   updateSheetData,
   updateHpCurrent,
@@ -128,7 +129,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
       <div class="ficha-bars">
         <div class="ficha-bar-block">
           <div class="ficha-bar-label">❤ HP <span class="ficha-bar-readout">${sheet.hp_current} / ${hMax}</span></div>
-          <div class="combat-hp-bar"><div class="combat-hp-fill ${hpPct <= 25 ? 'low' : ''}" style="width:${hpPct}%"></div></div>
+          <div class="combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hpPct)}" style="width:${hpPct}%"></div></div>
           <div class="ficha-bar-controls">
             <button type="button" class="combat-hp-btn" data-hp-delta="-1">−</button>
             <input type="number" class="combat-hp-input" id="ficha-hp-input" value="${sheet.hp_current}">

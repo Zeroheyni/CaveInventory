@@ -52,6 +52,7 @@
 
 .combat-hp-bar{ height:10px; border-radius:6px; background: var(--stone-900); border:1px solid var(--stone-line); overflow:hidden; }
 .combat-hp-fill{ height:100%; background: linear-gradient(90deg, #1f7a34, #4ade80); transition: width 0.25s ease, background 0.25s ease; }
+.combat-hp-fill.mid{ background: linear-gradient(90deg, #a8860a, #ffd93d); }
 .combat-hp-fill.low{ background: linear-gradient(90deg, #b3261e, var(--danger)); }
 .combat-hp-controls{ display:flex; align-items:center; gap:6px; margin-top:8px; }
 .combat-hp-btn{
