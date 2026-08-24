@@ -14,6 +14,7 @@ import {
   setCampaignLiveSession,
 } from '../admin.js';
 import { renderCharacterScreen } from './character.js';
+import { renderMasterCombatScreen } from './masterCombat.js';
 
 export function renderAdminScreen(app, { session, profile }) {
   let campaigns = [];
@@ -185,6 +186,7 @@ export function renderAdminScreen(app, { session, profile }) {
                 <div class="admin-campaign-meta">código <b>${escapeHtml(c.invite_code)}</b> · ${memberCount(c.id)} membro(s) · criada em ${created}</div>
               </div>
               <div class="admin-campaign-actions">
+                <button type="button" class="btn btn-ghost" data-open-combat="${c.id}">⚔ combate</button>
                 <button type="button" class="btn btn-ghost" data-view-campaign="${c.id}">${isOpen ? 'fechar' : 'ver personagens'}</button>
                 <button type="button" class="admin-danger-btn ${isConfirming ? 'confirm-pending' : ''}" data-delete-campaign="${c.id}">${isConfirming ? 'confirmar?' : 'excluir'}</button>
               </div>
@@ -208,6 +210,9 @@ export function renderAdminScreen(app, { session, profile }) {
       })
       .join('');
 
+    listEl.querySelectorAll('button[data-open-combat]').forEach((btn) => {
+      btn.addEventListener('click', () => onOpenCombat(btn.dataset.openCombat));
+    });
     listEl.querySelectorAll('button[data-view-campaign]').forEach((btn) => {
       btn.addEventListener('click', () => toggleCampaign(btn.dataset.viewCampaign));
     });
@@ -296,6 +301,12 @@ export function renderAdminScreen(app, { session, profile }) {
     el.querySelectorAll('button[data-delete-character]').forEach((btn) => {
       btn.addEventListener('click', () => onDeleteCharacterClick(campaignId, btn.dataset.deleteCharacter));
     });
+  }
+
+  function onOpenCombat(campaignId) {
+    const campaign = campaigns.find((c) => c.id === campaignId);
+    if (!campaign) return;
+    renderMasterCombatScreen(app, { session, profile, campaign, onBack: () => renderAdminScreen(app, { session, profile }) });
   }
 
   async function onToggleLiveSession(campaignId, live) {
