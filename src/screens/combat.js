@@ -122,10 +122,16 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
     const mySelf = participants.find((p) => p.character_id === characterId);
     const list = visibleParticipants().slice().sort((a, b) => a.position - b.position);
+    const allSorted = participants.slice().sort((a, b) => a.position - b.position);
+    const currentTurn = allSorted[0] || null;
+    const currentTurnVisible = currentTurn && (isMaster || list.some((p) => p.id === currentTurn.id));
 
     app.innerHTML = `
       <div class="combat-round-bar">
-        <span class="combat-round-label">RODADA <b>${combatState.round}</b><span class="combat-turn-sub"> · turno ${combatState.turns_passed_this_round || 0}/${participants.length}</span></span>
+        <div class="combat-round-info">
+          <span class="combat-round-label">RODADA <b>${combatState.round}</b><span class="combat-turn-sub"> · turno ${combatState.turns_passed_this_round || 0}/${participants.length}</span></span>
+          ${currentTurn ? `<span class="combat-turn-indicator"><span class="combat-turn-dot"></span>vez de: <b>${currentTurnVisible ? escapeHtml(currentTurn.display_name) : '???'}</b></span>` : ''}
+        </div>
         <div class="combat-round-actions">
           ${isMaster && participants.length > 0 ? `<button type="button" class="btn" id="combat-pass-turn">passar turno ▸</button>` : ''}
           ${isMaster ? `<button type="button" class="admin-danger-btn" id="combat-end-btn">encerrar combate</button>` : ''}
@@ -135,9 +141,9 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       ${
         !isMaster && mySelf
           ? `
-        <div class="combat-self-card">
+        <div class="combat-self-card ${currentTurn && mySelf.id === currentTurn.id ? 'current-turn' : ''}">
           <div class="combat-self-card-head">
-            <span class="combat-self-name">${escapeHtml(mySelf.display_name)}</span>
+            <span class="combat-self-name">${escapeHtml(mySelf.display_name)}${currentTurn && mySelf.id === currentTurn.id ? ' <span class="combat-turn-indicator" style="display:inline-flex;"><span class="combat-turn-dot"></span>sua vez!</span>' : ''}</span>
             <span class="combat-hp-readout"><b>${mySelf.hp_current}</b> / ${mySelf.hp_max} HP</span>
           </div>
           <div class="combat-hp-bar"><div class="combat-hp-fill ${hpPct(mySelf) <= 25 ? 'low' : ''}" style="width:${hpPct(mySelf)}%"></div></div>
@@ -161,7 +167,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       }
 
       <div class="combat-list" id="combat-list">
-        ${list.length === 0 ? '<div class="combat-empty">ninguém na iniciativa ainda</div>' : list.map((p) => participantRow(p)).join('')}
+        ${list.length === 0 ? '<div class="combat-empty">ninguém na iniciativa ainda</div>' : list.map((p) => participantRow(p, currentTurn && p.id === currentTurn.id)).join('')}
       </div>
 
       ${isMaster ? addParticipantSection() : ''}
@@ -169,11 +175,11 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     `;
   }
 
-  function participantRow(p) {
+  function participantRow(p, isCurrentTurn) {
     const hiddenLabel = isMaster ? hiddenStatusLabel(p) : null;
     const showHp = canSeeHp(p);
     return `
-      <div class="combat-participant-row team-${p.team}" data-row-pid="${p.id}" ${isMaster ? 'draggable="true"' : ''}>
+      <div class="combat-participant-row team-${p.team} ${isCurrentTurn ? 'current-turn' : ''}" data-row-pid="${p.id}" ${isMaster ? 'draggable="true"' : ''}>
         ${isMaster ? '<span class="combat-drag-handle" title="arraste pra reordenar">⋮⋮</span>' : ''}
         <span class="combat-team-dot team-${p.team}"></span>
         <div class="combat-row-main">
