@@ -31,9 +31,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 109-9"/><path d="M3 4v5h5"/></svg>
         <span class="undo-count-badge" id="undo-count-badge" style="display:none;">0</span>
       </button>
-      <button class="theme-trigger-btn" id="combat-trigger" title="tela de combate">
-        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14.5 4.5l5 5-9 9-3 1 1-3 9-9z"/><path d="M13 6l5 5"/><path d="M5 19l2-2"/></svg>
-      </button>
       <div class="log-picker-wrap" id="summary-picker-wrap">
         <button class="theme-trigger-btn" id="summary-trigger" title="ver resumo do inventário">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="4" height="10" rx="1"/><rect x="10" y="6" width="4" height="14" rx="1"/><rect x="16" y="13" width="4" height="7" rx="1"/></svg>
@@ -293,6 +290,18 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
 <button class="vehicle-dropzone" id="backpack-return-btn" title="voltar pro inventário" style="display:none;">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 8V6a5 5 0 0110 0v2"/><rect x="5" y="8" width="14" height="13" rx="2"/><rect x="9.5" y="12" width="5" height="4" rx="1"/></svg>
 </button>
+
+<nav class="side-nav" id="side-nav">
+  <button type="button" class="side-nav-handle" id="side-nav-toggle" title="menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 6l6 6-6 6"/></svg>
+  </button>
+  <div class="side-nav-items">
+    <button type="button" class="side-nav-item" id="combat-trigger" title="tela de combate">
+      <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14.5 4.5l5 5-9 9-3 1 1-3 9-9z"/><path d="M13 6l5 5"/><path d="M5 19l2-2"/></svg></span>
+      <span class="side-nav-label">Combate</span>
+    </button>
+  </div>
+</nav>
 
 <div class="copy-fab-wrap">
   <div class="copy-feedback" id="copy-feedback">COPIADO!</div>
@@ -1322,7 +1331,15 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   }
   renderThemePanel();
 
-  document.getElementById('combat-trigger').addEventListener('click', ()=> setMode('combat'));
+  // ---- menu retrátil à esquerda (navegação secundária, ex: combate) ----
+  const sideNav = document.getElementById('side-nav');
+  document.getElementById('side-nav-toggle').addEventListener('click', ()=>{
+    sideNav.classList.toggle('open');
+  });
+  document.getElementById('combat-trigger').addEventListener('click', ()=>{
+    setMode('combat');
+    sideNav.classList.remove('open');
+  });
 
   document.getElementById('theme-trigger').addEventListener('click', ()=>{
     const panel = document.getElementById('theme-panel');

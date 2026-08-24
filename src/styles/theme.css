@@ -774,6 +774,33 @@
   .vehicle-dropzone:hover{ opacity:1; border-color: var(--accent-deep); color: var(--accent); }
   .vehicle-dropzone.drag-over{ opacity:1; border-color: var(--accent-core); background: var(--accent-faint); color: var(--accent); box-shadow: 0 0 14px var(--accent-faint); transform: scale(1.08); }
 
+  /* ---------- MENU RETRÁTIL LATERAL (navegação secundária, ex: combate) ---------- */
+  .side-nav{ position:fixed; left:0; top:50%; transform:translateY(-50%); z-index:39; display:flex; align-items:stretch; }
+  .side-nav-handle{
+    width:24px; height:56px; flex-shrink:0; border-radius:0 10px 10px 0;
+    background: var(--stone-800); border:1px solid var(--stone-line); border-left:none;
+    color: var(--ink-faint); display:flex; align-items:center; justify-content:center; cursor:pointer;
+    box-shadow: 3px 0 12px rgba(0,0,0,0.3); transition: color 0.15s ease, background 0.15s ease;
+  }
+  .side-nav-handle:hover{ color: var(--accent); }
+  .side-nav-handle svg{ width:14px; height:14px; transition: transform 0.3s cubic-bezier(.22,1,.36,1); }
+  .side-nav.open .side-nav-handle svg{ transform: rotate(180deg); }
+  .side-nav-items{
+    max-width:0; overflow:hidden; display:flex; flex-direction:column; gap:4px;
+    background: var(--stone-800); border:1px solid var(--stone-line); border-left:none;
+    border-radius:0 12px 12px 0; box-shadow: 3px 0 16px rgba(0,0,0,0.35);
+    transition: max-width 0.3s cubic-bezier(.22,1,.36,1), padding 0.3s cubic-bezier(.22,1,.36,1);
+  }
+  .side-nav.open .side-nav-items{ max-width:220px; padding:6px; }
+  .side-nav-item{
+    display:flex; align-items:center; gap:10px; background:none; border:none;
+    color: var(--ink-dim); font-family: var(--font-mono); font-size:12.5px;
+    padding:10px 12px; border-radius:8px; cursor:pointer; white-space:nowrap; transition: all 0.15s ease;
+  }
+  .side-nav-item:hover{ background: var(--accent-faint); color: var(--accent); }
+  .side-nav-icon{ width:18px; height:18px; flex-shrink:0; display:flex; align-items:center; justify-content:center; }
+  .side-nav-icon svg{ width:100%; height:100%; }
+
   .copy-fab-wrap{ position:fixed; right:18px; bottom:18px; z-index:40; display:flex; align-items:center; gap:10px; }
   .copy-feedback{ font-family: var(--font-display); font-size:10.5px; letter-spacing:0.1em; color: var(--accent); background: var(--stone-800); border:1px solid var(--accent-core); padding:7px 12px; border-radius:6px; box-shadow: 0 6px 18px rgba(0,0,0,0.4); opacity:0; transform: translateX(6px); transition: opacity 0.2s ease, transform 0.2s ease; pointer-events:none; white-space:nowrap; }
   .copy-feedback.show{ opacity:1; transform: translateX(0); }
