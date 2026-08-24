@@ -1,0 +1,108 @@
+/* ---------- FICHA (Fase 5) ---------- */
+.ficha-header-card{
+  display:flex; align-items:center; gap:16px; background: linear-gradient(160deg, var(--stone-800), var(--stone-900));
+  border:1px solid var(--stone-line); border-radius:12px; padding:16px; margin-bottom:14px;
+}
+.ficha-avatar-wrap{ position:relative; width:76px; height:76px; flex-shrink:0; }
+.ficha-avatar{
+  width:76px; height:76px; border-radius:50%; object-fit:cover; border:2px solid var(--accent-core);
+  background: var(--stone-900); display:flex; align-items:center; justify-content:center; color: var(--ink-faint);
+}
+.ficha-avatar-placeholder{
+  width:76px; height:76px; border-radius:50%; border:2px solid var(--stone-line); background: var(--stone-900);
+  display:flex; align-items:center; justify-content:center; color: var(--ink-faint);
+}
+.ficha-avatar-placeholder svg{ width:32px; height:32px; }
+.ficha-avatar-upload-btn{
+  position:absolute; bottom:-2px; right:-2px; width:26px; height:26px; border-radius:50%;
+  background: var(--stone-800); border:1px solid var(--accent-core); color: var(--accent);
+  display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:12px; transition: all 0.15s ease;
+}
+.ficha-avatar-upload-btn:hover{ background: var(--accent-faint); }
+.ficha-header-info{ flex:1; min-width:0; }
+.ficha-name{ font-family: var(--font-display); font-size:16px; letter-spacing:0.05em; color: var(--ink); margin-bottom:6px; }
+.ficha-level-row{ display:flex; align-items:center; gap:8px; }
+.ficha-level-tag{
+  font-family: var(--font-mono); font-size:11px; color: var(--accent); border:1px solid var(--accent-deep);
+  border-radius:5px; padding:3px 7px; flex-shrink:0; white-space:nowrap;
+}
+.ficha-xp-bar{ flex:1; height:8px; border-radius:5px; background: var(--stone-900); border:1px solid var(--stone-line); overflow:hidden; }
+.ficha-xp-fill{ height:100%; background: linear-gradient(90deg, var(--accent-deep), var(--accent)); transition: width 0.3s ease; }
+.ficha-xp-text{ font-family: var(--font-mono); font-size:10px; color: var(--ink-faint); flex-shrink:0; white-space:nowrap; }
+
+.ficha-bars{ display:grid; grid-template-columns: repeat(2, 1fr); gap:10px; margin-bottom:14px; }
+.ficha-bar-block{ background: var(--stone-800); border:1px solid var(--stone-line); border-radius:10px; padding:11px 13px; }
+.ficha-bar-label{ font-family: var(--font-display); font-size:10.5px; letter-spacing:0.08em; color: var(--ink-dim); margin-bottom:7px; display:flex; align-items:center; gap:5px; }
+.ficha-bar-readout{ margin-left:auto; font-family: var(--font-mono); font-size:11px; color: var(--ink-faint); }
+.ficha-bar-block .combat-hp-bar{ height:11px; margin-bottom:7px; }
+.ficha-bar-controls{ display:flex; align-items:center; gap:6px; }
+.ficha-estamina-fill{ background: linear-gradient(90deg, #2a7f9e, #45b8de) !important; }
+
+.ficha-section{ background: var(--stone-800); border:1px solid var(--stone-line); border-radius:10px; padding:14px 16px; margin-bottom:14px; }
+.ficha-section-head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:12px; flex-wrap:wrap; gap:8px; }
+.ficha-section-title{ font-family: var(--font-display); font-size:11.5px; letter-spacing:0.1em; color: var(--ink-dim); }
+.ficha-points-badge{ font-size:10.5px; color: var(--accent); border:1px solid var(--accent-deep); border-radius:12px; padding:3px 10px; background: var(--accent-faint); }
+
+.ficha-status-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:9px; margin-bottom:10px; }
+.ficha-stat-card{ background: var(--stone-900); border:1px solid var(--stone-line); border-radius:8px; padding:9px 10px; text-align:center; }
+.ficha-stat-label{ font-family: var(--font-display); font-size:9.5px; letter-spacing:0.06em; color: var(--ink-faint); margin-bottom:6px; }
+.ficha-stat-value{ font-family: var(--font-mono); font-size:18px; color: var(--ink); font-weight:700; }
+.ficha-stat-editrow{ display:flex; align-items:center; justify-content:center; gap:8px; }
+.ficha-stat-btn{
+  width:22px; height:22px; border-radius:5px; border:1px solid var(--stone-line); background: var(--stone-800);
+  color: var(--ink-dim); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:13px; transition: all 0.15s ease;
+}
+.ficha-stat-btn:hover{ color: var(--accent); border-color: var(--accent-core); }
+.ficha-stat-btn:disabled{ opacity:0.3; cursor:not-allowed; }
+.ficha-status-actions{ display:flex; gap:8px; }
+
+.ficha-fields-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
+.ficha-fields-grid input, .ficha-historia-box{
+  width:100%; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
+  font-family: var(--font-mono); font-size:12.5px; padding:8px 10px; border-radius:6px; box-sizing:border-box;
+}
+.ficha-fields-grid input:focus, .ficha-historia-box:focus{ outline:none; border-color: var(--accent-core); box-shadow: 0 0 0 2px var(--accent-faint); }
+.ficha-historia-box{ min-height:110px; resize:vertical; line-height:1.5; }
+
+.ficha-module-card{ background: var(--stone-900); border:1px solid var(--stone-line); border-radius:8px; padding:11px; margin-bottom:8px; }
+.ficha-module-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
+.ficha-module-title-input{
+  flex:1; background: var(--stone-800); border:1px solid var(--stone-line); color: var(--ink); font-family: var(--font-display);
+  font-size:11.5px; letter-spacing:0.05em; padding:7px 9px; border-radius:5px;
+}
+.ficha-module-content{
+  width:100%; background: var(--stone-800); border:1px solid var(--stone-line); color: var(--ink-dim); font-family: var(--font-mono);
+  font-size:12px; padding:8px 9px; border-radius:5px; min-height:60px; resize:vertical; line-height:1.5; box-sizing:border-box;
+}
+
+.ficha-master-badge{ font-size:10px; color: var(--accent); border:1px solid var(--accent-deep); border-radius:10px; padding:2px 8px; }
+
+/* ---------- DASHBOARD DO MESTRE ---------- */
+.ficha-dash-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap:12px; margin-bottom:18px; }
+.ficha-dash-card{
+  display:flex; gap:11px; background: var(--stone-800); border:1px solid var(--stone-line); border-radius:10px;
+  padding:12px; cursor:pointer; transition: all 0.15s ease; text-align:left;
+}
+.ficha-dash-card:hover{ border-color: var(--accent-core); transform: translateY(-1px); box-shadow: 0 6px 16px rgba(0,0,0,0.3); }
+.ficha-dash-avatar{ width:48px; height:48px; border-radius:50%; object-fit:cover; border:1px solid var(--stone-line); flex-shrink:0; background: var(--stone-900); }
+.ficha-dash-info{ flex:1; min-width:0; }
+.ficha-dash-name{ font-family: var(--font-mono); font-size:12.5px; font-weight:600; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-bottom:5px; }
+.ficha-dash-bar-row{ display:flex; align-items:center; gap:5px; margin-bottom:4px; }
+.ficha-dash-bar-row .combat-hp-bar{ flex:1; height:7px; }
+.ficha-dash-bar-icon{ font-size:9px; flex-shrink:0; width:12px; }
+
+.ficha-xp-panel{ background: var(--stone-800); border:1px solid var(--stone-line); border-radius:10px; padding:16px; }
+.ficha-xp-panel-head{ font-family: var(--font-display); font-size:12px; letter-spacing:0.08em; color: var(--ink-dim); margin-bottom:12px; }
+.ficha-xp-player-row{ display:flex; align-items:center; gap:10px; padding:7px 0; border-bottom:1px solid var(--stone-line); font-size:12.5px; color: var(--ink-dim); }
+.ficha-xp-player-row:last-of-type{ border-bottom:none; }
+.ficha-xp-player-row img{ width:26px; height:26px; border-radius:50%; object-fit:cover; background: var(--stone-900); flex-shrink:0; }
+.ficha-xp-input-row{ display:flex; gap:8px; margin-top:12px; align-items:center; }
+.ficha-xp-input-row input{
+  width:100px; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink); font-family: var(--font-mono);
+  font-size:13px; padding:8px 10px; border-radius:6px;
+}
+
+@media (max-width: 640px){
+  .ficha-header-card{ flex-direction:column; text-align:center; }
+  .ficha-bars{ grid-template-columns: 1fr; }
+}

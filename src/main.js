@@ -4,6 +4,7 @@ import './styles/campaign-strip.css';
 import './styles/admin.css';
 import './styles/publicArea.css';
 import './styles/combat.css';
+import './styles/ficha.css';
 import { supabase } from './supabaseClient.js';
 import { renderApp } from './router.js';
 import { isRerenderSuppressed } from './auth.js';

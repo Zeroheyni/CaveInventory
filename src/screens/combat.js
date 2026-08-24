@@ -18,6 +18,7 @@ import {
   addParticipant,
   removeParticipant,
   updateParticipantHp,
+  updateParticipantStamina,
   updateParticipantInitiative,
   forceReveal,
   hideAgain,
@@ -25,6 +26,7 @@ import {
   setPlayerCombatPermission,
   isVisibleToPlayer,
 } from '../combat.js';
+import { hpMax as charHpMax, estaminaMax as charEstaminaMax } from '../characterSheet.js';
 
 let activeChannel = null;
 
@@ -44,6 +46,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   let members = [];
   let addFormOpen = false;
   let addSource = 'character';
+  let addCharacterId = null;
   let hiddenMode = 'visible'; // 'visible' | 'countdown' | 'always'
   let dragId = null;
 
@@ -52,7 +55,11 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     participants = await getParticipants(campaignId);
     if (isMaster) {
       const [{ data: chars }, { data: profs }] = await Promise.all([
-        supabase.from('characters').select('id, name').eq('campaign_id', campaignId).order('name'),
+        supabase
+          .from('characters')
+          .select('id, name, vitalidade, estamina, hp_current, estamina_current')
+          .eq('campaign_id', campaignId)
+          .order('name'),
         supabase.from('profiles').select('id, username, role, can_see_others_hp, can_see_hidden_initiative').eq('campaign_id', campaignId),
       ]);
       charactersInCampaign = chars || [];
@@ -89,6 +96,9 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   }
   function hpPct(p) {
     return p.hp_max > 0 ? Math.max(0, Math.min(100, Math.round((p.hp_current / p.hp_max) * 100))) : 0;
+  }
+  function staminaPct(p) {
+    return p.stamina_max > 0 ? Math.max(0, Math.min(100, Math.round((p.stamina_current / p.stamina_max) * 100))) : 0;
   }
   function hiddenStatusLabel(p) {
     if (!p.hidden) return null;
@@ -136,6 +146,16 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             <input type="number" class="combat-hp-input" data-hp-input data-pid="${mySelf.id}" value="${mySelf.hp_current}">
             <button type="button" class="combat-hp-btn" data-hp-delta="1" data-pid="${mySelf.id}">+</button>
           </div>
+          <div class="combat-self-card-head" style="margin-top:10px;">
+            <span class="combat-self-name">⚡ Estamina</span>
+            <span class="combat-hp-readout"><b>${mySelf.stamina_current}</b> / ${mySelf.stamina_max}</span>
+          </div>
+          <div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${staminaPct(mySelf)}%"></div></div>
+          <div class="combat-hp-controls">
+            <button type="button" class="combat-hp-btn" data-est-delta="-1" data-pid="${mySelf.id}">−</button>
+            <input type="number" class="combat-hp-input" data-est-input data-pid="${mySelf.id}" value="${mySelf.stamina_current}">
+            <button type="button" class="combat-hp-btn" data-est-delta="1" data-pid="${mySelf.id}">+</button>
+          </div>
         </div>`
           : ''
       }
@@ -167,13 +187,25 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
                 : '<span class="combat-row-hptxt">HP oculto</span>'
             }
           </div>
+          ${
+            showHp && p.stamina_max > 0
+              ? `
+          <div class="combat-row-sub">
+            <div class="combat-row-hpbar combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${staminaPct(p)}%"></div></div>
+            <span class="combat-row-hptxt">${p.stamina_current}/${p.stamina_max} ⚡</span>
+          </div>`
+              : ''
+          }
         </div>
         ${
           isMaster
             ? `
-          <button type="button" class="combat-hp-btn" data-hp-delta="-1" data-pid="${p.id}">−</button>
-          <input type="number" class="combat-hp-input" data-hp-input data-pid="${p.id}" value="${p.hp_current}">
-          <button type="button" class="combat-hp-btn" data-hp-delta="1" data-pid="${p.id}">+</button>
+          <button type="button" class="combat-hp-btn" data-hp-delta="-1" data-pid="${p.id}" title="HP">−</button>
+          <input type="number" class="combat-hp-input" data-hp-input data-pid="${p.id}" value="${p.hp_current}" title="HP">
+          <button type="button" class="combat-hp-btn" data-hp-delta="1" data-pid="${p.id}" title="HP">+</button>
+          <button type="button" class="combat-hp-btn" data-est-delta="-1" data-pid="${p.id}" title="Estamina">−⚡</button>
+          <input type="number" class="combat-hp-input" data-est-input data-pid="${p.id}" value="${p.stamina_current}" title="Estamina">
+          <button type="button" class="combat-hp-btn" data-est-delta="1" data-pid="${p.id}" title="Estamina">+⚡</button>
           <input type="number" class="combat-init-input" data-init-input data-pid="${p.id}" value="${p.initiative ?? ''}" title="iniciativa" placeholder="ini">`
             : `<span class="combat-init-badge" title="iniciativa">${p.initiative ?? '—'}</span>`
         }
@@ -185,6 +217,8 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
   function addParticipantSection() {
     const availableChars = charactersInCampaign.filter((c) => !participants.some((p) => p.character_id === c.id));
+    const currentAddCharId = addCharacterId || (availableChars[0] && availableChars[0].id) || null;
+    const selectedChar = availableChars.find((c) => c.id === currentAddCharId);
     return `
       <div class="combat-add-trigger">
         <button type="button" class="btn btn-ghost" id="combat-add-trigger">${addFormOpen ? 'fechar' : '+ adicionar participante'}</button>
@@ -206,7 +240,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
               <select class="slot-select" id="combat-add-character">
                 ${
                   availableChars.length
-                    ? availableChars.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')
+                    ? availableChars.map((c) => `<option value="${c.id}" ${c.id === currentAddCharId ? 'selected' : ''}>${escapeHtml(c.name)}</option>`).join('')
                     : '<option value="">nenhum personagem disponível</option>'
                 }
               </select>
@@ -225,10 +259,23 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
               <option value="neutro">Neutro</option>
             </select>
           </div>
+          ${
+            addSource === 'character'
+              ? `<div class="transfer-balance" id="combat-add-char-preview" style="margin-bottom:10px;">${
+                  selectedChar
+                    ? `<span>❤ ${selectedChar.hp_current}/${charHpMax(selectedChar)}</span><span class="transfer-balance-arrow">·</span><span>⚡ ${selectedChar.estamina_current}/${charEstaminaMax(selectedChar)}</span>`
+                    : '<span>sem personagem disponível</span>'
+                }</div>`
+              : `
           <div class="field" style="margin-bottom:10px;">
             <label>HP máximo</label>
             <input type="number" class="slot-select" id="combat-add-hp" min="1" value="10">
           </div>
+          <div class="field" style="margin-bottom:10px;">
+            <label>Estamina máxima</label>
+            <input type="number" class="slot-select" id="combat-add-stamina" min="0" value="10">
+          </div>`
+          }
           <div class="field" style="margin-bottom:10px;">
             <label>Iniciativa</label>
             <div style="display:flex; gap:6px;">
@@ -315,6 +362,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       const sourceBtn = e.target.closest('button[data-add-source]');
       if (sourceBtn) {
         addSource = sourceBtn.dataset.addSource;
+        addCharacterId = null;
         render();
         return;
       }
@@ -336,7 +384,19 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         const next = Math.max(0, Math.min(p.hp_max, p.hp_current + Number(hpDeltaBtn.dataset.hpDelta)));
         p.hp_current = next; // otimista -- clique seguinte já lê o valor atualizado, sem esperar o roundtrip
         render();
-        await updateParticipantHp(pid, next);
+        await updateParticipantHp(pid, next, p.character_id);
+        return;
+      }
+
+      const estDeltaBtn = e.target.closest('button[data-est-delta]');
+      if (estDeltaBtn) {
+        const pid = estDeltaBtn.dataset.pid;
+        const p = participants.find((x) => x.id === pid);
+        if (!p) return;
+        const next = Math.max(0, Math.min(p.stamina_max, p.stamina_current + Number(estDeltaBtn.dataset.estDelta)));
+        p.stamina_current = next;
+        render();
+        await updateParticipantStamina(pid, next, p.character_id);
         return;
       }
 
@@ -373,13 +433,30 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         return;
       }
 
+      const charSelect = e.target.closest('#combat-add-character');
+      if (charSelect) {
+        addCharacterId = charSelect.value || null;
+        render();
+        return;
+      }
+
       const hpInput = e.target.closest('input[data-hp-input]');
       if (hpInput) {
         const pid = hpInput.dataset.pid;
         const p = participants.find((x) => x.id === pid);
         if (!p) return;
         const next = Math.max(0, Math.min(p.hp_max, parseInt(hpInput.value) || 0));
-        await updateParticipantHp(pid, next);
+        await updateParticipantHp(pid, next, p.character_id);
+        return;
+      }
+
+      const estInput = e.target.closest('input[data-est-input]');
+      if (estInput) {
+        const pid = estInput.dataset.pid;
+        const p = participants.find((x) => x.id === pid);
+        if (!p) return;
+        const next = Math.max(0, Math.min(p.stamina_max, parseInt(estInput.value) || 0));
+        await updateParticipantStamina(pid, next, p.character_id);
         return;
       }
 
@@ -449,7 +526,6 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
   async function onAddSubmit() {
     const team = $('combat-add-team').value;
-    const hpMax = Math.max(1, parseInt($('combat-add-hp').value) || 1);
     const initiativeRaw = $('combat-add-initiative').value;
     const initiative = initiativeRaw === '' ? null : parseInt(initiativeRaw);
     const revealInRounds = hiddenMode === 'countdown' ? Math.max(1, parseInt($('combat-add-reveal-rounds').value) || 1) : null;
@@ -460,9 +536,24 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       const charId = select.value;
       if (!charId) return;
       const char = charactersInCampaign.find((c) => c.id === charId);
+      if (!char) return;
+      // HP/Estamina de personagem vêm direto da ficha (persistentes) --
+      // não é o mestre que digita um valor novo aqui.
       await addParticipant(
         campaignId,
-        { characterId: charId, displayName: char ? char.name : 'Personagem', team, hpMax, initiative, hiddenMode, revealInRounds, currentRound: combatState.round },
+        {
+          characterId: charId,
+          displayName: char.name,
+          team,
+          hpMax: charHpMax(char),
+          hpCurrent: char.hp_current,
+          staminaMax: charEstaminaMax(char),
+          staminaCurrent: char.estamina_current,
+          initiative,
+          hiddenMode,
+          revealInRounds,
+          currentRound: combatState.round,
+        },
         position,
       );
     } else {
@@ -472,13 +563,16 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         nameInput.focus();
         return;
       }
+      const hpMax = Math.max(1, parseInt($('combat-add-hp').value) || 1);
+      const staminaMax = Math.max(0, parseInt($('combat-add-stamina').value) || 0);
       await addParticipant(
         campaignId,
-        { characterId: null, displayName: name, team, hpMax, initiative, hiddenMode, revealInRounds, currentRound: combatState.round },
+        { characterId: null, displayName: name, team, hpMax, staminaMax, initiative, hiddenMode, revealInRounds, currentRound: combatState.round },
         position,
       );
     }
     addFormOpen = false;
+    addCharacterId = null;
     await load();
   }
 

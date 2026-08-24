@@ -42,7 +42,16 @@ export async function advanceRound(campaignId, currentRound) {
 }
 
 // hiddenMode: 'visible' | 'countdown' | 'always'
-export async function addParticipant(campaignId, { characterId, displayName, team, hpMax, initiative, hiddenMode, revealInRounds, currentRound }, position) {
+// Pra NPC (characterId nulo), hpCurrent/staminaCurrent/staminaMax vêm
+// digitados pelo mestre. Pra personagem vinculado, quem chama já deve
+// ter puxado esses valores da ficha (characterSheet.js) -- HP e
+// Estamina de personagem são persistentes, não é o combate que decide
+// o valor inicial.
+export async function addParticipant(
+  campaignId,
+  { characterId, displayName, team, hpMax, hpCurrent, staminaMax, staminaCurrent, initiative, hiddenMode, revealInRounds, currentRound },
+  position,
+) {
   const hidden = hiddenMode !== 'visible';
   const reveal_at_round = hiddenMode === 'countdown' ? currentRound + Math.max(1, revealInRounds || 1) : null;
   const { error } = await supabase.from('combat_participants').insert({
@@ -50,8 +59,10 @@ export async function addParticipant(campaignId, { characterId, displayName, tea
     character_id: characterId || null,
     display_name: displayName,
     team,
-    hp_current: hpMax,
+    hp_current: hpCurrent ?? hpMax,
     hp_max: hpMax,
+    stamina_current: staminaCurrent ?? staminaMax ?? 0,
+    stamina_max: staminaMax ?? 0,
     initiative: initiative === '' || initiative === null || initiative === undefined ? null : initiative,
     position,
     hidden,
@@ -66,9 +77,23 @@ export async function removeParticipant(id) {
   if (error) throw error;
 }
 
-export async function updateParticipantHp(id, hpCurrent) {
-  const { error } = await supabase.from('combat_participants').update({ hp_current: hpCurrent }).eq('id', id);
-  if (error) throw error;
+// Pra participante vinculado a personagem, grava também em
+// characters.hp_current -- a ficha é a fonte única de verdade, o
+// combate só reflete/edita ela em tempo real.
+export async function updateParticipantHp(id, hpCurrent, characterId) {
+  const writes = [supabase.from('combat_participants').update({ hp_current: hpCurrent }).eq('id', id)];
+  if (characterId) writes.push(supabase.from('characters').update({ hp_current: hpCurrent }).eq('id', characterId));
+  const results = await Promise.all(writes);
+  const failed = results.find((r) => r.error);
+  if (failed) throw failed.error;
+}
+
+export async function updateParticipantStamina(id, staminaCurrent, characterId) {
+  const writes = [supabase.from('combat_participants').update({ stamina_current: staminaCurrent }).eq('id', id)];
+  if (characterId) writes.push(supabase.from('characters').update({ estamina_current: staminaCurrent }).eq('id', characterId));
+  const results = await Promise.all(writes);
+  const failed = results.find((r) => r.error);
+  if (failed) throw failed.error;
 }
 
 export async function updateParticipantInitiative(id, initiative) {

@@ -2,6 +2,8 @@ import { supabase } from '../supabaseClient.js';
 import { signOut } from '../auth.js';
 import { renderPublicAreaScreen } from './publicArea.js';
 import { renderCombatScreen } from './combat.js';
+import { renderFichaScreen } from './ficha.js';
+import { renderMasterFichaScreen } from './masterFicha.js';
 import { createPublicItem, createPublicContainer, listCampaignPlayers, transferCurrencyRpc } from '../publicArea.js';
 
 let activeChannel = null;
@@ -282,6 +284,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     </div>
     <footer>COMBATE — RASTREADOR DE HP E INICIATIVA</footer>
   </div>
+
+  <div id="ficha-mode-wrap" style="display:none;">
+    <div id="ficha-embed"></div>
+    <footer>FICHA — STATUS, HISTÓRIA E MÓDULOS DO PERSONAGEM</footer>
+  </div>
 </div>
 
 <button class="vehicle-dropzone" id="vehicle-dropzone" title="arraste um item aqui para guardar no veículo, sem peso">
@@ -303,6 +310,10 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     <button type="button" class="side-nav-item" id="combat-trigger" data-nav-mode="combat" title="tela de combate">
       <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14.5 4.5l5 5-9 9-3 1 1-3 9-9z"/><path d="M13 6l5 5"/><path d="M5 19l2-2"/></svg></span>
       <span class="side-nav-label">Combate</span>
+    </button>
+    <button type="button" class="side-nav-item" id="ficha-trigger" data-nav-mode="ficha" title="ficha do personagem">
+      <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg></span>
+      <span class="side-nav-label">Ficha</span>
     </button>
   </div>
 </nav>
@@ -1348,6 +1359,10 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     setMode('inventory');
     sideNav.classList.remove('open');
   });
+  document.getElementById('ficha-trigger').addEventListener('click', ()=>{
+    setMode('ficha');
+    sideNav.classList.remove('open');
+  });
 
   document.getElementById('theme-trigger').addEventListener('click', ()=>{
     const panel = document.getElementById('theme-panel');
@@ -2219,13 +2234,15 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     });
   });
 
-  // ---- alternância de modo (inventário <-> baú do veículo <-> combate) ----
+  // ---- alternância de modo (inventário <-> baú do veículo <-> combate <-> ficha) ----
   let combatMounted = false;
+  let fichaMounted = false;
   function setMode(mode){
     currentMode = mode;
     const invWrap = document.getElementById('inventory-mode-wrap');
     const transWrap = document.getElementById('transport-mode-wrap');
     const combatWrap = document.getElementById('combat-mode-wrap');
+    const fichaWrap = document.getElementById('ficha-mode-wrap');
     const vehicleBtn = document.getElementById('vehicle-dropzone');
     const backpackBtn = document.getElementById('backpack-return-btn');
     const titleText = document.getElementById('main-title-text');
@@ -2233,6 +2250,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     invWrap.style.display = 'none';
     transWrap.style.display = 'none';
     combatWrap.style.display = 'none';
+    fichaWrap.style.display = 'none';
     vehicleBtn.style.display = 'none';
     backpackBtn.style.display = 'none';
     copyBtn.style.display = 'flex';
@@ -2251,6 +2269,22 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       if(!combatMounted){
         combatMounted = true;
         renderCombatScreen(document.getElementById('combat-embed'), { session, profile, campaign, characterId, characterName });
+      }
+    } else if(mode === 'ficha'){
+      fichaWrap.style.display = 'block';
+      fichaWrap.classList.remove('mode-fade-in'); void fichaWrap.offsetWidth; fichaWrap.classList.add('mode-fade-in');
+      backpackBtn.style.display = 'flex';
+      titleText.textContent = 'FICHA';
+      copyBtn.style.display = 'none';
+      if(!fichaMounted){
+        fichaMounted = true;
+        // mestre vê o painel rápido de todos os jogadores da campanha;
+        // jogador vê só a própria ficha.
+        if(profile.role === 'master'){
+          renderMasterFichaScreen(document.getElementById('ficha-embed'), { session, profile, campaign });
+        } else {
+          renderFichaScreen(document.getElementById('ficha-embed'), { session, profile, campaign, characterId });
+        }
       }
     } else {
       invWrap.style.display = 'block';

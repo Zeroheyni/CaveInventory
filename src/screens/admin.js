@@ -15,6 +15,7 @@ import {
 } from '../admin.js';
 import { renderCharacterScreen } from './character.js';
 import { renderMasterCombatScreen } from './masterCombat.js';
+import { renderMasterFichaScreen } from './masterFicha.js';
 
 export function renderAdminScreen(app, { session, profile }) {
   let campaigns = [];
@@ -187,6 +188,7 @@ export function renderAdminScreen(app, { session, profile }) {
               </div>
               <div class="admin-campaign-actions">
                 <button type="button" class="btn btn-ghost" data-open-combat="${c.id}">⚔ combate</button>
+                <button type="button" class="btn btn-ghost" data-open-ficha-campaign="${c.id}">📋 fichas</button>
                 <button type="button" class="btn btn-ghost" data-view-campaign="${c.id}">${isOpen ? 'fechar' : 'ver personagens'}</button>
                 <button type="button" class="admin-danger-btn ${isConfirming ? 'confirm-pending' : ''}" data-delete-campaign="${c.id}">${isConfirming ? 'confirmar?' : 'excluir'}</button>
               </div>
@@ -212,6 +214,9 @@ export function renderAdminScreen(app, { session, profile }) {
 
     listEl.querySelectorAll('button[data-open-combat]').forEach((btn) => {
       btn.addEventListener('click', () => onOpenCombat(btn.dataset.openCombat));
+    });
+    listEl.querySelectorAll('button[data-open-ficha-campaign]').forEach((btn) => {
+      btn.addEventListener('click', () => onOpenFicha(btn.dataset.openFichaCampaign));
     });
     listEl.querySelectorAll('button[data-view-campaign]').forEach((btn) => {
       btn.addEventListener('click', () => toggleCampaign(btn.dataset.viewCampaign));
@@ -307,6 +312,12 @@ export function renderAdminScreen(app, { session, profile }) {
     const campaign = campaigns.find((c) => c.id === campaignId);
     if (!campaign) return;
     renderMasterCombatScreen(app, { session, profile, campaign, onBack: () => renderAdminScreen(app, { session, profile }) });
+  }
+
+  function onOpenFicha(campaignId) {
+    const campaign = campaigns.find((c) => c.id === campaignId);
+    if (!campaign) return;
+    renderMasterFichaScreen(app, { session, profile, campaign, onBack: () => renderAdminScreen(app, { session, profile }) });
   }
 
   async function onToggleLiveSession(campaignId, live) {
