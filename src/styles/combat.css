@@ -31,7 +31,7 @@
 .combat-master-player-head{ display:flex; align-items:center; gap:7px; margin-bottom:7px; }
 .combat-master-player-name{ font-family: var(--font-mono); font-size:12px; font-weight:600; color: var(--ink); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .combat-master-bar-txt{ font-family: var(--font-mono); font-size:10px; color: var(--ink-faint); margin:2px 0 6px; }
-.combat-master-stat-row{ display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.combat-master-stat-row{ display:flex; flex-wrap:wrap; justify-content:center; gap:4px; margin-top:6px; }
 .combat-master-stat-chip{
   font-family: var(--font-mono); font-size:10px; color: var(--stat-color, var(--ink-dim)); background: var(--stone-900);
   border:1px solid var(--stone-line); border-radius:5px; padding:2px 5px;

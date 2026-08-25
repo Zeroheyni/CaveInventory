@@ -600,6 +600,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
 
     document.body.style.pointerEvents = '';
     document.body.style.opacity = '';
+    document.body.style.transition = '';
   }
 
   let lastWrittenUpdatedAt = null;
@@ -1183,9 +1184,12 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     const damageCopyText = computedDamage !== null
       ? `${computedDamage}${it.damageType ? ' dano de ' + it.damageType : ''}`
       : (it.damage || '');
+    const damageFormulaHtml = (computedDamage !== null && it.damage)
+      ? `<span class="weapon-damage-formula">${escapeHtml(it.damage)}</span>`
+      : '';
     const weaponStatsHtml = (it.tag === 'arma' && (it.damage || it.range))
       ? `<div class="weapon-stats">
-           ${it.damage ? `<span class="weapon-stat-badge" title="fórmula: ${escapeHtml(it.damage)}">${DAMAGE_ICON}${escapeHtml(damageNumberText)}${damageTypeHtml}<button class="weapon-copy-btn" data-copy-text="${escapeHtml(damageCopyText)}" title="copiar dano">${COPY_MINI_ICON}</button></span>` : ''}
+           ${it.damage ? `<span class="weapon-stat-badge weapon-damage-badge">${DAMAGE_ICON}${escapeHtml(damageNumberText)}${damageTypeHtml}${damageFormulaHtml}<button class="weapon-copy-btn" data-copy-text="${escapeHtml(damageCopyText)}" title="copiar dano">${COPY_MINI_ICON}</button></span>` : ''}
            ${it.range ? `<span class="weapon-stat-badge" title="alcance">${RANGE_ICON}${escapeHtml(it.range)}</span>` : ''}
          </div>`
       : '';

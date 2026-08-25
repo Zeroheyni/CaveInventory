@@ -333,6 +333,13 @@
 
   *{box-sizing:border-box; margin:0; padding:0;}
 
+  /* troca de tema suave -- só nas cores (background/border/texto/sombra),
+     nunca em layout (width/transform/etc) pra não atrapalhar drag-and-drop,
+     abrir/fechar modais e outras animações específicas de cada elemento
+     (que continuam mandando, por serem mais específicas que o seletor *). */
+  *, *::before, *::after{
+    transition: background-color 0.35s ease, border-color 0.35s ease, color 0.35s ease, box-shadow 0.35s ease;
+  }
   html,body{ min-height:100%; background: var(--void); color: var(--ink); font-family: var(--font-mono); }
   body{
     position:relative; overflow-x:hidden; padding: 28px 16px 90px; line-height:1.5;
@@ -440,6 +447,14 @@
   .weapon-copy-btn:hover{ color: var(--accent); }
   .weapon-stat-badge svg{ width:11px; height:11px; color: var(--accent); flex-shrink:0; }
   .weapon-damage-type{ color: var(--ink-faint); font-style:italic; }
+  .weapon-damage-badge{ transition: border-color 0.2s ease, background 0.2s ease; }
+  .weapon-damage-badge:hover{ border-color: var(--accent-core); background: var(--accent-faint); }
+  .weapon-damage-formula{
+    display:inline-block; max-width:0; overflow:hidden; white-space:nowrap; opacity:0;
+    color: var(--ink-faint); font-style:italic;
+    transition: max-width 0.35s cubic-bezier(.22,1,.36,1), opacity 0.25s ease, margin-left 0.35s cubic-bezier(.22,1,.36,1);
+  }
+  .weapon-damage-badge:hover .weapon-damage-formula{ max-width:260px; opacity:1; margin-left:6px; }
 
   /* ---------- SELEÇÃO EM LOTE ---------- */
   .item-card.is-selected, .nested-item-row.is-selected, .container-card.is-selected{

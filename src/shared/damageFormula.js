@@ -5,12 +5,15 @@
 // mestre (combat.js), por isso fica compartilhado aqui.
 //
 // Siglas de status reconhecidas (case-insensitive, "palavra inteira"
-// pra não confundir com nome de item): FOR, VIT, AGI, DES, INT, EST, OBS.
+// pra não confundir com nome de item): FOR, VIT, AGI, DES/DEZ, INT, EST, OBS.
+// DEZ é alias de DES (destreza) -- foi o exemplo usado ao pedir essa
+// funcionalidade, então precisa funcionar igual.
 export const STATUS_ABBREV_MAP = {
   FOR: 'forca',
   VIT: 'vitalidade',
   AGI: 'agilidade',
   DES: 'destreza',
+  DEZ: 'destreza',
   INT: 'inteligencia',
   EST: 'estamina',
   OBS: 'observacao',
@@ -87,7 +90,7 @@ export function evaluateDamageFormula(formula, statusValues, resolveAmmoDamage) 
     return val === null || val === undefined ? match : String(val);
   });
 
-  expr = expr.replace(/\b(FOR|VIT|AGI|DES|INT|EST|OBS)\b/gi, (match) => {
+  expr = expr.replace(/\b(FOR|VIT|AGI|DES|DEZ|INT|EST|OBS)\b/gi, (match) => {
     const key = STATUS_ABBREV_MAP[match.toUpperCase()];
     const val = statusValues ? statusValues[key] : undefined;
     return typeof val === 'number' ? String(val) : match;
