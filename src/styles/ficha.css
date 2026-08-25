@@ -63,7 +63,8 @@
 .ficha-stat-btn:disabled{ opacity:0.3; cursor:not-allowed; }
 .ficha-status-actions{ display:flex; gap:8px; }
 
-.ficha-fields-grid{ display:grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap:10px; }
+.ficha-fields-grid{ display:flex; flex-wrap:wrap; gap:10px; }
+.ficha-fields-grid > div{ flex:1 1 150px; }
 .ficha-fields-grid input, .ficha-historia-box{
   width:100%; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
   font-family: var(--font-mono); font-size:12.5px; padding:8px 10px; border-radius:6px; box-sizing:border-box;
