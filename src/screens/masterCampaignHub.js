@@ -44,6 +44,12 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
   const mounted = { inventory: false, combat: false, ficha: false, npcs: false };
 
   function render() {
+    // render() sempre reconstrói o DOM inteiro (chamado de novo depois que o
+    // mestre volta de um "escape" pra tela cheia de personagem/NPC) -- os
+    // embeds antigos ficam órfãos junto com o DOM velho, então precisa
+    // remontar tudo de novo, senão a aba atual fica com o miolo vazio
+    // (mounted continuava true apontando pra um container que não existe mais).
+    Object.keys(mounted).forEach((m) => (mounted[m] = false));
     app.innerHTML = `
       <div class="wrap">
         <div class="header">
