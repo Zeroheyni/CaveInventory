@@ -38,7 +38,7 @@ export function hpBarClass(pct) {
   return '';
 }
 export function emptySheetData() {
-  return { idade: '', genero: '', sexualidade: '', historia: '', modulos: [] };
+  return { idade: '', genero: '', sexualidade: '', raca: '', trabalho: '', historia: '', modulos: [] };
 }
 export function sheetDataOf(char) {
   return { ...emptySheetData(), ...(char.sheet_data || {}) };

@@ -168,6 +168,8 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
           <div><label style="font-size:9px; color:var(--ink-faint); display:block; margin-bottom:4px;">Idade</label><input type="text" id="ficha-idade" value="${escapeHtml(data.idade)}"></div>
           <div><label style="font-size:9px; color:var(--ink-faint); display:block; margin-bottom:4px;">Gênero</label><input type="text" id="ficha-genero" value="${escapeHtml(data.genero)}"></div>
           <div><label style="font-size:9px; color:var(--ink-faint); display:block; margin-bottom:4px;">Sexualidade</label><input type="text" id="ficha-sexualidade" value="${escapeHtml(data.sexualidade)}"></div>
+          <div><label style="font-size:9px; color:var(--ink-faint); display:block; margin-bottom:4px;">Raça</label><input type="text" id="ficha-raca" value="${escapeHtml(data.raca)}"></div>
+          <div><label style="font-size:9px; color:var(--ink-faint); display:block; margin-bottom:4px;">Trabalho</label><input type="text" id="ficha-trabalho" value="${escapeHtml(data.trabalho)}"></div>
         </div>
       </div>
 
@@ -407,6 +409,10 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
       if (generoInput) return saveSheetDataField((data) => ({ ...data, genero: generoInput.value }));
       const sexInput = e.target.closest('#ficha-sexualidade');
       if (sexInput) return saveSheetDataField((data) => ({ ...data, sexualidade: sexInput.value }));
+      const racaInput = e.target.closest('#ficha-raca');
+      if (racaInput) return saveSheetDataField((data) => ({ ...data, raca: racaInput.value }));
+      const trabalhoInput = e.target.closest('#ficha-trabalho');
+      if (trabalhoInput) return saveSheetDataField((data) => ({ ...data, trabalho: trabalhoInput.value }));
       const historiaInput = e.target.closest('#ficha-historia');
       if (historiaInput) return saveSheetDataField((data) => ({ ...data, historia: historiaInput.value }));
 
