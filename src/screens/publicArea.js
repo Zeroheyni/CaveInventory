@@ -1161,7 +1161,14 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
 
     async function writeCurrency(key, value) {
       if (key === 'personal') {
-        const { error } = await supabase.from('characters').update({ currency: value }).eq('id', myCharacter.id);
+        // inventory_updated_at avisa a aba do inventário (character.js)
+        // que a moeda mudou por fora -- sem isso, um save do inventário
+        // feito logo depois nessa outra aba pode sobrescrever essa
+        // transferência com o saldo antigo que ela ainda tinha em memória.
+        const { error } = await supabase
+          .from('characters')
+          .update({ currency: value, inventory_updated_at: new Date().toISOString() })
+          .eq('id', myCharacter.id);
         if (error) throw error;
       } else if (key === 'avulso') {
         await updatePublicCurrency(campaignId, value);

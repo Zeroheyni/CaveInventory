@@ -1,0 +1,13 @@
+-- Trava contra sobrescrita silenciosa do inventário pessoal (ver bug do
+-- Gregory: characters.data é um blob único regravado por inteiro a cada
+-- save do character.js -- sem nenhuma checagem de versão, uma aba que
+-- ficou muito tempo em segundo plano (perdeu o tempo real) podia
+-- sobrescrever uma gravação mais nova de outra sessão com dados velhos).
+--
+-- Coluna separada de `updated_at` (que também é tocada por HP/estamina
+-- do combate, status/avatar da ficha, etc. -- nada disso deveria
+-- invalidar a gravação do inventário). Só é tocada por quem escreve
+-- nos campos que o saveState() do character.js grava por inteiro
+-- (data/currency/max_carga/name): o próprio character.js e a
+-- transferência de moeda pessoal em publicArea.js.
+alter table characters add column inventory_updated_at timestamptz not null default now();

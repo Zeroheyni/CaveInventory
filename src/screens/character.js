@@ -502,6 +502,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     }
     characterId = row.id;
     characterName = row.name || 'Personagem';
+    knownUpdatedAt = row.inventory_updated_at;
     const d = row.data || {};
 
     state.items = Array.isArray(d.items) ? d.items : [];
@@ -546,13 +547,26 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   }
 
   let lastWrittenUpdatedAt = null;
+  // inventory_updated_at que essa aba sabe ser o real -- gravação só é
+  // aceita se ainda bater com esse valor no servidor (ver saveState).
+  // Sem isso, uma aba que ficou muito tempo em segundo plano (perde o
+  // tempo real) pode sobrescrever silenciosamente uma gravação mais
+  // nova de outra sessão com dados velhos. Coluna separada de
+  // `updated_at` porque essa também é tocada por HP/estamina do
+  // combate e status/avatar da ficha -- nada disso é conflito de
+  // verdade pro inventário.
+  let knownUpdatedAt = null;
 
   function subscribeRealtime(){
     activeChannel = supabase
       .channel('character-' + characterId)
       .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'characters', filter: `id=eq.${characterId}` }, (payload) => {
         const row = payload.new;
-        if(!row || row.updated_at === lastWrittenUpdatedAt) return; // eco da nossa própria gravação
+        // compara por instante, não por string -- o Postgres devolve o
+        // timestamp em formato diferente do que o JS mandou (+00:00 vs
+        // Z), então uma comparação de string nunca bate com a própria
+        // gravação e todo save próprio parecia "vindo de outro dispositivo".
+        if(!row || (row.inventory_updated_at && lastWrittenUpdatedAt && new Date(row.inventory_updated_at).getTime() === new Date(lastWrittenUpdatedAt).getTime())) return; // eco da nossa própria gravação
         applyRemoteRow(row);
       })
       .subscribe();
@@ -560,6 +574,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
 
   function applyRemoteRow(row){
     characterName = row.name || 'Personagem';
+    knownUpdatedAt = row.inventory_updated_at;
     const d = row.data || {};
     state.items = Array.isArray(d.items) ? d.items : [];
     state.containers = Array.isArray(d.containers) ? d.containers : [];
@@ -582,8 +597,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     saveTimer = setTimeout(async ()=>{
       try{
         const updatedAt = new Date().toISOString();
-        lastWrittenUpdatedAt = updatedAt;
-        await supabase.from('characters').update({
+        const payload = {
           data: {
             items: state.items, containers: state.containers, order: state.order,
             equipSlots: state.equipSlots, equip: state.equip,
@@ -594,7 +608,28 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
           max_carga: state.maxCarga,
           name: characterName,
           updated_at: updatedAt,
-        }).eq('id', characterId);
+          inventory_updated_at: updatedAt,
+        };
+        // grava só se ninguém mudou a linha desde a última vez que essa
+        // aba a leu -- sem isso, uma aba que ficou muito tempo em
+        // segundo plano (perde o tempo real) pode sobrescrever
+        // silenciosamente uma gravação mais nova de outra sessão com
+        // dados velhos.
+        let query = supabase.from('characters').update(payload).eq('id', characterId);
+        if(knownUpdatedAt) query = query.eq('inventory_updated_at', knownUpdatedAt);
+        const { data: rows, error } = await query.select('inventory_updated_at');
+        if(error) throw error;
+        if(!rows || rows.length === 0){
+          // conflito -- descarta essa gravação (não sobrescreve) e
+          // recarrega o estado real do servidor.
+          const { data: fresh } = await supabase.from('characters').select('*').eq('id', characterId).maybeSingle();
+          if(fresh) applyRemoteRow(fresh);
+          if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // conflito -- recarregado';
+          window.alert('Outra sessão salvou uma mudança antes da sua. Pra não perder nada, os dados mais recentes foram recarregados -- se você fez alguma alteração agora, refaça ela.');
+          return;
+        }
+        lastWrittenUpdatedAt = updatedAt;
+        knownUpdatedAt = updatedAt;
         if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // sincronizado';
       }catch(e){ console.error('falha ao salvar', e); if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // erro ao gravar'; }
     }, 300);
@@ -662,6 +697,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       if(!it) return;
       removeFromEverywhere('item', id);
       state.items = state.items.filter(i => i.id !== id);
+      const equippedVal = 'item:' + id;
+      Object.keys(state.equip).forEach(k => { if(state.equip[k] === equippedVal) state.equip[k] = ''; });
       renderAll(); saveState();
       try{
         await createPublicItem({
@@ -678,6 +715,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       if(c.contents.length > 0){ flashStatus('ESVAZIE O RECIPIENTE ANTES DE MOVER'); return; }
       removeFromEverywhere('container', id);
       state.containers = state.containers.filter(cc => cc.id !== id);
+      const equippedVal = 'container:' + id;
+      Object.keys(state.equip).forEach(k => { if(state.equip[k] === equippedVal) state.equip[k] = ''; });
       renderAll(); saveState();
       try{
         await createPublicContainer({
