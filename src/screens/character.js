@@ -507,9 +507,16 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         .limit(1);
       row = rows && rows[0];
       if(!row){
+        // ver db/022_patch_character_owner_unique.sql: duas cargas rápidas
+        // dessa tela sem personagem ainda criado podiam cair aqui ao mesmo
+        // tempo e criar duas linhas pro mesmo dono+campanha (corrida entre
+        // o select acima e o insert). upsert com ignoreDuplicates vira um
+        // "insert ... on conflict do nothing" -- se perder a corrida, não
+        // cria linha nenhuma (nem sobrescreve a que já existe), e busca ela
+        // de novo abaixo.
         const { data: created } = await supabase
           .from('characters')
-          .insert({
+          .upsert({
             campaign_id: campaignId,
             owner_id: userId,
             data: {
@@ -518,10 +525,19 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
               transportPersonal: [], transportPersonalMaxCarga: 100,
               theme: 'caverna-azul'
             }
-          })
+          }, { onConflict: 'campaign_id,owner_id', ignoreDuplicates: true })
           .select()
-          .single();
+          .maybeSingle();
         row = created;
+        if(!row){
+          const { data: existing } = await supabase
+            .from('characters')
+            .select('*')
+            .eq('campaign_id', campaignId)
+            .eq('owner_id', userId)
+            .limit(1);
+          row = existing && existing[0];
+        }
       }
     }
     characterId = row.id;
@@ -633,49 +649,68 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     flashStatus('ATUALIZADO POR OUTRO DISPOSITIVO');
   }
 
+  // encadeia todo save nessa promise -- sem isso, duas gravações desta
+  // MESMA aba disparadas perto uma da outra (ex: dois cliques rápidos,
+  // com o roundtrip de rede mais lento que os 300ms do debounce) podiam
+  // se sobrepor e usar o MESMO knownUpdatedAt desatualizado, fazendo a
+  // segunda achar que caiu num conflito de outra sessão quando na
+  // verdade era só a própria aba se atropelando -- daí o alerta de
+  // "conflito" aparecendo toda hora em uso normal, sem conflito real
+  // nenhum. Serializar garante que cada save só começa depois que o
+  // anterior já atualizou o knownUpdatedAt.
+  let saveChain = Promise.resolve();
+
   function saveState(){
     const statusEl = document.getElementById('save-status');
     if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // gravando...';
     clearTimeout(saveTimer);
-    saveTimer = setTimeout(async ()=>{
-      try{
-        const updatedAt = new Date().toISOString();
-        const payload = {
-          data: {
-            items: state.items, containers: state.containers, order: state.order,
-            equipSlots: state.equipSlots, equip: state.equip,
-            transportPersonal: state.transportPersonal, transportPersonalMaxCarga: state.transportPersonalMaxCarga,
-            theme: state.theme
-          },
-          currency: state.currency,
-          max_carga: state.maxCarga,
-          name: characterName,
-          updated_at: updatedAt,
-          inventory_updated_at: updatedAt,
-        };
-        // grava só se ninguém mudou a linha desde a última vez que essa
-        // aba a leu -- sem isso, uma aba que ficou muito tempo em
-        // segundo plano (perde o tempo real) pode sobrescrever
-        // silenciosamente uma gravação mais nova de outra sessão com
-        // dados velhos.
-        let query = supabase.from('characters').update(payload).eq('id', characterId);
-        if(knownUpdatedAt) query = query.eq('inventory_updated_at', knownUpdatedAt);
-        const { data: rows, error } = await query.select('inventory_updated_at');
-        if(error) throw error;
-        if(!rows || rows.length === 0){
-          // conflito -- descarta essa gravação (não sobrescreve) e
-          // recarrega o estado real do servidor.
-          const { data: fresh } = await supabase.from('characters').select('*').eq('id', characterId).maybeSingle();
-          if(fresh) applyRemoteRow(fresh);
-          if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // conflito -- recarregado';
-          window.alert('Outra sessão salvou uma mudança antes da sua. Pra não perder nada, os dados mais recentes foram recarregados -- se você fez alguma alteração agora, refaça ela.');
-          return;
-        }
-        lastWrittenUpdatedAt = updatedAt;
-        knownUpdatedAt = updatedAt;
-        if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // sincronizado';
-      }catch(e){ console.error('falha ao salvar', e); if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // erro ao gravar'; }
+    saveTimer = setTimeout(()=>{
+      saveChain = saveChain.then(() => doSaveState());
     }, 300);
+  }
+  async function doSaveState(){
+    // busca de novo em vez de reusar a referência de quando o save foi
+    // pedido -- com o encadeamento, essa gravação pode rodar bem depois
+    // (esperando a anterior terminar), e a re-renderização já pode ter
+    // trocado o elemento no DOM.
+    const statusEl = document.getElementById('save-status');
+    try{
+      const updatedAt = new Date().toISOString();
+      const payload = {
+        data: {
+          items: state.items, containers: state.containers, order: state.order,
+          equipSlots: state.equipSlots, equip: state.equip,
+          transportPersonal: state.transportPersonal, transportPersonalMaxCarga: state.transportPersonalMaxCarga,
+          theme: state.theme
+        },
+        currency: state.currency,
+        max_carga: state.maxCarga,
+        name: characterName,
+        updated_at: updatedAt,
+        inventory_updated_at: updatedAt,
+      };
+      // grava só se ninguém mudou a linha desde a última vez que essa
+      // aba a leu -- sem isso, uma aba que ficou muito tempo em
+      // segundo plano (perde o tempo real) pode sobrescrever
+      // silenciosamente uma gravação mais nova de outra sessão com
+      // dados velhos.
+      let query = supabase.from('characters').update(payload).eq('id', characterId);
+      if(knownUpdatedAt) query = query.eq('inventory_updated_at', knownUpdatedAt);
+      const { data: rows, error } = await query.select('inventory_updated_at');
+      if(error) throw error;
+      if(!rows || rows.length === 0){
+        // conflito -- descarta essa gravação (não sobrescreve) e
+        // recarrega o estado real do servidor.
+        const { data: fresh } = await supabase.from('characters').select('*').eq('id', characterId).maybeSingle();
+        if(fresh) applyRemoteRow(fresh);
+        if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // conflito -- recarregado';
+        window.alert('Outra sessão salvou uma mudança antes da sua. Pra não perder nada, os dados mais recentes foram recarregados -- se você fez alguma alteração agora, refaça ela.');
+        return;
+      }
+      lastWrittenUpdatedAt = updatedAt;
+      knownUpdatedAt = updatedAt;
+      if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // sincronizado';
+    }catch(e){ console.error('falha ao salvar', e); if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // erro ao gravar'; }
   }
   function flashStatus(msg){
     const el = document.getElementById('save-status');
