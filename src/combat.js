@@ -119,6 +119,12 @@ export async function addParticipant(
   if (error) throw error;
 }
 
+// dano de NPC -- texto livre digitado pelo mestre (ver db/023).
+export async function updateParticipantDamage(id, damage) {
+  const { error } = await supabase.from('combat_participants').update({ damage }).eq('id', id);
+  if (error) throw error;
+}
+
 export async function removeParticipant(id) {
   const { error } = await supabase.from('combat_participants').delete().eq('id', id);
   if (error) throw error;

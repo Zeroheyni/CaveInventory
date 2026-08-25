@@ -21,6 +21,7 @@ import {
   removeParticipant,
   updateParticipantHp,
   updateParticipantStamina,
+  updateParticipantDamage,
   updateParticipantInitiative,
   forceReveal,
   hideAgain,
@@ -52,7 +53,8 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   let addCharacterId = null;
   let hiddenMode = 'visible'; // 'visible' | 'countdown' | 'always'
   let dragId = null;
-  let openWeaponInfo = null; // id do personagem com o popover de dano da arma aberto (só mestre)
+  let openWeaponInfo = null; // id do participante com o popover de dano da arma aberto (só mestre)
+  let masterCardTab = 'jogadores'; // 'jogadores' | 'aliados' | 'inimigos'
 
   async function load() {
     combatState = await getCombatState(campaignId);
@@ -150,38 +152,104 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     const typeText = weapon.damageType ? ` de ${weapon.damageType}` : '';
     return `${weapon.name}: ${numberText} dano${typeText}`;
   }
-  function masterPlayersSummary() {
-    if (charactersInCampaign.length === 0) return '';
+  // agrupa os participantes atuais do combate em 3 abas -- jogador
+  // (tem character_id, aparece em Jogadores não importa o time) e NPC
+  // avulso (sem character_id, vai por time: inimigo -> Inimigos, o
+  // resto -- aliado/neutro -- -> Aliados).
+  function tabOfParticipant(p) {
+    if (!p) return null;
+    if (p.character_id) return 'jogadores';
+    if (p.team === 'inimigo') return 'inimigos';
+    return 'aliados';
+  }
+  function categorizedParticipants() {
+    const groups = { jogadores: [], aliados: [], inimigos: [] };
+    participants.forEach((p) => groups[tabOfParticipant(p)].push(p));
+    Object.values(groups).forEach((list) => list.sort((a, b) => a.position - b.position));
+    return groups;
+  }
+  // quem vai ficar com a vez depois do "passar turno" atual -- mesma
+  // lógica usada em onPassTurn(), só que sem efeito colateral (usada
+  // pra destacar o próximo no painel do mestre).
+  function computeNextTurn(allSorted, currentTurn) {
+    if (allSorted.length < 2 || !currentTurn) return null;
+    if (combatState.fixed_initiative) {
+      const idx = allSorted.findIndex((p) => p.id === currentTurn.id);
+      return allSorted[(idx + 1) % allSorted.length];
+    }
+    return allSorted[1] || null;
+  }
+  const MASTER_TAB_LABELS = { jogadores: 'Jogadores', aliados: 'Aliados', inimigos: 'Inimigos' };
+  function masterPlayersSummary(currentTurn, nextTurn) {
+    if (!combatState.active || participants.length === 0) return '';
+    const groups = categorizedParticipants();
+    const currentTab = tabOfParticipant(currentTurn);
+    const nextTab = tabOfParticipant(nextTurn);
+    const list = groups[masterCardTab] || [];
     return `
       <div class="combat-master-summary">
-        <div class="combat-master-summary-head">JOGADORES</div>
+        <div class="combat-master-summary-head">
+          <span class="combat-master-summary-title">PAINEL DO MESTRE</span>
+          ${currentTurn ? `<span class="combat-turn-indicator"><span class="combat-turn-dot"></span>vez de: <b>${escapeHtml(currentTurn.display_name)}</b></span>` : ''}
+          <button type="button" class="btn btn-ghost" id="combat-master-top-pass-turn">passar turno ▸</button>
+        </div>
+        <div class="combat-master-tabs">
+          ${['jogadores', 'aliados', 'inimigos']
+            .map(
+              (tab) => `
+            <button type="button" class="combat-master-tab-btn ${masterCardTab === tab ? 'active' : ''}" data-master-tab="${tab}">
+              ${MASTER_TAB_LABELS[tab]} <span class="combat-master-tab-count">${groups[tab].length}</span>
+              <span class="combat-master-tab-marks">
+                ${currentTab === tab ? '<span class="tab-mark current" title="vez de alguém aqui"></span>' : ''}
+                ${nextTab === tab ? '<span class="tab-mark next" title="próximo está aqui"></span>' : ''}
+              </span>
+            </button>`
+            )
+            .join('')}
+        </div>
         <div class="combat-master-summary-grid">
-          ${charactersInCampaign.map(playerSummaryCard).join('')}
+          ${list.length === 0 ? '<p class="admin-empty">ninguém nessa categoria</p>' : list.map((p) => masterCard(p, currentTurn, nextTurn)).join('')}
         </div>
       </div>`;
   }
-  function playerSummaryCard(c) {
-    const hMax = charHpMax(c);
-    const eMax = charEstaminaMax(c);
-    const hPct = hMax > 0 ? Math.max(0, Math.min(100, Math.round((c.hp_current / hMax) * 100))) : 0;
-    const ePct = eMax > 0 ? Math.max(0, Math.min(100, Math.round((c.estamina_current / eMax) * 100))) : 0;
-    const weapon = findEquippedWeapon(c);
-    const infoOpen = openWeaponInfo === c.id;
+  function masterCard(p, currentTurn, nextTurn) {
+    const char = p.character_id ? charactersInCampaign.find((c) => c.id === p.character_id) : null;
+    const hPct = hpPct(p);
+    const ePct = staminaPct(p);
+    const isCurrent = currentTurn && p.id === currentTurn.id;
+    const isNext = nextTurn && p.id === nextTurn.id;
+    const weapon = char ? findEquippedWeapon(char) : null;
+    const infoOpen = openWeaponInfo === p.id;
     return `
-      <div class="combat-master-player-card">
+      <div class="combat-master-player-card ${isCurrent ? 'current-turn' : ''} ${isNext ? 'next-turn' : ''}">
         <div class="combat-master-player-head">
-          ${avatarThumb({ display_name: c.name, avatar_url: c.avatar_url })}
-          <span class="combat-master-player-name">${escapeHtml(c.name)}</span>
-          ${weapon ? `<button type="button" class="combat-weapon-btn ${infoOpen ? 'active' : ''}" data-weapon-toggle="${c.id}" title="dano da arma equipada">⚔</button>` : ''}
+          ${avatarThumb({ display_name: p.display_name, avatar_url: char ? char.avatar_url : null })}
+          <span class="combat-master-player-name">${escapeHtml(p.display_name)}</span>
+          ${weapon ? `<button type="button" class="combat-weapon-btn ${infoOpen ? 'active' : ''}" data-weapon-toggle="${p.id}" title="dano da arma equipada">⚔</button>` : ''}
         </div>
         <div class="combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hPct)}" style="width:${hPct}%"></div></div>
-        <div class="combat-master-bar-txt">❤ ${c.hp_current}/${hMax}</div>
-        <div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${ePct}%"></div></div>
-        <div class="combat-master-bar-txt">⚡ ${c.estamina_current}/${eMax}</div>
-        <div class="combat-master-stat-row">
-          ${STATUS_STATS.map((s) => `<span class="combat-master-stat-chip" style="--stat-color:${s.color};" title="${s.label}">${s.icon}${c[s.key] ?? '—'}</span>`).join('')}
+        <div class="combat-master-bar-row">
+          <button type="button" class="combat-hp-btn" data-hp-delta="-1" data-pid="${p.id}">−</button>
+          <span class="combat-master-bar-txt">❤ ${p.hp_current}/${p.hp_max}</span>
+          <button type="button" class="combat-hp-btn" data-hp-delta="1" data-pid="${p.id}">+</button>
         </div>
-        ${weapon && infoOpen ? `<div class="combat-weapon-info">${escapeHtml(weaponDamageText(c, weapon))}</div>` : ''}
+        <div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${ePct}%"></div></div>
+        <div class="combat-master-bar-row">
+          <button type="button" class="combat-hp-btn" data-est-delta="-1" data-pid="${p.id}">−</button>
+          <span class="combat-master-bar-txt">⚡ ${p.stamina_current}/${p.stamina_max}</span>
+          <button type="button" class="combat-hp-btn" data-est-delta="1" data-pid="${p.id}">+</button>
+        </div>
+        ${
+          char
+            ? `<div class="combat-master-stat-row">
+                ${STATUS_STATS.map((s) => `<span class="combat-master-stat-chip" style="--stat-color:${s.color};" title="${s.label}">${s.icon}${char[s.key] ?? '—'}</span>`).join('')}
+              </div>`
+            : `<div class="combat-master-npc-damage">
+                <label>Dano</label>
+                <input type="text" class="slot-select" data-npc-damage-input data-pid="${p.id}" value="${escapeHtml(p.damage || '')}" placeholder="ex: 8 cortante">
+              </div>`
+        }
+        ${weapon && infoOpen ? `<div class="combat-weapon-info">${escapeHtml(weaponDamageText(char, weapon))}</div>` : ''}
       </div>`;
   }
 
@@ -193,7 +261,14 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
   // ---- render ----
   function render() {
-    const summaryHtml = isMaster ? masterPlayersSummary() : '';
+    const allSorted = participants.slice().sort((a, b) => a.position - b.position);
+    const currentTurn = combatState.active
+      ? combatState.fixed_initiative
+        ? allSorted.find((p) => p.id === combatState.current_turn_id) || allSorted[0] || null
+        : allSorted[0] || null
+      : null;
+    const nextTurn = computeNextTurn(allSorted, currentTurn);
+    const summaryHtml = isMaster ? masterPlayersSummary(currentTurn, nextTurn) : '';
     if (!combatState.active) {
       app.innerHTML =
         summaryHtml +
@@ -208,10 +283,6 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
     const mySelf = participants.find((p) => p.character_id === characterId);
     const list = visibleParticipants().slice().sort((a, b) => a.position - b.position);
-    const allSorted = participants.slice().sort((a, b) => a.position - b.position);
-    const currentTurn = combatState.fixed_initiative
-      ? allSorted.find((p) => p.id === combatState.current_turn_id) || allSorted[0] || null
-      : allSorted[0] || null;
     const currentTurnVisible = currentTurn && (isMaster || list.some((p) => p.id === currentTurn.id));
     const rankMap = new Map(allSorted.map((p, i) => [p.id, i + 1]));
 
@@ -510,6 +581,16 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         return;
       }
 
+      const masterTabBtn = e.target.closest('button[data-master-tab]');
+      if (masterTabBtn) {
+        masterCardTab = masterTabBtn.dataset.masterTab;
+        render();
+        return;
+      }
+
+      const topPassTurnBtn = e.target.closest('#combat-master-top-pass-turn');
+      if (topPassTurnBtn) return onPassTurn();
+
       const addTrigger = e.target.closest('#combat-add-trigger');
       if (addTrigger) {
         addFormOpen = !addFormOpen;
@@ -584,6 +665,16 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     });
 
     app.addEventListener('change', async (e) => {
+      const npcDamageInput = e.target.closest('input[data-npc-damage-input]');
+      if (npcDamageInput) {
+        const pid = npcDamageInput.dataset.pid;
+        const p = participants.find((x) => x.id === pid);
+        if (!p) return;
+        p.damage = npcDamageInput.value;
+        await updateParticipantDamage(pid, npcDamageInput.value);
+        return;
+      }
+
       const hiddenSelect = e.target.closest('#combat-add-hidden');
       if (hiddenSelect) {
         hiddenMode = hiddenSelect.value;
