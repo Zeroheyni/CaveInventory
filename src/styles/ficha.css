@@ -43,10 +43,10 @@
 .ficha-section-title{ font-family: var(--font-display); font-size:11.5px; letter-spacing:0.1em; color: var(--ink-dim); }
 .ficha-points-badge{ font-size:10.5px; color: var(--accent); border:1px solid var(--accent-deep); border-radius:12px; padding:3px 10px; background: var(--accent-faint); }
 
-.ficha-status-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:9px; margin-bottom:10px; }
+.ficha-status-grid{ display:flex; flex-wrap:wrap; justify-content:center; gap:9px; margin-bottom:10px; }
 .ficha-stat-card{
   background: var(--stone-900); border:1px solid var(--stone-line); border-top:2px solid var(--stat-color, var(--stone-line));
-  border-radius:8px; padding:9px 10px; text-align:center;
+  border-radius:8px; padding:9px 10px; text-align:center; flex:1 1 130px; max-width:170px;
 }
 .ficha-stat-label{
   font-family: var(--font-display); font-size:9.5px; letter-spacing:0.06em; color: var(--ink-faint); margin-bottom:6px;
@@ -69,7 +69,13 @@
   font-family: var(--font-mono); font-size:12.5px; padding:8px 10px; border-radius:6px; box-sizing:border-box;
 }
 .ficha-fields-grid input:focus, .ficha-historia-box:focus{ outline:none; border-color: var(--accent-core); box-shadow: 0 0 0 2px var(--accent-faint); }
-.ficha-historia-box{ min-height:110px; resize:vertical; line-height:1.5; }
+.ficha-historia-box{ resize:none; overflow-y:hidden; line-height:1.5; transition: height 0.2s ease; }
+.ficha-expandable{ overflow:hidden; }
+.ficha-expand-btn{
+  margin-top:6px; background:none; border:none; color: var(--accent); font-family: var(--font-mono); font-size:11px;
+  cursor:pointer; padding:2px 0; display:block;
+}
+.ficha-expand-btn:hover{ text-decoration:underline; }
 
 .ficha-module-card{ background: var(--stone-900); border:1px solid var(--stone-line); border-radius:8px; padding:11px; margin-bottom:8px; }
 .ficha-module-head{ display:flex; align-items:center; gap:8px; margin-bottom:8px; }
@@ -79,7 +85,8 @@
 }
 .ficha-module-content{
   width:100%; background: var(--stone-800); border:1px solid var(--stone-line); color: var(--ink-dim); font-family: var(--font-mono);
-  font-size:12px; padding:8px 9px; border-radius:5px; min-height:60px; resize:vertical; line-height:1.5; box-sizing:border-box;
+  font-size:12px; padding:8px 9px; border-radius:5px; resize:none; overflow-y:hidden; line-height:1.5; box-sizing:border-box;
+  transition: height 0.2s ease;
 }
 
 .ficha-master-badge{ font-size:10px; color: var(--accent); border:1px solid var(--accent-deep); border-radius:10px; padding:2px 8px; }

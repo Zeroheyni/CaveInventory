@@ -16,6 +16,7 @@ import {
   estaminaMax,
   xpNeeded,
   hpBarClass,
+  STATUS_STATS as STATS,
   sheetDataOf,
   updateSheetData,
   updateHpCurrent,
@@ -27,17 +28,9 @@ import {
   removeModuleFromSheetData,
 } from '../characterSheet.js';
 
-const STATS = [
-  { key: 'vitalidade', label: 'Vitalidade', icon: '❤', color: '#ff5a5a' },
-  { key: 'forca', label: 'Força', icon: '💪', color: '#ff8a4c' },
-  { key: 'agilidade', label: 'Agilidade', icon: '🏃', color: '#5ad4ff' },
-  { key: 'destreza', label: 'Destreza', icon: '🎯', color: '#4ade80' },
-  { key: 'inteligencia', label: 'Inteligência', icon: '🧠', color: '#b98bff' },
-  { key: 'estamina', label: 'Estamina', icon: '⚡', color: '#ffd93d' },
-  { key: 'observacao', label: 'Observação', icon: '👁', color: '#2dd4bf' },
-];
-
 let activeChannel = null;
+const HISTORIA_COLLAPSED_H = 90;
+const MODULE_COLLAPSED_H = 56;
 
 export function renderFichaScreen(app, { session, profile, campaign, characterId, onBack }) {
   const isMaster = profile.role === 'master';
@@ -52,6 +45,8 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
   let draftStats = null; // enquanto distribuindo pontos, rascunho local até confirmar
   let uploadingAvatar = false;
   let statusError = '';
+  let historiaExpanded = false;
+  const expandedModules = new Set();
 
   // debounce -- sem isso, edições rápidas em sequência (bio, história,
   // módulos) disparam vários eventos de realtime seguidos, cada um
@@ -178,7 +173,10 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
 
       <div class="ficha-section">
         <div class="ficha-section-head"><span class="ficha-section-title">HISTÓRIA</span></div>
-        <textarea class="ficha-historia-box" id="ficha-historia" placeholder="conte a história do personagem...">${escapeHtml(data.historia)}</textarea>
+        <div class="ficha-expandable ${historiaExpanded ? 'expanded' : ''}">
+          <textarea class="ficha-historia-box" id="ficha-historia" placeholder="conte a história do personagem...">${escapeHtml(data.historia)}</textarea>
+        </div>
+        <button type="button" class="ficha-expand-btn" data-expand-toggle="historia" style="display:none;">${historiaExpanded ? 'ver menos ▴' : 'ver mais ▾'}</button>
       </div>
 
       <div class="ficha-section">
@@ -195,6 +193,24 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
     `;
 
     wireEvents();
+    syncExpandableHeights();
+  }
+
+  // mede a altura natural do textarea (ligando height:auto por um
+  // instante) e só então aplica a altura fechada ou expandida -- sem
+  // isso não dá pra saber se o conteúdo passa da altura fechada.
+  function syncExpandableHeights() {
+    app.querySelectorAll('.ficha-expandable').forEach((wrap) => {
+      const ta = wrap.querySelector('textarea');
+      const btn = wrap.nextElementSibling;
+      if (!ta || !btn || btn.tagName !== 'BUTTON') return;
+      const collapsedH = ta.classList.contains('ficha-module-content') ? MODULE_COLLAPSED_H : HISTORIA_COLLAPSED_H;
+      ta.style.height = 'auto';
+      const natural = ta.scrollHeight;
+      const expanded = wrap.classList.contains('expanded');
+      ta.style.height = (expanded ? natural : collapsedH) + 'px';
+      btn.style.display = natural > collapsedH + 4 ? '' : 'none';
+    });
   }
 
   function statCard(s, editingStatus) {
@@ -232,13 +248,17 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
   }
 
   function moduleCard(m) {
+    const expanded = expandedModules.has(m.id);
     return `
       <div class="ficha-module-card" data-module-id="${m.id}">
         <div class="ficha-module-head">
           <input type="text" class="ficha-module-title-input" data-module-title="${m.id}" value="${escapeHtml(m.title)}" placeholder="título do módulo">
           <button type="button" class="combat-row-remove" data-remove-module="${m.id}" title="remover">✕</button>
         </div>
-        <textarea class="ficha-module-content" data-module-content="${m.id}" placeholder="conteúdo livre...">${escapeHtml(m.content)}</textarea>
+        <div class="ficha-expandable ${expanded ? 'expanded' : ''}">
+          <textarea class="ficha-module-content" data-module-content="${m.id}" placeholder="conteúdo livre...">${escapeHtml(m.content)}</textarea>
+        </div>
+        <button type="button" class="ficha-expand-btn" data-expand-toggle="module:${m.id}" style="display:none;">${expanded ? 'ver menos ▴' : 'ver mais ▾'}</button>
       </div>`;
   }
 
@@ -332,6 +352,20 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
       const removeModuleBtn = e.target.closest('button[data-remove-module]');
       if (removeModuleBtn) {
         await saveSheetDataField((data) => removeModuleFromSheetData(data, removeModuleBtn.dataset.removeModule));
+        render();
+        return;
+      }
+
+      const expandBtn = e.target.closest('button[data-expand-toggle]');
+      if (expandBtn) {
+        const key = expandBtn.dataset.expandToggle;
+        if (key === 'historia') {
+          historiaExpanded = !historiaExpanded;
+        } else if (key.startsWith('module:')) {
+          const id = key.slice(7);
+          if (expandedModules.has(id)) expandedModules.delete(id);
+          else expandedModules.add(id);
+        }
         render();
         return;
       }

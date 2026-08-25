@@ -328,6 +328,7 @@
   .weapon-copy-btn svg{ width:10px; height:10px; }
   .weapon-copy-btn:hover{ color: var(--accent); }
   .weapon-stat-badge svg{ width:11px; height:11px; color: var(--accent); flex-shrink:0; }
+  .weapon-damage-type{ color: var(--ink-faint); font-style:italic; }
 
   /* ---------- SELEÇÃO EM LOTE ---------- */
   .item-card.is-selected, .nested-item-row.is-selected, .container-card.is-selected{
@@ -777,13 +778,16 @@
   /* ---------- MENU RETRÁTIL LATERAL (navegação secundária, ex: combate) ---------- */
   .side-nav{ position:fixed; left:0; top:50%; transform:translateY(-50%); z-index:39; display:flex; align-items:stretch; }
   .side-nav-handle{
-    width:24px; height:56px; flex-shrink:0; border-radius:0 10px 10px 0;
-    background: var(--stone-800); border:1px solid var(--stone-line); border-left:none;
-    color: var(--ink-faint); display:flex; align-items:center; justify-content:center; cursor:pointer;
-    box-shadow: 3px 0 12px rgba(0,0,0,0.3); transition: color 0.15s ease, background 0.15s ease;
+    width:28px; height:64px; flex-shrink:0; border-radius:0 12px 12px 0;
+    background: linear-gradient(160deg, var(--stone-800), var(--stone-900)); border:1px solid var(--accent-core); border-left:none;
+    color: var(--accent); display:flex; align-items:center; justify-content:center; cursor:pointer;
+    box-shadow: 3px 0 14px rgba(0,0,0,0.35), 0 0 10px var(--accent-faint); transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+    animation: side-nav-handle-pulse 2.6s ease-in-out infinite;
   }
-  .side-nav-handle:hover{ color: var(--accent); }
-  .side-nav-handle svg{ width:14px; height:14px; transition: transform 0.3s cubic-bezier(.22,1,.36,1); }
+  .side-nav-handle:hover{ color: var(--ink); background: var(--accent-faint); box-shadow: 3px 0 14px rgba(0,0,0,0.35), 0 0 16px var(--accent-faint); animation: none; }
+  .side-nav.open .side-nav-handle{ animation: none; }
+  @keyframes side-nav-handle-pulse{ 0%, 100%{ box-shadow: 3px 0 14px rgba(0,0,0,0.35), 0 0 10px var(--accent-faint); } 50%{ box-shadow: 3px 0 14px rgba(0,0,0,0.35), 0 0 18px var(--accent-faint); } }
+  .side-nav-handle svg{ width:18px; height:18px; transition: transform 0.3s cubic-bezier(.22,1,.36,1); }
   .side-nav.open .side-nav-handle svg{ transform: rotate(180deg); }
   .side-nav-items{
     max-width:0; overflow:hidden; display:flex; flex-direction:column; gap:4px;

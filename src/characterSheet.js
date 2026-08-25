@@ -8,6 +8,18 @@ export const SHEET_FIELDS =
   'id, campaign_id, owner_id, name, avatar_url, level, xp, status_points_unspent, status_confirmed, ' +
   'vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, hp_current, estamina_current, sheet_data';
 
+// os 7 atributos de status com ícone/cor -- usado por ficha.js (cards
+// de status) e combat.js (resumo de status do mestre no combate).
+export const STATUS_STATS = [
+  { key: 'vitalidade', label: 'Vitalidade', icon: '❤', color: '#ff5a5a' },
+  { key: 'forca', label: 'Força', icon: '💪', color: '#ff8a4c' },
+  { key: 'agilidade', label: 'Agilidade', icon: '🏃', color: '#5ad4ff' },
+  { key: 'destreza', label: 'Destreza', icon: '🎯', color: '#4ade80' },
+  { key: 'inteligencia', label: 'Inteligência', icon: '🧠', color: '#b98bff' },
+  { key: 'estamina', label: 'Estamina', icon: '⚡', color: '#ffd93d' },
+  { key: 'observacao', label: 'Observação', icon: '👁', color: '#2dd4bf' },
+];
+
 export function hpMax(char) {
   return (char.vitalidade || 0) * 4;
 }

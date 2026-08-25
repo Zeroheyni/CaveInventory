@@ -5,6 +5,7 @@ import { renderCombatScreen } from './combat.js';
 import { renderFichaScreen } from './ficha.js';
 import { renderMasterFichaScreen } from './masterFicha.js';
 import { createPublicItem, createPublicContainer, listCampaignPlayers, transferCurrencyRpc } from '../publicArea.js';
+import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 
 let activeChannel = null;
 
@@ -161,8 +162,12 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       <div class="field" style="margin-bottom:6px;"><label>Categoria</label></div>
       <div class="tag-picker" id="item-tag-picker"></div>
       <div class="weapon-stats-form-wrap" id="weapon-stats-form-wrap">
-        <div class="field"><label for="f-damage">Dano</label><input type="text" id="f-damage" placeholder="ex: 2d6+1"></div>
-        <div class="field"><label for="f-range">Alcance</label><input type="text" id="f-range" placeholder="ex: 30m"></div>
+        <div class="field"><label for="f-damage">Dano (número, texto ou fórmula com FOR/VIT/AGI/DES/INT/EST/OBS)</label><input type="text" id="f-damage" placeholder="ex: 2 + FOR/2"></div>
+        <div class="field"><label for="f-damage-type">Tipo de dano</label><input type="text" id="f-damage-type" placeholder="ex: impacto, corte, fogo"></div>
+        <div class="field" style="grid-column:1/-1;"><label for="f-range">Alcance</label><input type="text" id="f-range" placeholder="ex: 30m"></div>
+      </div>
+      <div class="weapon-stats-form-wrap" id="ammo-damage-form-wrap">
+        <div class="field" style="grid-column:1/-1;"><label for="f-ammo-damage">Dano da munição (usa na fórmula da arma como DM + nome do item, ex: DMFlecha)</label><input type="text" id="f-ammo-damage" placeholder="ex: 4"></div>
       </div>
       <div class="uses-row">
         <label class="checkbox-wrap"><input type="checkbox" id="f-has-uses"> Consumível / com carga de usos</label>
@@ -429,6 +434,9 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   let state = {
     maxCarga: 60, transportPersonalMaxCarga: 100, theme: 'caverna-azul',
     currency: { bronze: 0, silver: 0, gold: 0, platinum: 0 },
+    // status da ficha (Fase 5) -- usado só pra calcular fórmula de dano
+    // de arma aqui (ex: "2 + FOR/2"), a ficha em si é editada em ficha.js.
+    status: { vitalidade: 10, forca: 10, agilidade: 10, destreza: 10, inteligencia: 10, estamina: 10, observacao: 10 },
     items: [],
     containers: [],
     order: [],
@@ -515,10 +523,15 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     state.theme = d.theme || 'caverna-azul';
     state.maxCarga = (row.max_carga !== undefined && row.max_carga !== null) ? row.max_carga : 60;
     state.currency = (row.currency && typeof row.currency === 'object') ? row.currency : { bronze:0, silver:0, gold:0, platinum:0 };
+    ['vitalidade','forca','agilidade','destreza','inteligencia','estamina','observacao'].forEach(k => {
+      if(typeof row[k] === 'number') state.status[k] = row[k];
+    });
 
     ['bronze','silver','gold','platinum'].forEach(k => { if(typeof state.currency[k] !== 'number' || isNaN(state.currency[k])) state.currency[k] = 0; });
     state.items.forEach(it => {
       if(!it.tag) it.tag = 'outro';
+      if(it.damageType === undefined) it.damageType = null;
+      if(it.ammoDamage === undefined) it.ammoDamage = null;
       if(it.durability === undefined) it.durability = null;
       if(it.maxDurability === undefined) it.maxDurability = null;
       if(it.description === undefined) it.description = null;
@@ -585,6 +598,9 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     state.transportPersonalMaxCarga = d.transportPersonalMaxCarga !== undefined ? d.transportPersonalMaxCarga : 100;
     state.maxCarga = (row.max_carga !== undefined && row.max_carga !== null) ? row.max_carga : 60;
     state.currency = (row.currency && typeof row.currency === 'object') ? row.currency : { bronze:0, silver:0, gold:0, platinum:0 };
+    ['vitalidade','forca','agilidade','destreza','inteligencia','estamina','observacao'].forEach(k => {
+      if(typeof row[k] === 'number') state.status[k] = row[k];
+    });
     renderAll();
     renderCampaignStrip();
     flashStatus('ATUALIZADO POR OUTRO DISPOSITIVO');
@@ -991,6 +1007,16 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     return c.contents.some(isEntryVisible);
   }
 
+  // ---- fórmula de dano (Fase 6) -- ver src/shared/damageFormula.js ----
+  // resolve o token "DM<Nome>" de uma fórmula de arma achando, entre os
+  // itens com categoria Munição, um cujo nome bate (sem espaço/acento/case).
+  function resolveAmmoDamage(name){
+    const target = normalizeItemName(name);
+    const ammoItem = state.items.find(i => i.tag === 'municao' && normalizeItemName(i.name) === target);
+    if(!ammoItem || !ammoItem.ammoDamage) return null;
+    return evaluateDamageFormula(ammoItem.ammoDamage, state.status, null); // sem recursão de munição
+  }
+
   // ---- classe de borda do item (saúde / munição) ----
   function sortPinnedFirst(entries){
     return entries
@@ -1089,9 +1115,15 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     const DAMAGE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M4 20l9-9"/><path d="M13 11l4-4 3 3-4 4"/><path d="M14 6l3-3"/></svg>';
     const RANGE_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 17l14-14"/><path d="M7 13l2 2M11 9l2 2M15 5l2 2"/></svg>';
     const COPY_MINI_ICON = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="12" rx="1.5"/><path d="M15 9V6a1.5 1.5 0 00-1.5-1.5H6A1.5 1.5 0 004.5 6v9A1.5 1.5 0 006 16.5h3"/></svg>';
+    const computedDamage = it.damage ? evaluateDamageFormula(it.damage, state.status, resolveAmmoDamage) : null;
+    const damageNumberText = computedDamage !== null ? String(computedDamage) : (it.damage || '');
+    const damageTypeHtml = it.damageType ? ` <span class="weapon-damage-type">(${escapeHtml(it.damageType)})</span>` : '';
+    const damageCopyText = computedDamage !== null
+      ? `${computedDamage}${it.damageType ? ' dano de ' + it.damageType : ''}`
+      : (it.damage || '');
     const weaponStatsHtml = (it.tag === 'arma' && (it.damage || it.range))
       ? `<div class="weapon-stats">
-           ${it.damage ? `<span class="weapon-stat-badge" title="dano">${DAMAGE_ICON}${escapeHtml(it.damage)}<button class="weapon-copy-btn" data-copy-text="${escapeHtml(it.damage)}" title="copiar dano">${COPY_MINI_ICON}</button></span>` : ''}
+           ${it.damage ? `<span class="weapon-stat-badge" title="fórmula: ${escapeHtml(it.damage)}">${DAMAGE_ICON}${escapeHtml(damageNumberText)}${damageTypeHtml}<button class="weapon-copy-btn" data-copy-text="${escapeHtml(damageCopyText)}" title="copiar dano">${COPY_MINI_ICON}</button></span>` : ''}
            ${it.range ? `<span class="weapon-stat-badge" title="alcance">${RANGE_ICON}${escapeHtml(it.range)}</span>` : ''}
          </div>`
       : '';
@@ -1491,6 +1523,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     fHasDurability.checked = false; fDurCurrent.value = 70; fDurMax.value = 70; durabilityWrap.classList.remove('show');
     fHasDescription.checked = false; fDescription.value = ''; fDescription.style.display = 'none';
     document.getElementById('f-damage').value = ''; document.getElementById('f-range').value = '';
+    document.getElementById('f-damage-type').value = ''; document.getElementById('f-ammo-damage').value = '';
     submitBtn.textContent = 'adicionar item'; formTitle.textContent = '// REGISTRAR ITEM'; cancelBtn.style.display = 'none';
     selectedItemTag = 'outro'; renderTagPicker('item-tag-picker', selectedItemTag);
     updateWeaponStatsVisibility();
@@ -1510,6 +1543,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     fDurCurrent.value = hasDurability ? it.durability : 70; fDurMax.value = hasDurability ? it.maxDurability : 70;
     fHasDescription.checked = !!it.description; fDescription.value = it.description || ''; fDescription.style.display = it.description ? 'block' : 'none';
     document.getElementById('f-damage').value = it.damage || ''; document.getElementById('f-range').value = it.range || '';
+    document.getElementById('f-damage-type').value = it.damageType || ''; document.getElementById('f-ammo-damage').value = it.ammoDamage || '';
     submitBtn.textContent = 'salvar alterações'; formTitle.textContent = '// EDITANDO ITEM'; cancelBtn.style.display = 'inline-block';
     selectedItemTag = it.tag || 'outro'; renderTagPicker('item-tag-picker', selectedItemTag);
     updateWeaponStatsVisibility();
@@ -1518,6 +1552,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   cancelBtn.addEventListener('click', resetForm);
   function updateWeaponStatsVisibility(){
     document.getElementById('weapon-stats-form-wrap').classList.toggle('show', selectedItemTag === 'arma');
+    document.getElementById('ammo-damage-form-wrap').classList.toggle('show', selectedItemTag === 'municao');
   }
   document.getElementById('item-tag-picker').addEventListener('click', (e)=>{
     const btn = e.target.closest('button[data-tag]');
@@ -1544,8 +1579,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     }
     const description = fHasDescription.checked ? fDescription.value.trim() || null : null;
     const isWeapon = selectedItemTag === 'arma';
+    const isAmmo = selectedItemTag === 'municao';
     const damage = isWeapon ? (document.getElementById('f-damage').value.trim() || null) : null;
+    const damageType = isWeapon ? (document.getElementById('f-damage-type').value.trim() || null) : null;
     const range = isWeapon ? (document.getElementById('f-range').value.trim() || null) : null;
+    const ammoDamage = isAmmo ? (document.getElementById('f-ammo-damage').value.trim() || null) : null;
 
     if(editingId){
       const it = state.items.find(i => i.id === editingId);
@@ -1560,7 +1598,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         }
         const wasAmmoLinked = it.ammoLinked, prevAmmoItemId = it.ammoItemId;
         it.name = name; it.weight = weight; it.qty = qty; it.tag = selectedItemTag; it.description = description;
-        it.damage = damage; it.range = range;
+        it.damage = damage; it.damageType = damageType; it.range = range; it.ammoDamage = ammoDamage;
         if(hasUses){
           const wasUsing = it.maxUses !== null && it.maxUses !== undefined;
           it.maxUses = maxUses;
@@ -1576,7 +1614,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     } else {
       const newId = uid();
       const initialUses = hasUses ? ((ammoLinked && ammoItemId) ? 0 : maxUses) : null;
-      state.items.push({ id: newId, name, weight, qty, maxUses, uses: initialUses, durability, maxDurability, description, ammoLinked, ammoItemId, damage, range, tag: selectedItemTag });
+      state.items.push({ id: newId, name, weight, qty, maxUses, uses: initialUses, durability, maxDurability, description, ammoLinked, ammoItemId, damage, damageType, range, ammoDamage, tag: selectedItemTag });
       state.order.push({type:'item', id: newId});
     }
     addLog(editingId ? `Item "${name}" editado` : `Item "${name}" criado`);

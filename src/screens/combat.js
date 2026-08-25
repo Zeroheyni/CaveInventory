@@ -28,7 +28,8 @@ import {
   setPlayerCombatPermission,
   isVisibleToPlayer,
 } from '../combat.js';
-import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass } from '../characterSheet.js';
+import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, STATUS_STATS } from '../characterSheet.js';
+import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 
 let activeChannel = null;
 
@@ -51,6 +52,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   let addCharacterId = null;
   let hiddenMode = 'visible'; // 'visible' | 'countdown' | 'always'
   let dragId = null;
+  let openWeaponInfo = null; // id do personagem com o popover de dano da arma aberto (só mestre)
 
   async function load() {
     combatState = await getCombatState(campaignId);
@@ -59,7 +61,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       const [{ data: chars }, { data: profs }] = await Promise.all([
         supabase
           .from('characters')
-          .select('id, name, vitalidade, estamina, hp_current, estamina_current, avatar_url')
+          .select('id, name, vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, hp_current, estamina_current, avatar_url, data')
           .eq('campaign_id', campaignId)
           .order('name'),
         supabase.from('profiles').select('id, username, role, can_see_others_hp, can_see_hidden_initiative').eq('campaign_id', campaignId),
@@ -109,6 +111,80 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     const left = p.reveal_at_round - combatState.round;
     return left > 0 ? `revela em ${left} rodada${left === 1 ? '' : 's'}` : 'revelando...';
   }
+  // ---- resumo do mestre (Fase 6) -- HP/estamina/status/arma equipada de todo mundo ----
+  function statusValuesOf(char) {
+    return {
+      vitalidade: char.vitalidade,
+      forca: char.forca,
+      agilidade: char.agilidade,
+      destreza: char.destreza,
+      inteligencia: char.inteligencia,
+      estamina: char.estamina,
+      observacao: char.observacao,
+    };
+  }
+  function findEquippedWeapon(char) {
+    const d = char.data || {};
+    const equip = d.equip || {};
+    const items = Array.isArray(d.items) ? d.items : [];
+    for (const slotVal of Object.values(equip)) {
+      if (!slotVal || typeof slotVal !== 'string' || slotVal.indexOf(':') === -1) continue;
+      const [kind, id] = slotVal.split(':');
+      if (kind !== 'item') continue;
+      const it = items.find((i) => i.id === id);
+      if (it && it.tag === 'arma') return it;
+    }
+    return null;
+  }
+  function resolveCharAmmoDamage(char, name) {
+    const d = char.data || {};
+    const items = Array.isArray(d.items) ? d.items : [];
+    const target = normalizeItemName(name);
+    const ammoItem = items.find((i) => i.tag === 'municao' && normalizeItemName(i.name) === target);
+    if (!ammoItem || !ammoItem.ammoDamage) return null;
+    return evaluateDamageFormula(ammoItem.ammoDamage, statusValuesOf(char), null);
+  }
+  function weaponDamageText(char, weapon) {
+    const computed = weapon.damage ? evaluateDamageFormula(weapon.damage, statusValuesOf(char), (name) => resolveCharAmmoDamage(char, name)) : null;
+    const numberText = computed !== null ? String(computed) : weapon.damage || '—';
+    const typeText = weapon.damageType ? ` de ${weapon.damageType}` : '';
+    return `${weapon.name}: ${numberText} dano${typeText}`;
+  }
+  function masterPlayersSummary() {
+    if (charactersInCampaign.length === 0) return '';
+    return `
+      <div class="combat-master-summary">
+        <div class="combat-master-summary-head">JOGADORES</div>
+        <div class="combat-master-summary-grid">
+          ${charactersInCampaign.map(playerSummaryCard).join('')}
+        </div>
+      </div>`;
+  }
+  function playerSummaryCard(c) {
+    const hMax = charHpMax(c);
+    const eMax = charEstaminaMax(c);
+    const hPct = hMax > 0 ? Math.max(0, Math.min(100, Math.round((c.hp_current / hMax) * 100))) : 0;
+    const ePct = eMax > 0 ? Math.max(0, Math.min(100, Math.round((c.estamina_current / eMax) * 100))) : 0;
+    const weapon = findEquippedWeapon(c);
+    const infoOpen = openWeaponInfo === c.id;
+    return `
+      <div class="combat-master-player-card">
+        <div class="combat-master-player-head">
+          ${avatarThumb({ display_name: c.name, avatar_url: c.avatar_url })}
+          <span class="combat-master-player-name">${escapeHtml(c.name)}</span>
+          ${weapon ? `<button type="button" class="combat-weapon-btn ${infoOpen ? 'active' : ''}" data-weapon-toggle="${c.id}" title="dano da arma equipada">⚔</button>` : ''}
+        </div>
+        <div class="combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hPct)}" style="width:${hPct}%"></div></div>
+        <div class="combat-master-bar-txt">❤ ${c.hp_current}/${hMax}</div>
+        <div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${ePct}%"></div></div>
+        <div class="combat-master-bar-txt">⚡ ${c.estamina_current}/${eMax}</div>
+        <div class="combat-master-stat-row">
+          ${STATUS_STATS.map((s) => `<span class="combat-master-stat-chip" style="--stat-color:${s.color};" title="${s.label}">${s.icon}${c[s.key] ?? '—'}</span>`).join('')}
+        </div>
+        ${weapon && infoOpen ? `<div class="combat-weapon-info">${escapeHtml(weaponDamageText(c, weapon))}</div>` : ''}
+      </div>`;
+  }
+
   function avatarThumb(p) {
     if (p.avatar_url) return `<img class="combat-avatar" src="${escapeHtml(p.avatar_url)}" alt="">`;
     const letter = (p.display_name || '?').trim().charAt(0).toUpperCase();
@@ -117,8 +193,11 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
   // ---- render ----
   function render() {
+    const summaryHtml = isMaster ? masterPlayersSummary() : '';
     if (!combatState.active) {
-      app.innerHTML = `
+      app.innerHTML =
+        summaryHtml +
+        `
         <div class="combat-empty">
           NENHUM COMBATE ATIVO NO MOMENTO
           ${isMaster ? '<div><button type="button" class="btn combat-start-btn" id="combat-start-btn">⚔ iniciar combate</button></div>' : ''}
@@ -136,7 +215,9 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     const currentTurnVisible = currentTurn && (isMaster || list.some((p) => p.id === currentTurn.id));
     const rankMap = new Map(allSorted.map((p, i) => [p.id, i + 1]));
 
-    app.innerHTML = `
+    app.innerHTML =
+      summaryHtml +
+      `
       <div class="combat-round-bar">
         <div class="combat-round-info">
           <span class="combat-round-label">RODADA <b>${combatState.round}</b><span class="combat-turn-sub"> · turno ${combatState.turns_passed_this_round || 0}/${participants.length}</span></span>
@@ -420,6 +501,14 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
       const toggleFixedBtn = e.target.closest('#combat-toggle-fixed');
       if (toggleFixedBtn) return onToggleFixedInitiative();
+
+      const weaponToggleBtn = e.target.closest('button[data-weapon-toggle]');
+      if (weaponToggleBtn) {
+        const id = weaponToggleBtn.dataset.weaponToggle;
+        openWeaponInfo = openWeaponInfo === id ? null : id;
+        render();
+        return;
+      }
 
       const addTrigger = e.target.closest('#combat-add-trigger');
       if (addTrigger) {

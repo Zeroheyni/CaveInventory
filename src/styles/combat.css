@@ -20,6 +20,32 @@
 }
 .combat-start-btn{ margin-top:14px; }
 
+/* ---------- resumo do mestre (Fase 6) ---------- */
+.combat-master-summary{ margin-bottom:16px; }
+.combat-master-summary-head{ font-family: var(--font-display); font-size:10.5px; letter-spacing:0.12em; color: var(--ink-faint); margin-bottom:8px; }
+.combat-master-summary-grid{ display:flex; flex-wrap:wrap; gap:10px; }
+.combat-master-player-card{
+  background: var(--stone-800); border:1px solid var(--stone-line); border-radius:10px; padding:10px 12px;
+  flex:1 1 200px; max-width:240px;
+}
+.combat-master-player-head{ display:flex; align-items:center; gap:7px; margin-bottom:7px; }
+.combat-master-player-name{ font-family: var(--font-mono); font-size:12px; font-weight:600; color: var(--ink); flex:1; min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.combat-master-bar-txt{ font-family: var(--font-mono); font-size:10px; color: var(--ink-faint); margin:2px 0 6px; }
+.combat-master-stat-row{ display:flex; flex-wrap:wrap; gap:4px; margin-top:6px; }
+.combat-master-stat-chip{
+  font-family: var(--font-mono); font-size:10px; color: var(--stat-color, var(--ink-dim)); background: var(--stone-900);
+  border:1px solid var(--stone-line); border-radius:5px; padding:2px 5px;
+}
+.combat-weapon-btn{
+  flex-shrink:0; width:24px; height:24px; border-radius:6px; border:1px solid var(--stone-line); background: var(--stone-900);
+  color: var(--ink-faint); cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center; transition: all 0.15s ease;
+}
+.combat-weapon-btn:hover, .combat-weapon-btn.active{ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); }
+.combat-weapon-info{
+  margin-top:7px; font-family: var(--font-mono); font-size:10.5px; color: var(--ink-dim); background: var(--stone-900);
+  border:1px solid var(--accent-deep); border-radius:6px; padding:6px 8px;
+}
+
 .combat-round-bar{
   display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap;
   background: var(--stone-800); border:1px solid var(--stone-line); border-radius:10px;
