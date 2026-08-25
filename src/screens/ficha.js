@@ -28,13 +28,13 @@ import {
 } from '../characterSheet.js';
 
 const STATS = [
-  { key: 'vitalidade', label: 'Vitalidade' },
-  { key: 'forca', label: 'Força' },
-  { key: 'agilidade', label: 'Agilidade' },
-  { key: 'destreza', label: 'Destreza' },
-  { key: 'inteligencia', label: 'Inteligência' },
-  { key: 'estamina', label: 'Estamina' },
-  { key: 'observacao', label: 'Observação' },
+  { key: 'vitalidade', label: 'Vitalidade', icon: '❤', color: '#ff5a5a' },
+  { key: 'forca', label: 'Força', icon: '💪', color: '#ff8a4c' },
+  { key: 'agilidade', label: 'Agilidade', icon: '🏃', color: '#5ad4ff' },
+  { key: 'destreza', label: 'Destreza', icon: '🎯', color: '#4ade80' },
+  { key: 'inteligencia', label: 'Inteligência', icon: '🧠', color: '#b98bff' },
+  { key: 'estamina', label: 'Estamina', icon: '⚡', color: '#ffd93d' },
+  { key: 'observacao', label: 'Observação', icon: '👁', color: '#2dd4bf' },
 ];
 
 let activeChannel = null;
@@ -200,10 +200,12 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
   function statCard(s, editingStatus) {
     const value = editingStatus ? draftStats[s.key] : sheet[s.key];
     const cap = statusCap();
+    const style = `style="--stat-color:${s.color};"`;
+    const label = `<div class="ficha-stat-label"><span class="ficha-stat-icon">${s.icon}</span>${s.label}</div>`;
     if (isMaster) {
       return `
-        <div class="ficha-stat-card">
-          <div class="ficha-stat-label">${s.label}</div>
+        <div class="ficha-stat-card" ${style}>
+          ${label}
           <div class="ficha-stat-editrow">
             <button type="button" class="ficha-stat-btn" data-master-stat-delta="-1" data-stat="${s.key}">−</button>
             <span class="ficha-stat-value">${sheet[s.key]}</span>
@@ -213,8 +215,8 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
     }
     if (editingStatus) {
       return `
-        <div class="ficha-stat-card">
-          <div class="ficha-stat-label">${s.label}</div>
+        <div class="ficha-stat-card" ${style}>
+          ${label}
           <div class="ficha-stat-editrow">
             <button type="button" class="ficha-stat-btn" data-draft-stat-delta="-1" data-stat="${s.key}" ${value <= sheet[s.key] ? 'disabled' : ''}>−</button>
             <span class="ficha-stat-value">${value}</span>
@@ -223,8 +225,8 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
         </div>`;
     }
     return `
-      <div class="ficha-stat-card">
-        <div class="ficha-stat-label">${s.label}</div>
+      <div class="ficha-stat-card" ${style}>
+        ${label}
         <div class="ficha-stat-value">${value}</div>
       </div>`;
   }

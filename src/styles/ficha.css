@@ -44,9 +44,16 @@
 .ficha-points-badge{ font-size:10.5px; color: var(--accent); border:1px solid var(--accent-deep); border-radius:12px; padding:3px 10px; background: var(--accent-faint); }
 
 .ficha-status-grid{ display:grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap:9px; margin-bottom:10px; }
-.ficha-stat-card{ background: var(--stone-900); border:1px solid var(--stone-line); border-radius:8px; padding:9px 10px; text-align:center; }
-.ficha-stat-label{ font-family: var(--font-display); font-size:9.5px; letter-spacing:0.06em; color: var(--ink-faint); margin-bottom:6px; }
-.ficha-stat-value{ font-family: var(--font-mono); font-size:18px; color: var(--ink); font-weight:700; }
+.ficha-stat-card{
+  background: var(--stone-900); border:1px solid var(--stone-line); border-top:2px solid var(--stat-color, var(--stone-line));
+  border-radius:8px; padding:9px 10px; text-align:center;
+}
+.ficha-stat-label{
+  font-family: var(--font-display); font-size:9.5px; letter-spacing:0.06em; color: var(--ink-faint); margin-bottom:6px;
+  display:flex; align-items:center; justify-content:center; gap:5px;
+}
+.ficha-stat-icon{ font-size:12px; filter: drop-shadow(0 0 3px var(--stat-color, transparent)); }
+.ficha-stat-value{ font-family: var(--font-mono); font-size:18px; color: var(--stat-color, var(--ink)); font-weight:700; }
 .ficha-stat-editrow{ display:flex; align-items:center; justify-content:center; gap:8px; }
 .ficha-stat-btn{
   width:22px; height:22px; border-radius:5px; border:1px solid var(--stone-line); background: var(--stone-800);
