@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient.js';
-import { getMyProfile, getCampaign } from './campaign.js';
+import { getMyProfile, getCampaign, applyGlobalTheme } from './campaign.js';
 import { renderLogin } from './screens/login.js';
 import { renderOnboarding } from './screens/onboarding.js';
 import { renderCharacterScreen } from './screens/character.js';
@@ -24,6 +24,8 @@ export async function renderApp() {
     renderFatalError(err);
     return;
   }
+
+  applyGlobalTheme(profile && profile.theme);
 
   if (profile && profile.is_superadmin) {
     renderAdminScreen(app, { session, profile });

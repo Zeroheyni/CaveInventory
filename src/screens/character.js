@@ -6,6 +6,7 @@ import { renderFichaScreen } from './ficha.js';
 import { renderMasterFichaScreen } from './masterFicha.js';
 import { createPublicItem, createPublicContainer, listCampaignPlayers, transferCurrencyRpc } from '../publicArea.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
+import { updateProfileTheme } from '../campaign.js';
 
 let activeChannel = null;
 
@@ -404,6 +405,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     {id:'rosa-neon', label:'Rosa Neon', group:'dark', accent:'#ff5cd6', void:'#0a0509'},
     {id:'indigo-profundo', label:'Índigo Profundo', group:'dark', accent:'#8c7bff', void:'#050414'},
     {id:'teal-abissal', label:'Teal Abissal', group:'dark', accent:'#33e6a8', void:'#040a09'},
+    {id:'marte-vermelho', label:'Marte Vermelho', group:'dark', accent:'#ff5a44', void:'#0a0505'},
+    {id:'ambar-fossil', label:'Âmbar Fóssil', group:'dark', accent:'#ffb020', void:'#0a0805'},
+    {id:'safira-profunda', label:'Safira Profunda', group:'dark', accent:'#4d7fff', void:'#04070f'},
+    {id:'limao-acido', label:'Limão Ácido', group:'dark', accent:'#c6ff3d', void:'#080a04'},
+    {id:'orquidea-sombria', label:'Orquídea Sombria', group:'dark', accent:'#e066ff', void:'#0a0510'},
 
     {id:'papel-antigo', label:'Papel Antigo', group:'light', accent:'#9c5f26', void:'#f4ecd8'},
     {id:'laboratorio', label:'Laboratório', group:'light', accent:'#0b7fb0', void:'#f0f4f7'},
@@ -415,6 +421,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     {id:'coral', label:'Coral', group:'light', accent:'#e05a2e', void:'#fdf0ea'},
     {id:'oliva-claro', label:'Oliva Claro', group:'light', accent:'#727a1f', void:'#f6f5e6'},
     {id:'cinza-perola', label:'Cinza Pérola', group:'light', accent:'#5c6b6a', void:'#f2f2f0'},
+    {id:'vinho-claro', label:'Vinho Claro', group:'light', accent:'#a3283f', void:'#faedec'},
+    {id:'turquesa-suave', label:'Turquesa Suave', group:'light', accent:'#1a9e94', void:'#eaf7f5'},
+    {id:'girassol', label:'Girassol', group:'light', accent:'#c4900a', void:'#fbf4e2'},
+    {id:'marinho-claro', label:'Azul Marinho Claro', group:'light', accent:'#2c5aa3', void:'#eaf0fb'},
+    {id:'ameixa-clara', label:'Ameixa Clara', group:'light', accent:'#8e4a8e', void:'#f7edf7'},
 
     {id:'cinza-grafite', label:'Cinza Grafite', group:'neutral', accent:'#9db4c7', void:'#202226'},
     {id:'bege-militar', label:'Bege Militar', group:'neutral', accent:'#c9b878', void:'#2b2a22'},
@@ -425,7 +436,12 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     {id:'argila', label:'Argila', group:'neutral', accent:'#c67f52', void:'#28211d'},
     {id:'chumbo', label:'Chumbo', group:'neutral', accent:'#a08fc4', void:'#212024'},
     {id:'areia-neutra', label:'Areia Neutra', group:'neutral', accent:'#d4b56a', void:'#2b2820'},
-    {id:'ametista-neutra', label:'Ametista Neutra', group:'neutral', accent:'#b98fd6', void:'#241f28'}
+    {id:'ametista-neutra', label:'Ametista Neutra', group:'neutral', accent:'#b98fd6', void:'#241f28'},
+    {id:'vinho-neutro', label:'Vinho Neutro', group:'neutral', accent:'#b06868', void:'#282022'},
+    {id:'oceano-neutro', label:'Oceano Neutro', group:'neutral', accent:'#6b9aa3', void:'#1f2628'},
+    {id:'amendoa-neutra', label:'Amêndoa Neutra', group:'neutral', accent:'#c9a374', void:'#2a251e'},
+    {id:'pinha-neutra', label:'Pinha Neutra', group:'neutral', accent:'#7fa88a', void:'#212824'},
+    {id:'cobre-neutro', label:'Cobre Neutro', group:'neutral', accent:'#b8805a', void:'#251f1a'}
   ];
 
   let characterId = null;
@@ -520,7 +536,18 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     state.equip = (d.equip && typeof d.equip === 'object') ? d.equip : state.equip;
     state.transportPersonal = Array.isArray(d.transportPersonal) ? d.transportPersonal : [];
     state.transportPersonalMaxCarga = d.transportPersonalMaxCarga !== undefined ? d.transportPersonalMaxCarga : 100;
-    state.theme = d.theme || 'caverna-azul';
+    // tema é preferência da conta (profile.theme) -- personagens
+    // criados antes disso existir guardavam o tema escolhido em
+    // characters.data.theme; se a conta ainda não tem profile.theme,
+    // migra esse valor antigo pra lá uma vez (sem perder a escolha de quem já tinha).
+    if (profile.theme) {
+      state.theme = profile.theme;
+    } else if (d.theme && d.theme !== 'caverna-azul') {
+      state.theme = d.theme;
+      updateProfileTheme(session.user.id, d.theme).catch(() => {});
+    } else {
+      state.theme = 'caverna-azul';
+    }
     state.maxCarga = (row.max_carga !== undefined && row.max_carga !== null) ? row.max_carga : 60;
     state.currency = (row.currency && typeof row.currency === 'object') ? row.currency : { bronze:0, silver:0, gold:0, platinum:0 };
     ['vitalidade','forca','agilidade','destreza','inteligencia','estamina','observacao'].forEach(k => {
@@ -1413,7 +1440,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     if(id === 'caverna-azul'){ document.documentElement.removeAttribute('data-theme'); }
     else { document.documentElement.setAttribute('data-theme', id); }
     renderThemePanel();
-    if(persist) saveState();
+    if(persist) updateProfileTheme(session.user.id, id).catch(err => flashStatus('erro ao salvar tema: ' + err.message));
   }
   renderThemePanel();
 
