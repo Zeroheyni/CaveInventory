@@ -95,7 +95,7 @@ export async function toggleFixedInitiative(campaignId) {
 // o valor inicial.
 export async function addParticipant(
   campaignId,
-  { characterId, displayName, team, hpMax, hpCurrent, staminaMax, staminaCurrent, initiative, hiddenMode, revealInRounds, currentRound, avatarUrl },
+  { characterId, displayName, team, hpMax, hpCurrent, staminaMax, staminaCurrent, initiative, hiddenMode, revealInRounds, currentRound, avatarUrl, damage },
   position,
 ) {
   const hidden = hiddenMode !== 'visible';
@@ -115,14 +115,21 @@ export async function addParticipant(
     reveal_at_round,
     manually_revealed: false,
     avatar_url: avatarUrl || null,
+    damage: damage || null,
   });
   if (error) throw error;
 }
 
-// dano de NPC -- texto livre digitado pelo mestre (ver db/023).
-export async function updateParticipantDamage(id, damage) {
-  const { error } = await supabase.from('combat_participants').update({ damage }).eq('id', id);
-  if (error) throw error;
+// dano de NPC -- texto livre digitado pelo mestre (ver db/023). Se o
+// participante está vinculado a um NPC do banco (ver db/024), grava
+// também lá -- mesma lógica de HP: mantém o valor padrão do NPC
+// atualizado pra próxima vez que ele for usado.
+export async function updateParticipantDamage(id, damage, characterId) {
+  const writes = [supabase.from('combat_participants').update({ damage }).eq('id', id)];
+  if (characterId) writes.push(supabase.from('characters').update({ npc_damage: damage }).eq('id', characterId));
+  const results = await Promise.all(writes);
+  const failed = results.find((r) => r.error);
+  if (failed) throw failed.error;
 }
 
 export async function removeParticipant(id) {

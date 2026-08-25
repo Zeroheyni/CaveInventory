@@ -51,6 +51,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   let addFormOpen = false;
   let addSource = 'character';
   let addCharacterId = null;
+  let addBankNpcId = null;
   let hiddenMode = 'visible'; // 'visible' | 'countdown' | 'always'
   let dragId = null;
   let openWeaponInfo = null; // id do participante com o popover de dano da arma aberto (só mestre)
@@ -63,7 +64,10 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       const [{ data: chars }, { data: profs }] = await Promise.all([
         supabase
           .from('characters')
-          .select('id, name, vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, hp_current, estamina_current, avatar_url, data')
+          .select(
+            'id, name, vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, hp_current, estamina_current, avatar_url, data, ' +
+              'is_npc, npc_sheet_type, npc_has_status, hp_max_override, estamina_max_override, npc_damage'
+          )
           .eq('campaign_id', campaignId)
           .order('name'),
         supabase.from('profiles').select('id, username, role, can_see_others_hp, can_see_hidden_initiative').eq('campaign_id', campaignId),
@@ -152,13 +156,18 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     const typeText = weapon.damageType ? ` de ${weapon.damageType}` : '';
     return `${weapon.name}: ${numberText} dano${typeText}`;
   }
-  // agrupa os participantes atuais do combate em 3 abas -- jogador
-  // (tem character_id, aparece em Jogadores não importa o time) e NPC
-  // avulso (sem character_id, vai por time: inimigo -> Inimigos, o
-  // resto -- aliado/neutro -- -> Aliados).
+  // agrupa os participantes atuais do combate em 3 abas -- jogador de
+  // verdade (character_id aponta pra um characters que NÃO é NPC) vai
+  // em Jogadores não importa o time; qualquer NPC (do banco, vinculado
+  // ou não, ou avulso) vai por time: inimigo -> Inimigos, o resto
+  // (aliado/neutro) -> Aliados.
+  function charOf(p) {
+    return p.character_id ? charactersInCampaign.find((c) => c.id === p.character_id) : null;
+  }
   function tabOfParticipant(p) {
     if (!p) return null;
-    if (p.character_id) return 'jogadores';
+    const char = charOf(p);
+    if (char && !char.is_npc) return 'jogadores';
     if (p.team === 'inimigo') return 'inimigos';
     return 'aliados';
   }
@@ -213,12 +222,19 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       </div>`;
   }
   function masterCard(p, currentTurn, nextTurn) {
-    const char = p.character_id ? charactersInCampaign.find((c) => c.id === p.character_id) : null;
+    const char = charOf(p);
+    const isRealPlayer = char && !char.is_npc;
+    const isCompleteNpc = char && char.is_npc && char.npc_sheet_type === 'completa';
+    // status/arma só fazem sentido pra jogador de verdade ou NPC de
+    // ficha completa (tem inventário/equipamento pra calcular); NPC de
+    // ficha simples só mostra status se o mestre marcou que quer, e
+    // nunca tem arma calculada (sem equipamento).
+    const showStatusChips = isRealPlayer || isCompleteNpc || (char && char.npc_has_status);
     const hPct = hpPct(p);
     const ePct = staminaPct(p);
     const isCurrent = currentTurn && p.id === currentTurn.id;
     const isNext = nextTurn && p.id === nextTurn.id;
-    const weapon = char ? findEquippedWeapon(char) : null;
+    const weapon = isRealPlayer || isCompleteNpc ? findEquippedWeapon(char) : null;
     const infoOpen = openWeaponInfo === p.id;
     return `
       <div class="combat-master-player-card ${isCurrent ? 'current-turn' : ''} ${isNext ? 'next-turn' : ''}">
@@ -240,14 +256,19 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           <button type="button" class="combat-hp-btn" data-est-delta="1" data-pid="${p.id}">+</button>
         </div>
         ${
-          char
+          showStatusChips
             ? `<div class="combat-master-stat-row">
                 ${STATUS_STATS.map((s) => `<span class="combat-master-stat-chip" style="--stat-color:${s.color};" title="${s.label}">${s.icon}${char[s.key] ?? '—'}</span>`).join('')}
               </div>`
-            : `<div class="combat-master-npc-damage">
+            : ''
+        }
+        ${
+          !isRealPlayer && !isCompleteNpc
+            ? `<div class="combat-master-npc-damage">
                 <label>Dano</label>
-                <input type="text" class="slot-select" data-npc-damage-input data-pid="${p.id}" value="${escapeHtml(p.damage || '')}" placeholder="ex: 8 cortante">
+                <input type="text" class="slot-select" data-npc-damage-input data-pid="${p.id}" data-char-id="${char ? char.id : ''}" value="${escapeHtml((char ? char.npc_damage : p.damage) || '')}" placeholder="ex: 8 cortante">
               </div>`
+            : ''
         }
         ${weapon && infoOpen ? `<div class="combat-weapon-info">${escapeHtml(weaponDamageText(char, weapon))}</div>` : ''}
       </div>`;
@@ -391,9 +412,13 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   }
 
   function addParticipantSection() {
-    const availableChars = charactersInCampaign.filter((c) => !participants.some((p) => p.character_id === c.id));
+    const realChars = charactersInCampaign.filter((c) => !c.is_npc);
+    const bankNpcs = charactersInCampaign.filter((c) => c.is_npc);
+    const availableChars = realChars.filter((c) => !participants.some((p) => p.character_id === c.id));
     const currentAddCharId = addCharacterId || (availableChars[0] && availableChars[0].id) || null;
     const selectedChar = availableChars.find((c) => c.id === currentAddCharId);
+    const currentBankNpcId = addBankNpcId || (bankNpcs[0] && bankNpcs[0].id) || null;
+    const selectedBankNpc = bankNpcs.find((c) => c.id === currentBankNpcId);
     return `
       <div class="combat-add-trigger">
         <button type="button" class="btn btn-ghost" id="combat-add-trigger">${addFormOpen ? 'fechar' : '+ adicionar participante'}</button>
@@ -405,7 +430,8 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           <div class="combat-add-card-head"><h3>// NOVO PARTICIPANTE</h3></div>
           <div class="combat-source-toggle">
             <button type="button" class="combat-source-btn ${addSource === 'character' ? 'active' : ''}" data-add-source="character">personagem</button>
-            <button type="button" class="combat-source-btn ${addSource === 'npc' ? 'active' : ''}" data-add-source="npc">npc / inimigo</button>
+            <button type="button" class="combat-source-btn ${addSource === 'npc_bank' ? 'active' : ''}" data-add-source="npc_bank">banco de NPCs</button>
+            <button type="button" class="combat-source-btn ${addSource === 'npc' ? 'active' : ''}" data-add-source="npc">npc avulso</button>
           </div>
           ${
             addSource === 'character'
@@ -420,7 +446,23 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
                 }
               </select>
             </div>`
-              : `
+              : addSource === 'npc_bank'
+                ? `
+            <div class="field" style="margin-bottom:10px;">
+              <label>NPC do banco</label>
+              <select class="slot-select" id="combat-add-bank-npc">
+                ${
+                  bankNpcs.length
+                    ? bankNpcs.map((c) => `<option value="${c.id}" ${c.id === currentBankNpcId ? 'selected' : ''}>${escapeHtml(c.name)} (${c.npc_sheet_type})</option>`).join('')
+                    : '<option value="">nenhum NPC salvo -- crie um no banco de NPCs</option>'
+                }
+              </select>
+            </div>
+            <div class="field" style="margin-bottom:10px;">
+              <label>Quantidade (spawna várias cópias, ex: 3x Goblin)</label>
+              <input type="number" class="slot-select" id="combat-add-quantity" min="1" value="1">
+            </div>`
+                : `
             <div class="field" style="margin-bottom:10px;">
               <label>Nome</label>
               <input type="text" class="slot-select" id="combat-add-name" placeholder="ex: Lobo das cavernas">
@@ -429,7 +471,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           <div class="field" style="margin-bottom:10px;">
             <label>Time</label>
             <select class="slot-select" id="combat-add-team">
-              <option value="aliado" ${addSource === 'character' ? 'selected' : ''}>Aliado</option>
+              <option value="aliado" ${addSource !== 'npc' ? 'selected' : ''}>Aliado</option>
               <option value="inimigo" ${addSource === 'npc' ? 'selected' : ''}>Inimigo</option>
               <option value="neutro">Neutro</option>
             </select>
@@ -441,7 +483,13 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
                     ? `<span>❤ ${selectedChar.hp_current}/${charHpMax(selectedChar)}</span><span class="transfer-balance-arrow">·</span><span>⚡ ${selectedChar.estamina_current}/${charEstaminaMax(selectedChar)}</span>`
                     : '<span>sem personagem disponível</span>'
                 }</div>`
-              : `
+              : addSource === 'npc_bank'
+                ? `<div class="transfer-balance" id="combat-add-bank-npc-preview" style="margin-bottom:10px;">${
+                    selectedBankNpc
+                      ? `<span>❤ ${selectedBankNpc.hp_current}/${charHpMax(selectedBankNpc)}</span><span class="transfer-balance-arrow">·</span><span>⚡ ${selectedBankNpc.estamina_current}/${charEstaminaMax(selectedBankNpc)}</span>`
+                      : '<span>sem NPC disponível</span>'
+                  }</div>`
+                : `
           <div class="field" style="margin-bottom:10px;">
             <label>HP máximo</label>
             <input type="number" class="slot-select" id="combat-add-hp" min="1" value="10">
@@ -602,6 +650,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       if (sourceBtn) {
         addSource = sourceBtn.dataset.addSource;
         addCharacterId = null;
+        addBankNpcId = null;
         render();
         return;
       }
@@ -671,7 +720,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         const p = participants.find((x) => x.id === pid);
         if (!p) return;
         p.damage = npcDamageInput.value;
-        await updateParticipantDamage(pid, npcDamageInput.value);
+        await updateParticipantDamage(pid, npcDamageInput.value, npcDamageInput.dataset.charId || null);
         return;
       }
 
@@ -685,6 +734,13 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       const charSelect = e.target.closest('#combat-add-character');
       if (charSelect) {
         addCharacterId = charSelect.value || null;
+        render();
+        return;
+      }
+
+      const bankNpcSelect = e.target.closest('#combat-add-bank-npc');
+      if (bankNpcSelect) {
+        addBankNpcId = bankNpcSelect.value || null;
         render();
         return;
       }
@@ -806,6 +862,69 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         },
         position,
       );
+    } else if (addSource === 'npc_bank') {
+      const bankSelect = $('combat-add-bank-npc');
+      const npc = charactersInCampaign.find((c) => c.id === (bankSelect && bankSelect.value));
+      if (!npc) return;
+      const quantity = Math.max(1, parseInt($('combat-add-quantity').value) || 1);
+      const hMax = charHpMax(npc);
+      const eMax = charEstaminaMax(npc);
+      if (quantity === 1) {
+        // uma cópia só -- fica vinculado ao registro do banco, HP/estamina
+        // sincronizam de volta pra lá igual personagem de jogador (faz
+        // sentido pra NPC nomeado e recorrente, tipo um aliado fixo).
+        await addParticipant(
+          campaignId,
+          {
+            characterId: npc.id,
+            displayName: npc.name,
+            team,
+            hpMax: hMax,
+            hpCurrent: npc.hp_current,
+            staminaMax: eMax,
+            staminaCurrent: npc.estamina_current,
+            initiative,
+            hiddenMode,
+            revealInRounds,
+            currentRound: combatState.round,
+            avatarUrl: npc.avatar_url,
+          },
+          position,
+        );
+      } else {
+        // várias cópias -- desvincula do registro do banco (senão as
+        // cópias compartilhariam a MESMA linha de HP, e dano numa
+        // "sujaria" as outras e o próprio registro do banco). Cada
+        // cópia começa cheia, e o dano (se tiver) vai como texto fixo.
+        let dmgText = null;
+        if (npc.npc_sheet_type === 'simples') {
+          dmgText = npc.npc_damage || null;
+        } else {
+          const weapon = findEquippedWeapon(npc);
+          dmgText = weapon ? weaponDamageText(npc, weapon) : null;
+        }
+        for (let i = 0; i < quantity; i++) {
+          await addParticipant(
+            campaignId,
+            {
+              characterId: null,
+              displayName: `${npc.name} ${i + 1}`,
+              team,
+              hpMax: hMax,
+              hpCurrent: hMax,
+              staminaMax: eMax,
+              staminaCurrent: eMax,
+              initiative,
+              hiddenMode,
+              revealInRounds,
+              currentRound: combatState.round,
+              avatarUrl: npc.avatar_url,
+              damage: dmgText,
+            },
+            position + i,
+          );
+        }
+      }
     } else {
       const nameInput = $('combat-add-name');
       const name = nameInput.value.trim();
@@ -823,6 +942,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     }
     addFormOpen = false;
     addCharacterId = null;
+    addBankNpcId = null;
     await load();
   }
 

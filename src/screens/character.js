@@ -4,6 +4,8 @@ import { renderPublicAreaScreen } from './publicArea.js';
 import { renderCombatScreen } from './combat.js';
 import { renderFichaScreen } from './ficha.js';
 import { renderMasterFichaScreen } from './masterFicha.js';
+import { renderNpcBankScreen } from './npcBank.js';
+import { renderMasterInventoryChooser } from './masterInventoryChooser.js';
 import { createPublicItem, createPublicContainer, listCampaignPlayers, transferCurrencyRpc } from '../publicArea.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 import { updateProfileTheme } from '../campaign.js';
@@ -277,6 +279,14 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     <footer>BAÚ DO VEÍCULO — SEPARADO DO INVENTÁRIO PRINCIPAL</footer>
   </div>
 
+  <div id="master-inventory-chooser-wrap" style="display:none;">
+    <div id="master-inventory-chooser-embed"></div>
+  </div>
+
+  <div id="npcs-mode-wrap" style="display:none;">
+    <div id="npcs-embed"></div>
+  </div>
+
   <div id="combat-mode-wrap" style="display:none;">
     <div class="combat-layout">
       <div class="combat-tabs">
@@ -321,6 +331,14 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg></span>
       <span class="side-nav-label">Ficha</span>
     </button>
+    ${
+      profile.role === 'master' && !isAdminView
+        ? `<button type="button" class="side-nav-item" id="npcs-trigger" data-nav-mode="npcs" title="banco de NPCs">
+      <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3"/><path d="M6 10c-1.5 1-2.5 2.7-2.5 4.6" stroke-linecap="round"/><path d="M18 10c1.5 1 2.5 2.7 2.5 4.6" stroke-linecap="round"/><path d="M5 20c1-3.5 3.8-6 7-6s6 2.5 7 6"/></svg></span>
+      <span class="side-nav-label">NPCs</span>
+    </button>`
+        : ''
+    }
   </div>
 </nav>
 
@@ -1500,6 +1518,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     setMode('ficha');
     sideNav.classList.remove('open');
   });
+  const npcsTrigger = document.getElementById('npcs-trigger');
+  if(npcsTrigger) npcsTrigger.addEventListener('click', ()=>{
+    setMode('npcs');
+    sideNav.classList.remove('open');
+  });
 
   document.getElementById('theme-trigger').addEventListener('click', ()=>{
     const panel = document.getElementById('theme-panel');
@@ -2380,12 +2403,16 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   // ---- alternância de modo (inventário <-> baú do veículo <-> combate <-> ficha) ----
   let combatMounted = false;
   let fichaMounted = false;
+  let npcsMounted = false;
+  let chooserMounted = false;
   function setMode(mode){
     currentMode = mode;
     const invWrap = document.getElementById('inventory-mode-wrap');
     const transWrap = document.getElementById('transport-mode-wrap');
     const combatWrap = document.getElementById('combat-mode-wrap');
     const fichaWrap = document.getElementById('ficha-mode-wrap');
+    const npcsWrap = document.getElementById('npcs-mode-wrap');
+    const chooserWrap = document.getElementById('master-inventory-chooser-wrap');
     const vehicleBtn = document.getElementById('vehicle-dropzone');
     const backpackBtn = document.getElementById('backpack-return-btn');
     const titleText = document.getElementById('main-title-text');
@@ -2394,6 +2421,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     transWrap.style.display = 'none';
     combatWrap.style.display = 'none';
     fichaWrap.style.display = 'none';
+    npcsWrap.style.display = 'none';
+    chooserWrap.style.display = 'none';
     vehicleBtn.style.display = 'none';
     backpackBtn.style.display = 'none';
     copyBtn.style.display = 'flex';
@@ -2429,12 +2458,37 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
           renderFichaScreen(document.getElementById('ficha-embed'), { session, profile, campaign, characterId });
         }
       }
+    } else if(mode === 'npcs'){
+      npcsWrap.style.display = 'block';
+      npcsWrap.classList.remove('mode-fade-in'); void npcsWrap.offsetWidth; npcsWrap.classList.add('mode-fade-in');
+      backpackBtn.style.display = 'flex';
+      titleText.textContent = 'BANCO DE NPCS';
+      copyBtn.style.display = 'none';
+      if(!npcsMounted){
+        npcsMounted = true;
+        renderNpcBankScreen(document.getElementById('npcs-embed'), { session, profile, campaign, topApp: app });
+      }
     } else {
-      invWrap.style.display = 'block';
-      invWrap.classList.remove('mode-fade-in'); void invWrap.offsetWidth; invWrap.classList.add('mode-fade-in');
-      vehicleBtn.style.display = 'flex';
-      titleText.textContent = 'INVENTÁRIO';
-      copyBtn.title = 'copiar inventário para a área de transferência';
+      // mestre não joga um personagem próprio de verdade -- em vez de
+      // mostrar o inventário auto-criado dele (inútil), a aba
+      // Inventário vira um seletor: escolhe de quem (player ou NPC
+      // completo) quer gerenciar os itens.
+      if(profile.role === 'master' && !isAdminView){
+        chooserWrap.style.display = 'block';
+        chooserWrap.classList.remove('mode-fade-in'); void chooserWrap.offsetWidth; chooserWrap.classList.add('mode-fade-in');
+        titleText.textContent = 'INVENTÁRIO';
+        copyBtn.style.display = 'none';
+        if(!chooserMounted){
+          chooserMounted = true;
+          renderMasterInventoryChooser(document.getElementById('master-inventory-chooser-embed'), { session, profile, campaign, topApp: app });
+        }
+      } else {
+        invWrap.style.display = 'block';
+        invWrap.classList.remove('mode-fade-in'); void invWrap.offsetWidth; invWrap.classList.add('mode-fade-in');
+        vehicleBtn.style.display = 'flex';
+        titleText.textContent = 'INVENTÁRIO';
+        copyBtn.title = 'copiar inventário para a área de transferência';
+      }
     }
     document.querySelectorAll('.side-nav-item').forEach(el => el.classList.toggle('active', el.dataset.navMode === mode));
   }
@@ -2688,5 +2742,9 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   updateUndoButton();
 
   loadState();
+
+  // mestre não pousa no próprio inventário (inútil pra ele) -- já
+  // abre direto no seletor de quem gerenciar.
+  if(profile.role === 'master' && !isAdminView) setMode('inventory');
 
 }
