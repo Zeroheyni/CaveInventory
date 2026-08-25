@@ -13,6 +13,7 @@ export function renderMasterInventoryChooser(app, { session, profile, campaign, 
 
   let list = [];
   let loaded = false;
+  let activeTab = 'jogadores'; // 'jogadores' | 'npcs' -- mesma ideia de abas do painel de combate, pra não misturar player com NPC no mesmo grid
 
   async function load() {
     const { data, error } = await supabase
@@ -32,14 +33,27 @@ export function renderMasterInventoryChooser(app, { session, profile, campaign, 
   }
 
   function render() {
+    const players = list.filter((c) => !c.is_npc);
+    const npcs = list.filter((c) => c.is_npc);
+    const groups = { jogadores: players, npcs };
+    const shown = groups[activeTab] || [];
+
     app.innerHTML = `
       <div class="ficha-section-title" style="margin-bottom:10px;">ESCOLHA UM INVENTÁRIO</div>
       ${
         !loaded
           ? '<p class="admin-empty">carregando...</p>'
-          : list.length === 0
-            ? '<p class="admin-empty">nenhum personagem ou NPC completo nessa campanha ainda.</p>'
-            : `<div class="ficha-dash-grid">${list.map(chooserCard).join('')}</div>`
+          : `
+        <div class="combat-master-tabs">
+          <button type="button" class="combat-master-tab-btn ${activeTab === 'jogadores' ? 'active' : ''}" data-inv-tab="jogadores">Jogadores <span class="combat-master-tab-count">${players.length}</span></button>
+          <button type="button" class="combat-master-tab-btn ${activeTab === 'npcs' ? 'active' : ''}" data-inv-tab="npcs">NPCs <span class="combat-master-tab-count">${npcs.length}</span></button>
+        </div>
+        ${
+          shown.length === 0
+            ? `<p class="admin-empty">${activeTab === 'jogadores' ? 'nenhum jogador nessa campanha ainda.' : 'nenhum NPC completo criado ainda.'}</p>`
+            : `<div class="ficha-dash-grid">${shown.map(chooserCard).join('')}</div>`
+        }
+      `
       }
     `;
     wireEvents();
@@ -61,6 +75,12 @@ export function renderMasterInventoryChooser(app, { session, profile, campaign, 
     if (wired) return;
     wired = true;
     app.addEventListener('click', (e) => {
+      const tabBtn = e.target.closest('button[data-inv-tab]');
+      if (tabBtn) {
+        activeTab = tabBtn.dataset.invTab;
+        render();
+        return;
+      }
       const btn = e.target.closest('button[data-open-inv]');
       if (!btn) return;
       const id = btn.dataset.openInv;
