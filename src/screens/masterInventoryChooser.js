@@ -8,7 +8,7 @@ import { escapeHtml } from '../shared/gameData.js';
 import { supabase } from '../supabaseClient.js';
 import { renderCharacterScreen } from './character.js';
 
-export function renderMasterInventoryChooser(app, { session, profile, campaign, topApp }) {
+export function renderMasterInventoryChooser(app, { session, profile, campaign, topApp, escapeBack }) {
   const campaignId = campaign.id;
 
   let list = [];
@@ -71,7 +71,7 @@ export function renderMasterInventoryChooser(app, { session, profile, campaign, 
         campaign,
         characterId: id,
         ownerName: c ? c.name : 'Personagem',
-        onBack: () => renderCharacterScreen(topApp, { session, profile, campaign }),
+        onBack: escapeBack || (() => renderCharacterScreen(topApp, { session, profile, campaign })),
       });
     });
   }

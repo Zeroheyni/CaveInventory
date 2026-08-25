@@ -12,6 +12,56 @@ import { updateProfileTheme } from '../campaign.js';
 
 let activeChannel = null;
 
+export const THEMES = [
+  {id:'caverna-azul', label:'Caverna Azul', group:'dark', accent:'#5ad4ff', void:'#050708'},
+  {id:'nucleo-roxo', label:'Núcleo Roxo', group:'dark', accent:'#b98bff', void:'#08050d'},
+  {id:'ferrugem', label:'Ferrugem', group:'dark', accent:'#ff8a4c', void:'#0a0705'},
+  {id:'verde-radioativo', label:'Verde Radioativo', group:'dark', accent:'#7aff5a', void:'#060a06'},
+  {id:'sangue', label:'Sangue', group:'dark', accent:'#ff4d6d', void:'#0a0405'},
+  {id:'dourado-imperial', label:'Dourado Imperial', group:'dark', accent:'#ffcc4d', void:'#0a0805'},
+  {id:'ciano-neon', label:'Ciano Neon', group:'dark', accent:'#3df0e0', void:'#04090a'},
+  {id:'rosa-neon', label:'Rosa Neon', group:'dark', accent:'#ff5cd6', void:'#0a0509'},
+  {id:'indigo-profundo', label:'Índigo Profundo', group:'dark', accent:'#8c7bff', void:'#050414'},
+  {id:'teal-abissal', label:'Teal Abissal', group:'dark', accent:'#33e6a8', void:'#040a09'},
+  {id:'marte-vermelho', label:'Marte Vermelho', group:'dark', accent:'#ff5a44', void:'#0a0505'},
+  {id:'ambar-fossil', label:'Âmbar Fóssil', group:'dark', accent:'#ffb020', void:'#0a0805'},
+  {id:'safira-profunda', label:'Safira Profunda', group:'dark', accent:'#4d7fff', void:'#04070f'},
+  {id:'limao-acido', label:'Limão Ácido', group:'dark', accent:'#c6ff3d', void:'#080a04'},
+  {id:'orquidea-sombria', label:'Orquídea Sombria', group:'dark', accent:'#e066ff', void:'#0a0510'},
+
+  {id:'papel-antigo', label:'Papel Antigo', group:'light', accent:'#9c5f26', void:'#f4ecd8'},
+  {id:'laboratorio', label:'Laboratório', group:'light', accent:'#0b7fb0', void:'#f0f4f7'},
+  {id:'deserto-claro', label:'Deserto Claro', group:'light', accent:'#c2621c', void:'#faf1e4'},
+  {id:'menta-clara', label:'Menta Clara', group:'light', accent:'#0b8a63', void:'#eef7f3'},
+  {id:'rosa-pastel', label:'Rosa Pastel', group:'light', accent:'#c23368', void:'#faeef2'},
+  {id:'lavanda', label:'Lavanda', group:'light', accent:'#7440c2', void:'#f2eefa'},
+  {id:'ceu-claro', label:'Céu Claro', group:'light', accent:'#1f8fd6', void:'#eaf4fb'},
+  {id:'coral', label:'Coral', group:'light', accent:'#e05a2e', void:'#fdf0ea'},
+  {id:'oliva-claro', label:'Oliva Claro', group:'light', accent:'#727a1f', void:'#f6f5e6'},
+  {id:'cinza-perola', label:'Cinza Pérola', group:'light', accent:'#5c6b6a', void:'#f2f2f0'},
+  {id:'vinho-claro', label:'Vinho Claro', group:'light', accent:'#a3283f', void:'#faedec'},
+  {id:'turquesa-suave', label:'Turquesa Suave', group:'light', accent:'#1a9e94', void:'#eaf7f5'},
+  {id:'girassol', label:'Girassol', group:'light', accent:'#c4900a', void:'#fbf4e2'},
+  {id:'marinho-claro', label:'Azul Marinho Claro', group:'light', accent:'#2c5aa3', void:'#eaf0fb'},
+  {id:'ameixa-clara', label:'Ameixa Clara', group:'light', accent:'#8e4a8e', void:'#f7edf7'},
+
+  {id:'cinza-grafite', label:'Cinza Grafite', group:'neutral', accent:'#9db4c7', void:'#202226'},
+  {id:'bege-militar', label:'Bege Militar', group:'neutral', accent:'#c9b878', void:'#2b2a22'},
+  {id:'aco-frio', label:'Aço Frio', group:'neutral', accent:'#7fb0d6', void:'#21252b'},
+  {id:'terracota', label:'Terracota Neutro', group:'neutral', accent:'#d99a72', void:'#2b2420'},
+  {id:'musgo-neutro', label:'Musgo Neutro', group:'neutral', accent:'#a8c46e', void:'#242820'},
+  {id:'ardosia', label:'Ardósia', group:'neutral', accent:'#7fa3c4', void:'#1e2226'},
+  {id:'argila', label:'Argila', group:'neutral', accent:'#c67f52', void:'#28211d'},
+  {id:'chumbo', label:'Chumbo', group:'neutral', accent:'#a08fc4', void:'#212024'},
+  {id:'areia-neutra', label:'Areia Neutra', group:'neutral', accent:'#d4b56a', void:'#2b2820'},
+  {id:'ametista-neutra', label:'Ametista Neutra', group:'neutral', accent:'#b98fd6', void:'#241f28'},
+  {id:'vinho-neutro', label:'Vinho Neutro', group:'neutral', accent:'#b06868', void:'#282022'},
+  {id:'oceano-neutro', label:'Oceano Neutro', group:'neutral', accent:'#6b9aa3', void:'#1f2628'},
+  {id:'amendoa-neutra', label:'Amêndoa Neutra', group:'neutral', accent:'#c9a374', void:'#2a251e'},
+  {id:'pinha-neutra', label:'Pinha Neutra', group:'neutral', accent:'#7fa88a', void:'#212824'},
+  {id:'cobre-neutro', label:'Cobre Neutro', group:'neutral', accent:'#b8805a', void:'#251f1a'}
+];
+
 export function renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, ownerName, onBack }) {
   const campaignId = campaign.id;
   const userId = session.user.id;
@@ -411,56 +461,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     outro:{label:'Outros', emoji:'❔'}
   };
   const TAG_ORDER = ['arma','vestimenta','acessorio','alimento','pocao','consumivel','ferramenta','material','municao','quest','tesouro','recipiente','bolsa','outro'];
-
-  const THEMES = [
-    {id:'caverna-azul', label:'Caverna Azul', group:'dark', accent:'#5ad4ff', void:'#050708'},
-    {id:'nucleo-roxo', label:'Núcleo Roxo', group:'dark', accent:'#b98bff', void:'#08050d'},
-    {id:'ferrugem', label:'Ferrugem', group:'dark', accent:'#ff8a4c', void:'#0a0705'},
-    {id:'verde-radioativo', label:'Verde Radioativo', group:'dark', accent:'#7aff5a', void:'#060a06'},
-    {id:'sangue', label:'Sangue', group:'dark', accent:'#ff4d6d', void:'#0a0405'},
-    {id:'dourado-imperial', label:'Dourado Imperial', group:'dark', accent:'#ffcc4d', void:'#0a0805'},
-    {id:'ciano-neon', label:'Ciano Neon', group:'dark', accent:'#3df0e0', void:'#04090a'},
-    {id:'rosa-neon', label:'Rosa Neon', group:'dark', accent:'#ff5cd6', void:'#0a0509'},
-    {id:'indigo-profundo', label:'Índigo Profundo', group:'dark', accent:'#8c7bff', void:'#050414'},
-    {id:'teal-abissal', label:'Teal Abissal', group:'dark', accent:'#33e6a8', void:'#040a09'},
-    {id:'marte-vermelho', label:'Marte Vermelho', group:'dark', accent:'#ff5a44', void:'#0a0505'},
-    {id:'ambar-fossil', label:'Âmbar Fóssil', group:'dark', accent:'#ffb020', void:'#0a0805'},
-    {id:'safira-profunda', label:'Safira Profunda', group:'dark', accent:'#4d7fff', void:'#04070f'},
-    {id:'limao-acido', label:'Limão Ácido', group:'dark', accent:'#c6ff3d', void:'#080a04'},
-    {id:'orquidea-sombria', label:'Orquídea Sombria', group:'dark', accent:'#e066ff', void:'#0a0510'},
-
-    {id:'papel-antigo', label:'Papel Antigo', group:'light', accent:'#9c5f26', void:'#f4ecd8'},
-    {id:'laboratorio', label:'Laboratório', group:'light', accent:'#0b7fb0', void:'#f0f4f7'},
-    {id:'deserto-claro', label:'Deserto Claro', group:'light', accent:'#c2621c', void:'#faf1e4'},
-    {id:'menta-clara', label:'Menta Clara', group:'light', accent:'#0b8a63', void:'#eef7f3'},
-    {id:'rosa-pastel', label:'Rosa Pastel', group:'light', accent:'#c23368', void:'#faeef2'},
-    {id:'lavanda', label:'Lavanda', group:'light', accent:'#7440c2', void:'#f2eefa'},
-    {id:'ceu-claro', label:'Céu Claro', group:'light', accent:'#1f8fd6', void:'#eaf4fb'},
-    {id:'coral', label:'Coral', group:'light', accent:'#e05a2e', void:'#fdf0ea'},
-    {id:'oliva-claro', label:'Oliva Claro', group:'light', accent:'#727a1f', void:'#f6f5e6'},
-    {id:'cinza-perola', label:'Cinza Pérola', group:'light', accent:'#5c6b6a', void:'#f2f2f0'},
-    {id:'vinho-claro', label:'Vinho Claro', group:'light', accent:'#a3283f', void:'#faedec'},
-    {id:'turquesa-suave', label:'Turquesa Suave', group:'light', accent:'#1a9e94', void:'#eaf7f5'},
-    {id:'girassol', label:'Girassol', group:'light', accent:'#c4900a', void:'#fbf4e2'},
-    {id:'marinho-claro', label:'Azul Marinho Claro', group:'light', accent:'#2c5aa3', void:'#eaf0fb'},
-    {id:'ameixa-clara', label:'Ameixa Clara', group:'light', accent:'#8e4a8e', void:'#f7edf7'},
-
-    {id:'cinza-grafite', label:'Cinza Grafite', group:'neutral', accent:'#9db4c7', void:'#202226'},
-    {id:'bege-militar', label:'Bege Militar', group:'neutral', accent:'#c9b878', void:'#2b2a22'},
-    {id:'aco-frio', label:'Aço Frio', group:'neutral', accent:'#7fb0d6', void:'#21252b'},
-    {id:'terracota', label:'Terracota Neutro', group:'neutral', accent:'#d99a72', void:'#2b2420'},
-    {id:'musgo-neutro', label:'Musgo Neutro', group:'neutral', accent:'#a8c46e', void:'#242820'},
-    {id:'ardosia', label:'Ardósia', group:'neutral', accent:'#7fa3c4', void:'#1e2226'},
-    {id:'argila', label:'Argila', group:'neutral', accent:'#c67f52', void:'#28211d'},
-    {id:'chumbo', label:'Chumbo', group:'neutral', accent:'#a08fc4', void:'#212024'},
-    {id:'areia-neutra', label:'Areia Neutra', group:'neutral', accent:'#d4b56a', void:'#2b2820'},
-    {id:'ametista-neutra', label:'Ametista Neutra', group:'neutral', accent:'#b98fd6', void:'#241f28'},
-    {id:'vinho-neutro', label:'Vinho Neutro', group:'neutral', accent:'#b06868', void:'#282022'},
-    {id:'oceano-neutro', label:'Oceano Neutro', group:'neutral', accent:'#6b9aa3', void:'#1f2628'},
-    {id:'amendoa-neutra', label:'Amêndoa Neutra', group:'neutral', accent:'#c9a374', void:'#2a251e'},
-    {id:'pinha-neutra', label:'Pinha Neutra', group:'neutral', accent:'#7fa88a', void:'#212824'},
-    {id:'cobre-neutro', label:'Cobre Neutro', group:'neutral', accent:'#b8805a', void:'#251f1a'}
-  ];
 
   let characterId = null;
   let characterName = 'Personagem';

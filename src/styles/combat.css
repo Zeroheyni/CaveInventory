@@ -27,7 +27,7 @@
 .combat-master-summary-head{ display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:10px; }
 .combat-master-summary-title{ font-family: var(--font-display); font-size:10.5px; letter-spacing:0.12em; color: var(--ink-faint); }
 .combat-master-summary-head .btn{ margin-left:auto; }
-.combat-master-tabs{ display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; }
+.combat-master-tabs{ display:flex; gap:6px; margin-bottom:12px; flex-wrap:wrap; justify-content:center; }
 .combat-master-tab-btn{
   position:relative; display:flex; align-items:center; gap:5px; padding:7px 12px; border-radius:7px 7px 0 0;
   border:1px solid var(--stone-line); border-bottom:none; background: var(--stone-900); color: var(--ink-faint);

@@ -38,6 +38,18 @@
 .admin-danger-btn:hover{ color: var(--danger); border-color: var(--danger); }
 .admin-danger-btn.confirm-pending{ color: var(--danger); border-color: var(--danger); background: rgba(var(--danger-rgb),0.15); }
 
+.admin-delete-gate{
+  margin-top:10px; padding:12px; border-radius:8px;
+  border:1px solid var(--danger); background: rgba(var(--danger-rgb),0.08);
+}
+.admin-delete-gate-warn{ font-size:11.5px; color: var(--danger); margin:0 0 8px; }
+.admin-delete-gate-pass{
+  width:100%; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
+  font-family: var(--font-mono); font-size:13px; padding:8px 10px; border-radius:5px; margin-bottom:8px;
+}
+.admin-delete-gate-pass:focus{ outline:none; border-color: var(--danger); box-shadow: 0 0 0 2px rgba(var(--danger-rgb),0.25); }
+.admin-delete-gate-actions{ display:flex; gap:8px; }
+
 .admin-character-list{ margin-top:12px; padding-top:12px; border-top:1px solid var(--stone-line); display:flex; flex-direction:column; gap:8px; }
 .admin-character-row{ display:flex; align-items:center; justify-content:space-between; gap:10px; font-size:12.5px; color: var(--ink-dim); }
 .admin-owner-tag{ color: var(--ink-faint); font-size:11px; }

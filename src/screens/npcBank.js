@@ -19,7 +19,7 @@ import {
 import { renderFichaScreen } from './ficha.js';
 import { renderCharacterScreen } from './character.js';
 
-export function renderNpcBankScreen(app, { session, profile, campaign, topApp, onBack }) {
+export function renderNpcBankScreen(app, { session, profile, campaign, topApp, onBack, escapeBack }) {
   const campaignId = campaign.id;
   const $ = (id) => app.querySelector('#' + id);
 
@@ -44,6 +44,7 @@ export function renderNpcBankScreen(app, { session, profile, campaign, topApp, o
   }
 
   function backToTopApp() {
+    if (escapeBack) return escapeBack();
     renderCharacterScreen(topApp, { session, profile, campaign });
   }
 
