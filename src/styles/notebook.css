@@ -167,7 +167,14 @@ body.notebook-focus-mode #backpack-return-btn{ display:none !important; }
   background:#fdfbf4; color:#2b2a28; box-shadow:0 10px 30px rgba(0,0,0,0.35);
 }
 .notebook-theme-papel.notebook-variant-amarelado-liso .notebook-page{
-  background:#f3e6bf; color:#3a2f1c; box-shadow:0 10px 30px rgba(0,0,0,0.4);
+  background:
+    radial-gradient(ellipse at 15% 20%, rgba(120,90,40,0.2), transparent 35%),
+    radial-gradient(ellipse at 88% 78%, rgba(120,90,40,0.24), transparent 40%),
+    radial-gradient(ellipse at 60% 10%, rgba(90,60,20,0.12), transparent 30%),
+    radial-gradient(ellipse at top left, rgba(0,0,0,0.15), transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(0,0,0,0.18), transparent 55%),
+    #e8d4a0;
+  color:#3a2f1c; box-shadow: inset 0 0 50px rgba(90,60,20,0.25), 0 10px 30px rgba(0,0,0,0.4);
 }
 .notebook-theme-papel.notebook-variant-reciclado .notebook-page{
   background:
