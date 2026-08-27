@@ -27,7 +27,7 @@ export async function listCharactersInCampaign(campaignId) {
 // ---- vínculo com o bot do Discord (Fase 3) ----
 
 export async function listDiscordConfigs() {
-  const { data, error } = await supabase.from('discord_config').select('campaign_id, channel_id');
+  const { data, error } = await supabase.from('discord_config').select('campaign_id, channel_id, combat_channel_id');
   if (error) throw error;
   return data;
 }
@@ -37,6 +37,22 @@ export async function setCampaignDiscordChannel(campaignId, channelId) {
   if (error) throw error;
   // dispara uma sincronização imediata pra dar feedback na hora ao mestre
   await supabase.functions.invoke('discord-sync-public', { body: { campaign_id: campaignId } });
+}
+
+// canal DEDICADO do aviso de turno (Fase 8, db/033_patch_discord_turn_notify.sql)
+// -- separado do canal de sync de inventário/transporte acima. Sem sync
+// imediata pra disparar aqui (não tem "estado atual" pra sincronizar, só
+// dispara quando um turno passa de verdade).
+export async function setCampaignCombatChannel(campaignId, channelId) {
+  const { error } = await supabase.from('discord_config').upsert({ campaign_id: campaignId, combat_channel_id: channelId });
+  if (error) throw error;
+}
+
+// ID da conta Discord do jogador (Fase 8) -- cadastrado pelo mestre, pra o
+// bot poder @mencionar quando chega a vez dele no combate.
+export async function setPlayerDiscordUserId(profileId, discordUserId) {
+  const { error } = await supabase.from('profiles').update({ discord_user_id: discordUserId }).eq('id', profileId);
+  if (error) throw error;
 }
 
 export async function listCharacterDiscordConfigs(characterIds) {

@@ -1,0 +1,51 @@
+/* ---------- ROLAGEM DE DADOS (Fase 8) ---------- */
+.dice-wrap{ display:flex; flex-direction:column; gap:16px; }
+
+.dice-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.dice-title{ font-family: var(--font-display); font-size:13px; letter-spacing:0.1em; color: var(--ink); }
+
+.dice-controls{
+  display:flex; flex-wrap:wrap; align-items:center; gap:16px;
+  background: linear-gradient(180deg, var(--stone-800), var(--stone-900));
+  border:1px solid var(--stone-line); border-radius:12px; padding:16px;
+  box-shadow:0 4px 16px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.03);
+}
+.dice-buttons{ display:flex; flex-wrap:wrap; gap:8px; }
+.dice-die-btn{
+  width:56px; height:56px; border-radius:10px; border:1px solid var(--stone-line); background: var(--stone-900);
+  color: var(--ink-dim); cursor:pointer; font-family: var(--font-display); font-size:14px; letter-spacing:0.04em;
+  transition: all 0.15s ease;
+}
+.dice-die-btn:hover:not(:disabled){ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); transform:translateY(-2px); box-shadow:0 8px 18px rgba(0,0,0,0.3); }
+.dice-die-btn:active:not(:disabled){ transform:translateY(0) scale(0.96); }
+.dice-die-btn:disabled{ opacity:0.4; cursor:default; }
+
+.dice-modifiers{ display:flex; gap:14px; margin-left:auto; }
+.dice-field{ display:flex; flex-direction:column; gap:5px; font-size:10.5px; letter-spacing:0.06em; color: var(--ink-faint); text-transform:uppercase; }
+.dice-field input{
+  width:76px; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
+  font-family: var(--font-mono); font-size:14px; padding:8px 10px; border-radius:6px; text-align:center;
+}
+.dice-field input:focus{ outline:none; border-color: var(--accent-core); box-shadow:0 0 0 2px var(--accent-faint); }
+
+.dice-history{
+  background: var(--stone-800); border:1px solid var(--stone-line); border-radius:11px; padding:14px;
+  max-height:480px; overflow-y:auto;
+}
+.dice-roll-entry{
+  display:flex; align-items:center; gap:10px; padding:8px 4px; border-bottom:1px solid var(--stone-line);
+  font-size:12px; font-family: var(--font-mono); flex-wrap:wrap;
+}
+.dice-roll-entry:last-child{ border-bottom:none; }
+.dice-roll-who{ color: var(--ink); font-weight:700; }
+.dice-roll-formula{ color: var(--ink-faint); }
+.dice-roll-results{ color: var(--ink-faint); font-size:11px; }
+.dice-roll-total{
+  margin-left:auto; font-family: var(--font-display); font-size:15px; color: var(--accent);
+  text-shadow:0 0 8px var(--accent-faint);
+}
+
+@media (max-width: 640px){
+  .dice-die-btn{ width:48px; height:48px; font-size:12px; }
+  .dice-modifiers{ margin-left:0; }
+}

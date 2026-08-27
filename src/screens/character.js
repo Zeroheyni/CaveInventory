@@ -6,6 +6,9 @@ import { renderFichaScreen } from './ficha.js';
 import { renderMasterFichaScreen } from './masterFicha.js';
 import { renderNpcBankScreen } from './npcBank.js';
 import { renderNotebookScreen } from './notebook.js';
+import { renderDiceScreen } from './dice.js';
+import { renderBattleLogScreen } from './battleLog.js';
+import { renderSessionJournalScreen } from './sessionJournal.js';
 import { renderMasterInventoryChooser } from './masterInventoryChooser.js';
 import { createPublicItem, createPublicContainer, listCampaignPlayers, transferCurrencyRpc } from '../publicArea.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
@@ -347,10 +350,14 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     <div class="combat-layout">
       <div class="combat-tabs">
         <button type="button" class="combat-tab-btn active" data-combat-tab="status">⚔ STATUS</button>
+        <button type="button" class="combat-tab-btn" data-combat-tab="log">📜 LOG</button>
       </div>
       <div class="combat-page-wrap">
         <div class="combat-page active" id="combat-page-status">
           <div id="combat-embed"></div>
+        </div>
+        <div class="combat-page" id="combat-page-log">
+          <div id="battlelog-embed"></div>
         </div>
       </div>
     </div>
@@ -365,6 +372,16 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   <div id="notebook-mode-wrap" style="display:none;">
     <div id="notebook-embed"></div>
     <footer>CADERNO — ANOTAÇÕES PESSOAIS DO PERSONAGEM</footer>
+  </div>
+
+  <div id="dice-mode-wrap" style="display:none;">
+    <div id="dice-embed"></div>
+    <footer>DADOS — ROLAGEM COMPARTILHADA DA CAMPANHA</footer>
+  </div>
+
+  <div id="journal-mode-wrap" style="display:none;">
+    <div id="journal-embed"></div>
+    <footer>DIÁRIO — REGISTRO DE SESSÕES DA CAMPANHA</footer>
   </div>
 </div>
 
@@ -391,6 +408,14 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     <button type="button" class="side-nav-item" id="ficha-trigger" data-nav-mode="ficha" title="ficha do personagem">
       <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg></span>
       <span class="side-nav-label">Ficha</span>
+    </button>
+    <button type="button" class="side-nav-item" id="dice-trigger" data-nav-mode="dice" title="rolagem de dados">
+      <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="8.5" cy="8.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.1" fill="currentColor" stroke="none"/></svg></span>
+      <span class="side-nav-label">Dados</span>
+    </button>
+    <button type="button" class="side-nav-item" id="journal-trigger" data-nav-mode="journal" title="diário de sessão">
+      <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/><path d="M4 7h16" stroke-dasharray="2 2"/></svg></span>
+      <span class="side-nav-label">Diário</span>
     </button>
     ${
       !(profile.role === 'master' && !isAdminView)
@@ -1554,6 +1579,14 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     setMode('notebook');
     sideNav.classList.remove('open');
   });
+  document.getElementById('dice-trigger').addEventListener('click', ()=>{
+    setMode('dice');
+    sideNav.classList.remove('open');
+  });
+  document.getElementById('journal-trigger').addEventListener('click', ()=>{
+    setMode('journal');
+    sideNav.classList.remove('open');
+  });
 
   document.getElementById('theme-trigger').addEventListener('click', ()=>{
     const panel = document.getElementById('theme-panel');
@@ -2439,6 +2472,23 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   let npcsMounted = false;
   let chooserMounted = false;
   let notebookMounted = false;
+  let diceMounted = false;
+  let battleLogMounted = false;
+  let journalMounted = false;
+
+  // ---- sub-abas dentro do combate (STATUS <-> LOG) ----
+  document.querySelectorAll('.combat-tab-btn').forEach(btn => {
+    btn.addEventListener('click', ()=>{
+      const tab = btn.dataset.combatTab;
+      document.querySelectorAll('.combat-tab-btn').forEach(b => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.combat-page').forEach(p => p.classList.toggle('active', p.id === 'combat-page-' + tab));
+      if(tab === 'log' && !battleLogMounted){
+        battleLogMounted = true;
+        renderBattleLogScreen(document.getElementById('battlelog-embed'), { session, profile, campaign });
+      }
+    });
+  });
+
   function setMode(mode){
     currentMode = mode;
     // sai do modo foco do caderno sempre que troca de aba -- senão,
@@ -2451,6 +2501,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     const fichaWrap = document.getElementById('ficha-mode-wrap');
     const npcsWrap = document.getElementById('npcs-mode-wrap');
     const notebookWrap = document.getElementById('notebook-mode-wrap');
+    const diceWrap = document.getElementById('dice-mode-wrap');
+    const journalWrap = document.getElementById('journal-mode-wrap');
     const chooserWrap = document.getElementById('master-inventory-chooser-wrap');
     const vehicleBtn = document.getElementById('vehicle-dropzone');
     const backpackBtn = document.getElementById('backpack-return-btn');
@@ -2462,6 +2514,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     fichaWrap.style.display = 'none';
     npcsWrap.style.display = 'none';
     notebookWrap.style.display = 'none';
+    diceWrap.style.display = 'none';
+    journalWrap.style.display = 'none';
     chooserWrap.style.display = 'none';
     vehicleBtn.style.display = 'none';
     backpackBtn.style.display = 'none';
@@ -2517,6 +2571,26 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       if(!notebookMounted){
         notebookMounted = true;
         renderNotebookScreen(document.getElementById('notebook-embed'), { session, profile, campaign, characterId, isAdminView });
+      }
+    } else if(mode === 'dice'){
+      diceWrap.style.display = 'block';
+      diceWrap.classList.remove('mode-fade-in'); void diceWrap.offsetWidth; diceWrap.classList.add('mode-fade-in');
+      backpackBtn.style.display = 'flex';
+      titleText.textContent = 'DADOS';
+      copyBtn.style.display = 'none';
+      if(!diceMounted){
+        diceMounted = true;
+        renderDiceScreen(document.getElementById('dice-embed'), { session, profile, campaign });
+      }
+    } else if(mode === 'journal'){
+      journalWrap.style.display = 'block';
+      journalWrap.classList.remove('mode-fade-in'); void journalWrap.offsetWidth; journalWrap.classList.add('mode-fade-in');
+      backpackBtn.style.display = 'flex';
+      titleText.textContent = 'DIÁRIO';
+      copyBtn.style.display = 'none';
+      if(!journalMounted){
+        journalMounted = true;
+        renderSessionJournalScreen(document.getElementById('journal-embed'), { session, profile, campaign });
       }
     } else {
       // mestre não joga um personagem próprio de verdade -- em vez de

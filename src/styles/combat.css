@@ -166,6 +166,32 @@
 }
 .combat-row-remove:hover{ color: var(--danger); border-color: var(--danger); }
 
+/* ---- condições de combate (Fase 8) ---- */
+.combat-conditions-row{ display:flex; align-items:center; gap:5px; margin-top:6px; flex-wrap:wrap; position:relative; }
+.combat-condition-badge{
+  width:24px; height:24px; border-radius:50%; border:1px solid var(--cond-color, var(--stone-line));
+  background: color-mix(in srgb, var(--cond-color, var(--stone-line)) 18%, var(--stone-900));
+  color: var(--cond-color, var(--ink-faint)); cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center;
+  transition: transform 0.15s ease; flex-shrink:0;
+}
+.combat-condition-badge:hover:not(:disabled){ transform:scale(1.12); }
+.combat-condition-badge:disabled{ cursor:default; }
+.combat-condition-add-btn{
+  width:22px; height:22px; border-radius:50%; border:1px dashed var(--stone-line); background:none;
+  color: var(--ink-faint); cursor:pointer; font-size:12px; transition: all 0.15s ease; flex-shrink:0;
+}
+.combat-condition-add-btn:hover{ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); }
+.combat-condition-picker{
+  position:absolute; top:calc(100% + 6px); left:0; z-index:15; display:flex; gap:6px; align-items:center; flex-wrap:wrap;
+  background: var(--stone-800); border:1px solid var(--stone-line); border-radius:9px; padding:9px;
+  box-shadow:0 14px 32px rgba(0,0,0,0.45); width:max-content; max-width:260px;
+}
+.combat-condition-select, .combat-condition-duration{
+  background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
+  font-family: var(--font-mono); font-size:11.5px; padding:6px 7px; border-radius:6px;
+}
+.combat-condition-duration{ width:150px; }
+
 .combat-add-trigger{ margin-top:12px; }
 .combat-add-card{
   background: var(--stone-800); border:1px solid var(--stone-line); border-radius:10px; padding:14px 16px; margin-top:12px;
@@ -202,3 +228,19 @@
   .combat-layout{ flex-direction:column; }
   .combat-tabs{ flex-direction:row; width:auto; overflow-x:auto; }
 }
+
+/* ---- log de batalha (Fase 8) ---- */
+.battlelog-wrap{ display:flex; flex-direction:column; gap:10px; }
+.battlelog-toolbar{ display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.battlelog-entry{
+  display:flex; align-items:center; gap:10px; padding:8px 10px; border-bottom:1px solid var(--stone-line);
+  font-size:12px; font-family: var(--font-mono); flex-wrap:wrap;
+}
+.battlelog-entry:last-child{ border-bottom:none; }
+.battlelog-icon{ width:20px; text-align:center; flex-shrink:0; }
+.battlelog-who{ color: var(--ink); font-weight:700; }
+.battlelog-text{ color: var(--ink-faint); }
+.battlelog-dano .battlelog-icon{ color: var(--danger); }
+.battlelog-cura .battlelog-icon{ color:#4ade80; }
+.battlelog-entrada .battlelog-icon, .battlelog-saida .battlelog-icon{ color: var(--ink-faint); }
+.battlelog-condicao .battlelog-icon{ color: var(--accent); }

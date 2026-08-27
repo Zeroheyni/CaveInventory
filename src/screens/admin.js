@@ -10,8 +10,10 @@ import {
   createPlayerAccount,
   listDiscordConfigs,
   setCampaignDiscordChannel,
+  setCampaignCombatChannel,
   listCharacterDiscordConfigs,
   setCharacterDiscordChannel,
+  setPlayerDiscordUserId,
   deletePlayerAccount,
   setCampaignLiveSession,
 } from '../admin.js';
@@ -29,6 +31,7 @@ export function renderAdminScreen(app, { session, profile }) {
   let syncingLiveSession = null;
   let lastCreatedAccount = null;
   let discordChannelByCampaign = new Map();
+  let combatChannelByCampaign = new Map();
   let discordChannelByCharacter = new Map();
 
   async function load() {
@@ -36,6 +39,7 @@ export function renderAdminScreen(app, { session, profile }) {
     campaigns = camps;
     profilesById = new Map(profs.map((p) => [p.id, p]));
     discordChannelByCampaign = new Map(discordConfigs.map((c) => [c.campaign_id, c.channel_id]));
+    combatChannelByCampaign = new Map(discordConfigs.map((c) => [c.campaign_id, c.combat_channel_id]));
     charactersByCampaign.clear();
     render();
   }
@@ -220,6 +224,12 @@ export function renderAdminScreen(app, { session, profile }) {
               <span class="admin-discord-feedback" data-discord-feedback-campaign="${c.id}"></span>
             </div>
             <div class="admin-discord-row">
+              <label>⚔ Canal do Discord (aviso de turno)</label>
+              <input type="text" class="admin-discord-input" data-combat-discord-campaign="${c.id}" placeholder="ID do canal" value="${escapeHtml(combatChannelByCampaign.get(c.id) || '')}" />
+              <button type="button" class="btn btn-ghost" data-save-combat-discord-campaign="${c.id}">vincular</button>
+              <span class="admin-discord-feedback" data-combat-discord-feedback-campaign="${c.id}"></span>
+            </div>
+            <div class="admin-discord-row">
               <label>🎲 Sessão do Discord</label>
               <button type="button" class="btn ${c.discord_live_session ? 'btn-live-session' : 'btn-ghost'}" data-toggle-live-session="${c.id}" data-live="${c.discord_live_session}" ${syncingLiveSession === c.id ? 'disabled' : ''} title="em sessão, o Discord atualiza em tempo real a cada mudança; fora de sessão, só atualiza quando alguém clica em 🔄 atualizar">
                 ${syncingLiveSession === c.id ? 'sincronizando tudo...' : (c.discord_live_session ? '🟢 em sessão (tempo real)' : '⚪ fora de sessão (só no 🔄 atualizar)')}
@@ -255,6 +265,9 @@ export function renderAdminScreen(app, { session, profile }) {
     });
     listEl.querySelectorAll('button[data-save-discord-campaign]').forEach((btn) => {
       btn.addEventListener('click', () => onSaveCampaignDiscord(btn.dataset.saveDiscordCampaign));
+    });
+    listEl.querySelectorAll('button[data-save-combat-discord-campaign]').forEach((btn) => {
+      btn.addEventListener('click', () => onSaveCampaignCombatDiscord(btn.dataset.saveCombatDiscordCampaign));
     });
     listEl.querySelectorAll('button[data-toggle-live-session]').forEach((btn) => {
       btn.addEventListener('click', () => onToggleLiveSession(btn.dataset.toggleLiveSession, btn.dataset.live !== 'true'));
@@ -314,6 +327,12 @@ export function renderAdminScreen(app, { session, profile }) {
             <button type="button" class="btn btn-ghost" data-save-discord-character="${ch.id}">vincular</button>
             <span class="admin-discord-feedback" data-discord-feedback-character="${ch.id}"></span>
           </div>
+          <div class="admin-discord-row">
+            <label>🎮 Discord user ID do jogador</label>
+            <input type="text" class="admin-discord-input" data-player-discord-owner="${ch.owner_id}" placeholder="ID numérico da conta" value="${escapeHtml((owner && owner.discord_user_id) || '')}" />
+            <button type="button" class="btn btn-ghost" data-save-player-discord="${ch.owner_id}">vincular</button>
+            <span class="admin-discord-feedback" data-player-discord-feedback="${ch.owner_id}"></span>
+          </div>
         `;
       })
       .join('');
@@ -332,6 +351,9 @@ export function renderAdminScreen(app, { session, profile }) {
     });
     el.querySelectorAll('button[data-save-discord-character]').forEach((btn) => {
       btn.addEventListener('click', () => onSaveCharacterDiscord(btn.dataset.saveDiscordCharacter));
+    });
+    el.querySelectorAll('button[data-save-player-discord]').forEach((btn) => {
+      btn.addEventListener('click', () => onSavePlayerDiscord(btn.dataset.savePlayerDiscord));
     });
     el.querySelectorAll('button[data-delete-character]').forEach((btn) => {
       btn.addEventListener('click', () => onDeleteCharacterClick(campaignId, btn.dataset.deleteCharacter));
@@ -407,6 +429,37 @@ export function renderAdminScreen(app, { session, profile }) {
     try {
       await setCharacterDiscordChannel(characterId, channelId);
       discordChannelByCharacter.set(characterId, channelId);
+      feedback.textContent = 'vinculado ✓';
+    } catch (err) {
+      feedback.textContent = 'erro: ' + err.message;
+    }
+  }
+
+  async function onSaveCampaignCombatDiscord(campaignId) {
+    const input = document.querySelector(`input[data-combat-discord-campaign="${campaignId}"]`);
+    const feedback = document.querySelector(`span[data-combat-discord-feedback-campaign="${campaignId}"]`);
+    const channelId = input.value.trim();
+    if (!channelId) { input.focus(); return; }
+    feedback.textContent = 'vinculando...';
+    try {
+      await setCampaignCombatChannel(campaignId, channelId);
+      combatChannelByCampaign.set(campaignId, channelId);
+      feedback.textContent = 'vinculado ✓';
+    } catch (err) {
+      feedback.textContent = 'erro: ' + err.message;
+    }
+  }
+
+  async function onSavePlayerDiscord(ownerId) {
+    const input = document.querySelector(`input[data-player-discord-owner="${ownerId}"]`);
+    const feedback = document.querySelector(`span[data-player-discord-feedback="${ownerId}"]`);
+    const discordUserId = input.value.trim();
+    if (!discordUserId) { input.focus(); return; }
+    feedback.textContent = 'vinculando...';
+    try {
+      await setPlayerDiscordUserId(ownerId, discordUserId);
+      const owner = profilesById.get(ownerId);
+      if (owner) owner.discord_user_id = discordUserId;
       feedback.textContent = 'vinculado ✓';
     } catch (err) {
       feedback.textContent = 'erro: ' + err.message;

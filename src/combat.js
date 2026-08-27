@@ -3,6 +3,21 @@
 // depende da ficha de status da Fase 5) -- aqui é só HP + ordem de
 // iniciativa, que o mestre e os jogadores ajustam manualmente.
 import { supabase } from './supabaseClient.js';
+import { logEvent } from './battleLog.js';
+
+// catálogo fixo de condições (Fase 8, db/031_patch_combat_conditions.sql) --
+// fórmula/catálogo em vez de texto livre, mesmo espírito de STATUS_STATS
+// (characterSheet.js). Só o mestre aplica/remove (ver RPCs abaixo).
+export const CONDITION_TYPES = [
+  { key: 'envenenado', label: 'Envenenado', icon: '☠', color: '#4ade80' },
+  { key: 'atordoado', label: 'Atordoado', icon: '💫', color: '#ffd93d' },
+  { key: 'sangrando', label: 'Sangrando', icon: '🩸', color: '#ff5a5a' },
+  { key: 'queimando', label: 'Queimando', icon: '🔥', color: '#ff8a4c' },
+  { key: 'congelado', label: 'Congelado', icon: '❄', color: '#5ad4ff' },
+  { key: 'amedrontado', label: 'Amedrontado', icon: '😨', color: '#b98bff' },
+  { key: 'cego', label: 'Cego', icon: '🙈', color: '#9db4c7' },
+  { key: 'imobilizado', label: 'Imobilizado', icon: '⛓', color: '#c9b878' },
+];
 
 export async function getCombatState(campaignId) {
   const { data, error } = await supabase.from('campaign_combat').select('*').eq('campaign_id', campaignId).maybeSingle();
@@ -34,6 +49,9 @@ export async function startCombat(campaignId) {
 export async function endCombat(campaignId) {
   const { error: e1 } = await supabase.from('combat_participants').delete().eq('campaign_id', campaignId);
   if (e1) throw e1;
+  // log de batalha é só da luta ATUAL -- some junto com os participantes.
+  const { error: e0 } = await supabase.from('battle_log').delete().eq('campaign_id', campaignId);
+  if (e0) throw e0;
   const { error: e2 } = await supabase
     .from('campaign_combat')
     .upsert({ campaign_id: campaignId, active: false, round: 1, turns_passed_this_round: 0, fixed_initiative: false, current_turn_id: null });
@@ -87,6 +105,23 @@ export async function toggleFixedInitiative(campaignId) {
   if (error) throw error;
 }
 
+// só o mestre (validado dentro da RPC security definer, ver
+// db/031_patch_combat_conditions.sql) -- duração em rodadas, vazia/null =
+// manual (só some quando o mestre clicar pra remover).
+export async function applyCondition(participantId, conditionKey, durationRounds) {
+  const { error } = await supabase.rpc('apply_combat_condition', {
+    p_participant_id: participantId,
+    p_condition_key: conditionKey,
+    p_duration_rounds: durationRounds ?? null,
+  });
+  if (error) throw error;
+}
+
+export async function removeCondition(participantId, conditionId) {
+  const { error } = await supabase.rpc('remove_combat_condition', { p_participant_id: participantId, p_condition_id: conditionId });
+  if (error) throw error;
+}
+
 // hiddenMode: 'visible' | 'countdown' | 'always'
 // Pra NPC (characterId nulo), hpCurrent/staminaCurrent/staminaMax vêm
 // digitados pelo mestre. Pra personagem vinculado, quem chama já deve
@@ -118,6 +153,7 @@ export async function addParticipant(
     damage: damage || null,
   });
   if (error) throw error;
+  logEvent(campaignId, { type: 'entrada', participantName: displayName, actorCharacterId: characterId || null }).catch(() => {});
 }
 
 // dano de NPC -- texto livre digitado pelo mestre (ver db/023). Se o
@@ -133,27 +169,54 @@ export async function updateParticipantDamage(id, damage, characterId) {
 }
 
 export async function removeParticipant(id) {
+  const { data: row } = await supabase.from('combat_participants').select('campaign_id, display_name, character_id').eq('id', id).maybeSingle();
   const { error } = await supabase.from('combat_participants').delete().eq('id', id);
   if (error) throw error;
+  if (row) logEvent(row.campaign_id, { type: 'saida', participantName: row.display_name, actorCharacterId: row.character_id }).catch(() => {});
 }
 
 // Pra participante vinculado a personagem, grava também em
 // characters.hp_current -- a ficha é a fonte única de verdade, o
 // combate só reflete/edita ela em tempo real.
 export async function updateParticipantHp(id, hpCurrent, characterId) {
+  // consulta o valor anterior antes de escrever, só pra saber o delta pro
+  // log de batalha (dano vs cura) -- não bloqueia a UI otimista, que já
+  // atualizou a tela antes de chamar esta função.
+  const { data: prevRow } = await supabase.from('combat_participants').select('campaign_id, display_name, hp_current').eq('id', id).maybeSingle();
   const writes = [supabase.from('combat_participants').update({ hp_current: hpCurrent }).eq('id', id)];
   if (characterId) writes.push(supabase.from('characters').update({ hp_current: hpCurrent }).eq('id', characterId));
   const results = await Promise.all(writes);
   const failed = results.find((r) => r.error);
   if (failed) throw failed.error;
+  if (prevRow && prevRow.hp_current !== hpCurrent) {
+    const delta = hpCurrent - prevRow.hp_current;
+    logEvent(prevRow.campaign_id, {
+      type: delta < 0 ? 'dano' : 'cura',
+      participantName: prevRow.display_name,
+      actorCharacterId: characterId || null,
+      amount: Math.abs(delta),
+      detail: 'hp',
+    }).catch(() => {});
+  }
 }
 
 export async function updateParticipantStamina(id, staminaCurrent, characterId) {
+  const { data: prevRow } = await supabase.from('combat_participants').select('campaign_id, display_name, stamina_current').eq('id', id).maybeSingle();
   const writes = [supabase.from('combat_participants').update({ stamina_current: staminaCurrent }).eq('id', id)];
   if (characterId) writes.push(supabase.from('characters').update({ estamina_current: staminaCurrent }).eq('id', characterId));
   const results = await Promise.all(writes);
   const failed = results.find((r) => r.error);
   if (failed) throw failed.error;
+  if (prevRow && prevRow.stamina_current !== staminaCurrent) {
+    const delta = staminaCurrent - prevRow.stamina_current;
+    logEvent(prevRow.campaign_id, {
+      type: delta < 0 ? 'dano' : 'cura',
+      participantName: prevRow.display_name,
+      actorCharacterId: characterId || null,
+      amount: Math.abs(delta),
+      detail: 'estamina',
+    }).catch(() => {});
+  }
 }
 
 export async function updateParticipantInitiative(id, initiative) {

@@ -48,6 +48,16 @@ export async function sendMessage(channelId: string, content: string, customId: 
   return msg.id as string;
 }
 
+// Mensagem simples (texto puro, sem embed/botão de atualizar) -- pra avisos
+// pontuais tipo passagem de turno (Fase 8), que não precisam de tracking
+// pra editar depois. Menção de usuário específico (<@id>) já funciona sem
+// allowed_mentions nem permissão extra -- o bot é bot real com token, não
+// webhook, e o default do Discord já pinga qualquer <@id> no content.
+export async function sendPlainMessage(channelId: string, content: string): Promise<string> {
+  const msg = await discordFetch(`/channels/${channelId}/messages`, { method: 'POST', body: JSON.stringify({ content }) });
+  return msg.id as string;
+}
+
 // Editar tratava QUALQUER falha (rate limit 429, erro transitório 5xx, etc.)
 // como "mensagem sumiu, apagada à mão" e recriava -- mas um 429/5xx não
 // significa que a mensagem sumiu, e recriar nesse caso só deixa a mensagem

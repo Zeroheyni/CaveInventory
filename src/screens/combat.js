@@ -28,6 +28,9 @@ import {
   reorderParticipants,
   setPlayerCombatPermission,
   isVisibleToPlayer,
+  CONDITION_TYPES,
+  applyCondition,
+  removeCondition,
 } from '../combat.js';
 import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, STATUS_STATS } from '../characterSheet.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
@@ -55,6 +58,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   let hiddenMode = 'visible'; // 'visible' | 'countdown' | 'always'
   let dragId = null;
   let openWeaponInfo = null; // id do participante com o popover de dano da arma aberto (só mestre)
+  let conditionPickerFor = null; // id do participante com o mini-form de "aplicar condição" aberto (só mestre)
   let masterCardTab = 'jogadores'; // 'jogadores' | 'aliados' | 'inimigos'
 
   async function load() {
@@ -117,6 +121,37 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     const left = p.reveal_at_round - combatState.round;
     return left > 0 ? `revela em ${left} rodada${left === 1 ? '' : 's'}` : 'revelando...';
   }
+  // ---- condições de combate (Fase 8) -- ver db/031_patch_combat_conditions.sql ----
+  function conditionExpiryLabel(cond) {
+    if (cond.round_expira === null || cond.round_expira === undefined) return 'manual';
+    const left = cond.round_expira - combatState.round;
+    return left > 0 ? `${left} rodada${left === 1 ? '' : 's'}` : 'expirando...';
+  }
+  function conditionPickerHtml(p) {
+    return `
+      <div class="combat-condition-picker" data-pid="${p.id}">
+        <select class="combat-condition-select">
+          ${CONDITION_TYPES.map((t) => `<option value="${t.key}">${t.icon} ${t.label}</option>`).join('')}
+        </select>
+        <input type="number" class="combat-condition-duration" min="1" placeholder="rodadas (vazio=manual)">
+        <button type="button" class="btn" data-condition-apply="${p.id}">aplicar</button>
+      </div>`;
+  }
+  function conditionsRowHtml(p) {
+    const conds = Array.isArray(p.conditions) ? p.conditions : [];
+    if (conds.length === 0 && !isMaster) return '';
+    const badges = conds
+      .map((c) => {
+        const meta = CONDITION_TYPES.find((t) => t.key === c.tipo) || { label: c.tipo, icon: '❔', color: '#9db4c7' };
+        const title = `${meta.label} — ${conditionExpiryLabel(c)}${isMaster ? ' (clique pra remover)' : ''}`;
+        return `<button type="button" class="combat-condition-badge" style="--cond-color:${meta.color};" data-remove-condition="${c.id}" data-pid="${p.id}" title="${escapeHtml(title)}" ${isMaster ? '' : 'disabled'}>${meta.icon}</button>`;
+      })
+      .join('');
+    const addBtn = isMaster ? `<button type="button" class="combat-condition-add-btn" data-condition-add-toggle="${p.id}" title="aplicar condição">+</button>` : '';
+    const picker = isMaster && conditionPickerFor === p.id ? conditionPickerHtml(p) : '';
+    return `<div class="combat-conditions-row">${badges}${addBtn}${picker}</div>`;
+  }
+
   // ---- resumo do mestre (Fase 6) -- HP/estamina/status/arma equipada de todo mundo ----
   function statusValuesOf(char) {
     return {
@@ -392,6 +427,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           </div>`
               : ''
           }
+          ${conditionsRowHtml(p)}
         </div>
         ${
           isMaster
@@ -626,6 +662,45 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         const id = weaponToggleBtn.dataset.weaponToggle;
         openWeaponInfo = openWeaponInfo === id ? null : id;
         render();
+        return;
+      }
+
+      const conditionAddToggleBtn = e.target.closest('button[data-condition-add-toggle]');
+      if (conditionAddToggleBtn) {
+        const id = conditionAddToggleBtn.dataset.conditionAddToggle;
+        conditionPickerFor = conditionPickerFor === id ? null : id;
+        render();
+        return;
+      }
+
+      const conditionApplyBtn = e.target.closest('button[data-condition-apply]');
+      if (conditionApplyBtn) {
+        const pid = conditionApplyBtn.dataset.conditionApply;
+        const picker = conditionApplyBtn.closest('.combat-condition-picker');
+        const key = picker.querySelector('.combat-condition-select').value;
+        const durationRaw = picker.querySelector('.combat-condition-duration').value;
+        const duration = durationRaw === '' ? null : Math.max(1, parseInt(durationRaw, 10) || 1);
+        conditionPickerFor = null;
+        try {
+          await applyCondition(pid, key, duration);
+          await load();
+        } catch (err) {
+          window.alert(err.message);
+          render();
+        }
+        return;
+      }
+
+      const removeConditionBtn = e.target.closest('button[data-remove-condition]');
+      if (removeConditionBtn) {
+        const pid = removeConditionBtn.dataset.pid;
+        const conditionId = removeConditionBtn.dataset.removeCondition;
+        try {
+          await removeCondition(pid, conditionId);
+          await load();
+        } catch (err) {
+          window.alert(err.message);
+        }
         return;
       }
 
