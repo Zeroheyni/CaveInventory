@@ -290,9 +290,9 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
     `;
   }
 
-  function pageTitleWithPencil(page, side) {
+  function pageTitleWithPencil(page) {
     if (!isOwner) return escapeHtml(page.title);
-    return `${escapeHtml(page.title)} <button type="button" class="notebook-pencil-btn" data-rename-page="${page.id}" title="renomear página">✎</button>`;
+    return `${escapeHtml(page.title)} <button type="button" class="notebook-pencil-btn" data-rename-page="${page.id}" title="renomear página">✎</button><button type="button" class="notebook-pencil-btn notebook-delete-page-btn" data-delete-page="${page.id}" title="apagar página">✕</button>`;
   }
 
   function digitalBody(nb) {
@@ -304,14 +304,18 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
             (p) => `
           <div class="notebook-tab-item">
             <button type="button" class="notebook-tab-btn ${p.id === nb.activePageId ? 'active' : ''}" data-page-id="${p.id}">${escapeHtml(p.title)}</button>
-            ${isOwner ? `<button type="button" class="notebook-pencil-btn" data-rename-page="${p.id}" title="renomear">✎</button>` : ''}
+            ${
+              isOwner
+                ? `<button type="button" class="notebook-pencil-btn" data-rename-page="${p.id}" title="renomear">✎</button>
+            <button type="button" class="notebook-pencil-btn notebook-delete-page-btn" data-delete-page="${p.id}" title="apagar página">✕</button>`
+                : ''
+            }
           </div>`
           )
           .join('')}
         ${isOwner ? `<button type="button" class="notebook-tab-add" id="notebook-add-page" title="nova página">+</button>` : ''}
       </div>
       ${isOwner && page ? sharePageToggle(page) : ''}
-      ${isOwner ? deletePageRow() : ''}
       <div class="notebook-stage">
         <div class="notebook-page" id="notebook-page-surface" data-page-id="${page ? page.id : ''}" ${isOwner ? 'contenteditable="true"' : ''}>${page ? sanitizeNotebookHtml(page.html) : ''}</div>
       </div>
@@ -330,7 +334,6 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         ${isOwner ? `<button type="button" class="notebook-tab-add" id="notebook-add-page" title="nova página">+</button>` : ''}
       </div>
       ${isOwner && page ? sharePageToggle(page) : ''}
-      ${isOwner ? deletePageRow() : ''}
       <div class="notebook-stage">
         <div class="notebook-page" id="notebook-page-surface" data-page-id="${page ? page.id : ''}" ${isOwner ? 'contenteditable="true"' : ''}>${page ? sanitizeNotebookHtml(page.html) : ''}</div>
       </div>
@@ -361,7 +364,6 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         </div>
       </div>
       ${isOwner && left ? sharePageToggle(left, right) : ''}
-      ${isOwner ? deletePageRow() : ''}
     `;
   }
 
@@ -374,10 +376,6 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         ${page2 ? `<label class="notebook-share-toggle"><input type="checkbox" class="notebook-share-check" data-share-page="${page2.id}" ${page2.visibleToMaster ? 'checked' : ''}> compartilhar (direita)</label>` : ''}
       </div>
     `;
-  }
-
-  function deletePageRow() {
-    return `<div class="notebook-page-actions"><button type="button" class="combat-row-remove" id="notebook-delete-page" title="apagar página atual">✕ apagar página</button></div>`;
   }
 
   // ================= NAVEGAÇÃO / AÇÕES =================
@@ -752,22 +750,25 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
       });
     }
 
-    const deleteBtn = $('notebook-delete-page');
-    if (deleteBtn) {
-      deleteBtn.addEventListener('click', () => {
+    app.querySelectorAll('button[data-delete-page]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const nb = currentNotebook();
         if (nb.pages.length <= 1) {
           window.alert('não dá pra apagar a única página do caderno.');
           return;
         }
-        if (!window.confirm('apagar essa página? não dá pra desfazer.')) return;
-        const idx = nb.pages.findIndex((p) => p.id === nb.activePageId);
+        const id = btn.dataset.deletePage;
+        const page = nb.pages.find((p) => p.id === id);
+        if (!page) return;
+        if (!window.confirm(`apagar a página "${page.title}"? não dá pra desfazer.`)) return;
+        const idx = nb.pages.findIndex((p) => p.id === id);
         nb.pages.splice(idx, 1);
-        nb.activePageId = nb.pages[Math.max(0, idx - 1)].id;
+        if (nb.activePageId === id) nb.activePageId = nb.pages[Math.max(0, idx - 1)].id;
         render();
         scheduleSave();
       });
-    }
+    });
   }
 
   load();

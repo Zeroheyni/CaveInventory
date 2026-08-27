@@ -31,6 +31,7 @@
   border-radius:5px; transition: all 0.15s ease; flex-shrink:0; opacity:0.7;
 }
 .notebook-pencil-btn:hover{ color: var(--accent); background: var(--accent-faint); opacity:1; transform:scale(1.08); }
+.notebook-delete-page-btn:hover{ color: var(--danger); background: rgba(var(--danger-rgb),0.15); }
 .notebook-share-toggle{ display:flex; align-items:center; gap:5px; font-size:11.5px; color: var(--ink-faint); cursor:pointer; white-space:nowrap; font-family: var(--font-mono); }
 .notebook-save-status{
   margin-left:auto; font-size:11px; color: var(--ink-faint); white-space:nowrap;
@@ -140,7 +141,6 @@
   background: var(--stone-800); border:1px solid var(--stone-line); border-radius:20px; padding:6px 14px;
 }
 .notebook-share-row{ display:flex; gap:14px; }
-.notebook-page-actions{ display:flex; gap:8px; }
 
 /* palco da página -- perspective pro efeito de virar */
 .notebook-stage{ perspective:1600px; }
