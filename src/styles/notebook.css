@@ -1,0 +1,106 @@
+/* ---------- CADERNO DE ANOTAÇÕES (Fase 7) ---------- */
+.notebook-wrap{ display:flex; flex-direction:column; gap:12px; }
+
+.notebook-toolbar{
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+  background: var(--stone-800); border:1px solid var(--stone-line); border-radius:10px; padding:8px 10px;
+}
+.notebook-theme-select{
+  background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
+  font-family: var(--font-mono); font-size:12px; padding:6px 8px; border-radius:6px;
+}
+.notebook-toolbar-sep{ width:1px; align-self:stretch; background: var(--stone-line); margin:0 2px; }
+.notebook-fmt-btn{
+  width:30px; height:30px; border-radius:6px; border:1px solid var(--stone-line); background: var(--stone-900);
+  color: var(--ink-dim); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center;
+  transition: all 0.15s ease;
+}
+.notebook-fmt-btn:hover{ color: var(--accent); border-color: var(--accent-core); }
+.notebook-share-toggle{ display:flex; align-items:center; gap:5px; font-size:11.5px; color: var(--ink-faint); cursor:pointer; white-space:nowrap; }
+.notebook-save-status{ margin-left:auto; font-size:11px; color: var(--ink-faint); white-space:nowrap; }
+.notebook-readonly-badge{ font-size:12px; color: var(--ink-faint); }
+
+/* abas (temas "digital": terminal, moderno) */
+.notebook-tabs{ display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.notebook-tab-btn{
+  padding:7px 14px; border-radius:7px 7px 0 0; border:1px solid var(--stone-line); border-bottom:none;
+  background: var(--stone-900); color: var(--ink-faint); font-family: var(--font-mono); font-size:12px; cursor:pointer;
+  transition: all 0.15s ease;
+}
+.notebook-tab-btn:hover{ color: var(--ink-dim); }
+.notebook-tab-btn.active{ color: var(--accent); background: var(--stone-700); }
+.notebook-tab-add{
+  width:28px; height:28px; border-radius:6px; border:1px dashed var(--stone-line); background:none;
+  color: var(--ink-faint); cursor:pointer; font-size:14px; transition: all 0.15s ease;
+}
+.notebook-tab-add:hover{ color: var(--accent); border-color: var(--accent-core); }
+
+/* navegação por seta (temas "físico": papel, pergaminho) */
+.notebook-physical-nav{ display:flex; align-items:center; gap:12px; }
+.notebook-page-arrow{
+  width:32px; height:32px; border-radius:50%; border:1px solid var(--stone-line); background: var(--stone-900);
+  color: var(--ink-dim); cursor:pointer; font-size:16px; display:flex; align-items:center; justify-content:center;
+  transition: all 0.15s ease;
+}
+.notebook-page-arrow:hover:not(:disabled){ color: var(--accent); border-color: var(--accent-core); }
+.notebook-page-arrow:disabled{ opacity:0.35; cursor:default; }
+.notebook-page-count{ font-family: var(--font-mono); font-size:12px; color: var(--ink-faint); }
+
+.notebook-page-actions{ display:flex; gap:8px; margin-left:auto; }
+
+/* palco da página -- perspective pro efeito de virar */
+.notebook-stage{ perspective:1400px; }
+.notebook-page{
+  min-height:360px; border-radius:10px; padding:22px 26px; outline:none; line-height:1.6; font-size:15px;
+  overflow-wrap:break-word; transform-origin:left center; backface-visibility:hidden;
+}
+.notebook-page:empty::before{ content:'escreva aqui...'; opacity:0.4; }
+.notebook-img{ max-width:100%; border-radius:4px; cursor:default; }
+
+@keyframes notebook-flip-out-next{ to{ transform:rotateY(-92deg); opacity:0.3; } }
+@keyframes notebook-flip-out-prev{ to{ transform:rotateY(92deg); opacity:0.3; } }
+@keyframes notebook-flip-in-next{ from{ transform:rotateY(92deg); opacity:0.3; } to{ transform:rotateY(0); opacity:1; } }
+@keyframes notebook-flip-in-prev{ from{ transform:rotateY(-92deg); opacity:0.3; } to{ transform:rotateY(0); opacity:1; } }
+.notebook-flip-out-next .notebook-page{ animation: notebook-flip-out-next 0.18s ease forwards; }
+.notebook-flip-out-prev .notebook-page{ animation: notebook-flip-out-prev 0.18s ease forwards; }
+.notebook-flip-in-next .notebook-page{ animation: notebook-flip-in-next 0.26s ease; }
+.notebook-flip-in-prev .notebook-page{ animation: notebook-flip-in-prev 0.26s ease; }
+
+/* ---- temas ---- */
+
+/* Caderno de Papel: pauta clara + fonte manuscrita */
+.notebook-theme-papel .notebook-page{
+  background:
+    linear-gradient(90deg, transparent 46px, rgba(255,90,90,0.35) 46px, rgba(255,90,90,0.35) 48px, transparent 48px),
+    repeating-linear-gradient(#faf6e8 0px, #faf6e8 31px, #cfd8e6 32px);
+  background-color:#faf6e8;
+  color:#2b2a28; font-family:'Caveat', cursive; font-size:19px;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.35);
+}
+
+/* Pergaminho Antigo: papel envelhecido + serifada */
+.notebook-theme-pergaminho .notebook-page{
+  background:
+    radial-gradient(ellipse at top left, rgba(120,90,50,0.18), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(120,90,50,0.22), transparent 60%),
+    #e8d6ad;
+  color:#3b2c1a; font-family:'IM Fell English', serif;
+  box-shadow: inset 0 0 60px rgba(90,60,20,0.35), 0 10px 30px rgba(0,0,0,0.35);
+}
+
+/* Terminal Digital: fundo escuro + mono, no clima do resto do app */
+.notebook-theme-terminal .notebook-page{
+  background:
+    repeating-linear-gradient(rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 3px),
+    #05100a;
+  color:#7dffb0; font-family:'JetBrains Mono', monospace; font-size:13.5px;
+  box-shadow: inset 0 0 40px rgba(0,255,120,0.06), 0 10px 30px rgba(0,0,0,0.45);
+  text-shadow: 0 0 4px rgba(125,255,176,0.35);
+}
+.notebook-theme-terminal .notebook-page:empty::before{ content:'> escreva aqui...'; }
+
+/* Bloco Moderno: limpo, minimalista */
+.notebook-theme-moderno .notebook-page{
+  background:#f4f5f7; color:#1c1e21; font-family:'Inter', sans-serif;
+  box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+}

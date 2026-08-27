@@ -5,6 +5,7 @@ import { renderCombatScreen } from './combat.js';
 import { renderFichaScreen } from './ficha.js';
 import { renderMasterFichaScreen } from './masterFicha.js';
 import { renderNpcBankScreen } from './npcBank.js';
+import { renderNotebookScreen } from './notebook.js';
 import { renderMasterInventoryChooser } from './masterInventoryChooser.js';
 import { createPublicItem, createPublicContainer, listCampaignPlayers, transferCurrencyRpc } from '../publicArea.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
@@ -355,6 +356,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     <div id="ficha-embed"></div>
     <footer>FICHA — STATUS, HISTÓRIA E MÓDULOS DO PERSONAGEM</footer>
   </div>
+
+  <div id="notebook-mode-wrap" style="display:none;">
+    <div id="notebook-embed"></div>
+    <footer>CADERNO — ANOTAÇÕES PESSOAIS DO PERSONAGEM</footer>
+  </div>
 </div>
 
 <button class="vehicle-dropzone" id="vehicle-dropzone" title="arraste um item aqui para guardar no veículo, sem peso">
@@ -381,6 +387,14 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg></span>
       <span class="side-nav-label">Ficha</span>
     </button>
+    ${
+      !(profile.role === 'master' && !isAdminView)
+        ? `<button type="button" class="side-nav-item" id="notebook-trigger" data-nav-mode="notebook" title="caderno de anotações">
+      <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M6 4h11a2 2 0 012 2v13a1 1 0 01-1.5.87L15 18.5l-2.5 1.37a1 1 0 01-1 0L9 18.5l-2.5 1.37A1 1 0 015 19V6a2 2 0 011-1.73"/><path d="M9 8h6M9 12h6M9 16h3"/></svg></span>
+      <span class="side-nav-label">Anotações</span>
+    </button>`
+        : ''
+    }
     ${
       profile.role === 'master' && !isAdminView
         ? `<button type="button" class="side-nav-item" id="npcs-trigger" data-nav-mode="npcs" title="banco de NPCs">
@@ -1523,6 +1537,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     setMode('npcs');
     sideNav.classList.remove('open');
   });
+  const notebookTrigger = document.getElementById('notebook-trigger');
+  if(notebookTrigger) notebookTrigger.addEventListener('click', ()=>{
+    setMode('notebook');
+    sideNav.classList.remove('open');
+  });
 
   document.getElementById('theme-trigger').addEventListener('click', ()=>{
     const panel = document.getElementById('theme-panel');
@@ -2405,6 +2424,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   let fichaMounted = false;
   let npcsMounted = false;
   let chooserMounted = false;
+  let notebookMounted = false;
   function setMode(mode){
     currentMode = mode;
     const invWrap = document.getElementById('inventory-mode-wrap');
@@ -2412,6 +2432,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     const combatWrap = document.getElementById('combat-mode-wrap');
     const fichaWrap = document.getElementById('ficha-mode-wrap');
     const npcsWrap = document.getElementById('npcs-mode-wrap');
+    const notebookWrap = document.getElementById('notebook-mode-wrap');
     const chooserWrap = document.getElementById('master-inventory-chooser-wrap');
     const vehicleBtn = document.getElementById('vehicle-dropzone');
     const backpackBtn = document.getElementById('backpack-return-btn');
@@ -2422,6 +2443,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     combatWrap.style.display = 'none';
     fichaWrap.style.display = 'none';
     npcsWrap.style.display = 'none';
+    notebookWrap.style.display = 'none';
     chooserWrap.style.display = 'none';
     vehicleBtn.style.display = 'none';
     backpackBtn.style.display = 'none';
@@ -2467,6 +2489,16 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       if(!npcsMounted){
         npcsMounted = true;
         renderNpcBankScreen(document.getElementById('npcs-embed'), { session, profile, campaign, topApp: app });
+      }
+    } else if(mode === 'notebook'){
+      notebookWrap.style.display = 'block';
+      notebookWrap.classList.remove('mode-fade-in'); void notebookWrap.offsetWidth; notebookWrap.classList.add('mode-fade-in');
+      backpackBtn.style.display = 'flex';
+      titleText.textContent = 'ANOTAÇÕES';
+      copyBtn.style.display = 'none';
+      if(!notebookMounted){
+        notebookMounted = true;
+        renderNotebookScreen(document.getElementById('notebook-embed'), { session, profile, campaign, characterId, isAdminView });
       }
     } else {
       // mestre não joga um personagem próprio de verdade -- em vez de

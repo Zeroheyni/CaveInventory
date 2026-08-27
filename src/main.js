@@ -6,6 +6,7 @@ import './styles/publicArea.css';
 import './styles/combat.css';
 import './styles/ficha.css';
 import './styles/npcBank.css';
+import './styles/notebook.css';
 import { supabase } from './supabaseClient.js';
 import { renderApp } from './router.js';
 import { isRerenderSuppressed } from './auth.js';
