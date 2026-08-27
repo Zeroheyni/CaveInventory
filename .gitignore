@@ -11,6 +11,10 @@ node_modules
 dist
 dist-ssr
 *.local
+*.local.md
+
+# log de contexto/credenciais do projeto -- nunca deve ir pro Git
+CONTEXT.local.md
 
 # cache local do CLI do Supabase (link do projeto, versões) — não é código
 supabase/.temp
