@@ -1,37 +1,51 @@
-// Fase 7 — caderno de anotações. Dono lê/escreve o próprio (RLS direta
-// em characters.notebook_data); quem está em isAdminView (mestre de
-// campanha ou mestre global olhando o personagem de outra pessoa) só
-// enxerga, em modo leitura, as páginas que o dono marcou como
-// compartilhadas -- ver get_notebook_shared_pages em db/026.
+// Fase 7 — caderno de anotações. Dono tem uma LISTA de cadernos (cada
+// um com tema/material/fonte próprios) e escolhe qual abrir; quem
+// está em isAdminView (mestre de campanha ou mestre global olhando o
+// personagem de outra pessoa) só enxerga, em modo leitura, os
+// cadernos/páginas que o dono marcou como compartilhados -- ver
+// get_notebook_shared_pages em db/027.
 import { escapeHtml } from '../shared/gameData.js';
 import {
   NOTEBOOK_THEMES,
-  loadOwnNotebook,
-  saveOwnNotebook,
-  loadSharedNotebookPages,
+  TEXT_COLORS,
+  loadOwnNotebookData,
+  saveOwnNotebookData,
+  loadSharedNotebooks,
   uploadNotebookImage,
   sanitizeNotebookHtml,
   newPage,
+  newNotebook,
+  getFontFamily,
+  ensureCustomFontLoaded,
 } from '../notebook.js';
 
 export function renderNotebookScreen(app, { session, profile, campaign, characterId, isAdminView }) {
   const isOwner = !isAdminView;
   const $ = (id) => app.querySelector('#' + id);
 
-  let notebook = null; // { theme, activePageId, pages }
   let loaded = false;
   let loadError = '';
+  let notebookData = null; // dono: { activeNotebookId, notebooks: [...] }
+  let sharedNotebooks = null; // visitante: [{ notebookId, notebookName, pages }]
+  let sharedActiveId = null;
+  let view = 'list'; // 'list' | 'notebook'
   let saveTimer = null;
   let savedRange = null;
   let imgUploadError = '';
+  let settingsOpen = false;
+  let colorPopoverOpen = false;
+  let creatingNotebook = false;
+  let lastFocusedSide = 'left'; // qual metade da folha dupla recebeu foco por último
+  let docClickWired = false;
 
   async function load() {
     try {
       if (isOwner) {
-        notebook = await loadOwnNotebook(characterId);
+        notebookData = await loadOwnNotebookData(characterId);
       } else {
-        const shared = await loadSharedNotebookPages(characterId);
-        notebook = { theme: shared.theme, activePageId: shared.pages[0] ? shared.pages[0].id : null, pages: shared.pages };
+        sharedNotebooks = await loadSharedNotebooks(characterId);
+        sharedActiveId = sharedNotebooks[0] ? sharedNotebooks[0].notebookId : null;
+        if (sharedNotebooks.length === 1) view = 'notebook';
       }
     } catch (err) {
       loadError = err.message;
@@ -40,14 +54,43 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
     render();
   }
 
-  function activePage() {
-    if (!notebook) return null;
-    return notebook.pages.find((p) => p.id === notebook.activePageId) || notebook.pages[0] || null;
+  function themeDef(themeId) {
+    return NOTEBOOK_THEMES.find((t) => t.id === themeId) || NOTEBOOK_THEMES[0];
   }
 
-  function themeInfo() {
-    return NOTEBOOK_THEMES.find((t) => t.id === (notebook && notebook.theme)) || NOTEBOOK_THEMES[0];
+  function currentNotebook() {
+    if (isOwner) return notebookData.notebooks.find((n) => n.id === notebookData.activeNotebookId) || null;
+    return sharedNotebooks.find((n) => n.notebookId === sharedActiveId) || null;
   }
+
+  function scheduleSave() {
+    if (!isOwner) return;
+    const statusEl = $('notebook-save-status');
+    if (statusEl) statusEl.textContent = 'salvando...';
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(async () => {
+      try {
+        await saveOwnNotebookData(characterId, notebookData);
+        const el = $('notebook-save-status');
+        if (el) el.textContent = 'salvo ✓';
+      } catch (err) {
+        const el = $('notebook-save-status');
+        if (el) el.textContent = 'erro ao salvar: ' + err.message;
+      }
+    }, 1200);
+  }
+
+  function capture() {
+    if (!isOwner) return;
+    const nb = currentNotebook();
+    if (!nb) return;
+    app.querySelectorAll('.notebook-page[contenteditable][data-page-id]').forEach((el) => {
+      const page = nb.pages.find((p) => p.id === el.dataset.pageId);
+      if (page) page.html = sanitizeNotebookHtml(el.innerHTML);
+    });
+  }
+
+  // ================= RENDER =================
 
   function render() {
     if (!loaded) {
@@ -58,117 +101,296 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
       app.innerHTML = `<p class="admin-error" style="display:block;">erro: ${escapeHtml(loadError)}</p>`;
       return;
     }
-    const theme = themeInfo();
-    const page = activePage();
-    const isDigital = theme.family === 'digital';
-
-    app.innerHTML = `
-      <div class="notebook-wrap notebook-theme-${theme.id}">
-        <div class="notebook-toolbar">
-          ${
-            isOwner
-              ? `
-            <select class="notebook-theme-select" id="notebook-theme-select">
-              ${NOTEBOOK_THEMES.map((t) => `<option value="${t.id}" ${t.id === theme.id ? 'selected' : ''}>${escapeHtml(t.label)}</option>`).join('')}
-            </select>
-            <span class="notebook-toolbar-sep"></span>
-            <button type="button" class="notebook-fmt-btn" data-fmt="bold" title="negrito"><b>B</b></button>
-            <button type="button" class="notebook-fmt-btn" data-fmt="italic" title="itálico"><i>I</i></button>
-            <button type="button" class="notebook-fmt-btn" data-fmt="underline" title="sublinhado"><u>U</u></button>
-            <button type="button" class="notebook-fmt-btn" data-fmt="insertUnorderedList" title="lista">☰</button>
-            <button type="button" class="notebook-fmt-btn" data-fmt="insertOrderedList" title="lista numerada">①</button>
-            <button type="button" class="notebook-fmt-btn" id="notebook-img-btn" title="inserir imagem">🖼</button>
-            <input type="file" id="notebook-img-input" accept="image/*" style="display:none;">
-            <span class="notebook-toolbar-sep"></span>
-            ${page ? `<label class="notebook-share-toggle" title="o mestre consegue ver essa página"><input type="checkbox" id="notebook-share-check" ${page.visibleToMaster ? 'checked' : ''}> visível ao mestre</label>` : ''}
-            <span class="notebook-save-status" id="notebook-save-status"></span>
-          `
-              : `<span class="notebook-readonly-badge">📖 modo leitura — só páginas compartilhadas</span>`
-          }
-        </div>
-        ${imgUploadError ? `<p class="admin-error" style="display:block;">${escapeHtml(imgUploadError)}</p>` : ''}
-
-        ${
-          notebook.pages.length === 0
-            ? isOwner
-              ? `<p class="admin-empty">nenhuma página ainda.</p><button type="button" class="btn" id="notebook-add-page">+ nova página</button>`
-              : `<p class="admin-empty">esse personagem não compartilhou nenhuma página com você.</p>`
-            : `
-          ${isDigital ? digitalNav() : physicalNav()}
-          <div class="notebook-stage">
-            <div class="notebook-page" id="notebook-page-surface" ${isOwner ? 'contenteditable="true"' : ''}>${page ? sanitizeNotebookHtml(page.html) : ''}</div>
-          </div>
-        `
-        }
-      </div>
-    `;
+    app.innerHTML = view === 'list' ? renderListView() : renderNotebookView();
     wireEvents();
   }
 
-  function digitalNav() {
+  // ---- lista de cadernos ----
+
+  function renderListView() {
+    if (!isOwner) {
+      const list = sharedNotebooks || [];
+      if (list.length === 0) return '<p class="admin-empty">esse personagem não compartilhou nenhum caderno com você.</p>';
+      return `
+        <div class="notebook-list-head">
+          <div class="ficha-section-title">CADERNOS COMPARTILHADOS</div>
+        </div>
+        <div class="notebook-list-grid">${list.map((nb) => notebookCard(nb.notebookId, nb.notebookName, nb.themeId)).join('')}</div>
+      `;
+    }
+    const list = notebookData.notebooks;
     return `
-      <div class="notebook-tabs">
-        ${notebook.pages.map((p) => `<button type="button" class="notebook-tab-btn ${p.id === notebook.activePageId ? 'active' : ''}" data-page-id="${p.id}">${escapeHtml(p.title)}</button>`).join('')}
-        ${isOwner ? `<button type="button" class="notebook-tab-add" id="notebook-add-page" title="nova página">+</button>` : ''}
+      <div class="notebook-list-head">
+        <div class="ficha-section-title">MEUS CADERNOS</div>
+        ${!creatingNotebook ? `<button type="button" class="btn" id="notebook-new-btn">+ novo caderno</button>` : ''}
       </div>
-      ${isOwner ? pageActionsRow() : ''}
+      ${creatingNotebook ? newNotebookPanel() : ''}
+      <div class="notebook-list-grid">
+        ${list.map((nb) => notebookCard(nb.id, nb.name, nb.themeId, true)).join('')}
+      </div>
     `;
   }
 
-  function physicalNav() {
-    const idx = notebook.pages.findIndex((p) => p.id === notebook.activePageId);
-    const page = activePage();
+  function newNotebookPanel() {
+    return `
+      <div class="npc-bank-create-card notebook-create-card">
+        <div class="npc-bank-create-head">
+          <h3>// NOVO CADERNO</h3>
+          <button class="icon-btn" id="notebook-create-close" title="fechar">✕</button>
+        </div>
+        <div class="field" style="margin-bottom:12px;"><label for="notebook-create-name">Nome</label><input type="text" id="notebook-create-name" placeholder="ex: Diário de bordo" value="Caderno ${notebookData.notebooks.length + 1}"></div>
+        <label class="ficha-section-title" style="display:block; margin-bottom:8px;">ESCOLHA O TEMA</label>
+        <div class="notebook-theme-choice">
+          ${NOTEBOOK_THEMES.map(
+            (t) => `
+            <button type="button" class="notebook-theme-choice-btn" data-create-theme="${t.id}">
+              <span class="notebook-theme-choice-icon">${t.family === 'digital' ? '💻' : '📖'}</span>
+              <span>${escapeHtml(t.label)}</span>
+            </button>`
+          ).join('')}
+        </div>
+      </div>
+    `;
+  }
+
+  function notebookCard(id, name, themeId, deletable) {
+    const theme = themeDef(themeId);
+    return `
+      <div class="notebook-card-wrap">
+        <button type="button" class="notebook-card" data-open-notebook="${id}">
+          <span class="notebook-card-icon">${theme.family === 'digital' ? '💻' : '📖'}</span>
+          <span class="notebook-card-name">${escapeHtml(name)}</span>
+          <span class="notebook-card-theme">${escapeHtml(theme.label)}</span>
+        </button>
+        ${isOwner ? `<button type="button" class="notebook-pencil-btn" data-rename-notebook="${id}" title="renomear">✎</button>` : ''}
+        ${deletable && isOwner && list().length > 1 ? `<button type="button" class="combat-row-remove notebook-card-delete" data-delete-notebook="${id}" title="apagar caderno">✕</button>` : ''}
+      </div>
+    `;
+  }
+
+  function list() {
+    return notebookData ? notebookData.notebooks : [];
+  }
+
+  // ---- caderno aberto ----
+
+  function renderNotebookView() {
+    const nb = currentNotebook();
+    if (!nb) {
+      view = 'list';
+      return renderListView();
+    }
+    const theme = themeDef(nb.themeId);
+    const isDigital = theme.family === 'digital';
+    const fontFamily = getFontFamily(nb);
+    if (nb.customFont) ensureCustomFontLoaded(nb.customFont);
+
+    const pages = nb.pages;
+    const themeClasses = `notebook-family-${theme.family} notebook-theme-${theme.id} notebook-variant-${nb.variant}${isDigital && nb.expandedView ? ' notebook-expanded' : ''}`;
+
+    return `
+      <div class="notebook-wrap ${themeClasses}" style="--notebook-font:${fontFamily};">
+        <div class="notebook-toolbar">
+          <button type="button" class="btn btn-ghost" id="notebook-back-to-list">← cadernos</button>
+          <span class="notebook-name">${escapeHtml(isOwner ? nb.name : nb.name)}</span>
+          ${isOwner ? `<button type="button" class="notebook-pencil-btn" id="notebook-rename-current" title="renomear caderno">✎</button>` : ''}
+          <span class="notebook-toolbar-sep"></span>
+          ${
+            isOwner
+              ? `
+            <div class="notebook-settings-wrap" id="notebook-settings-wrap">
+              <button type="button" class="notebook-fmt-btn" id="notebook-settings-btn" title="personalizar caderno">⚙</button>
+              ${settingsOpen ? settingsPanel(nb, theme) : ''}
+            </div>
+          `
+              : ''
+          }
+          <button type="button" class="notebook-fmt-btn" id="notebook-focus-btn" title="modo foco (tela cheia)">⤢</button>
+          <span class="notebook-save-status" id="notebook-save-status"></span>
+          ${!isOwner ? `<span class="notebook-readonly-badge">📖 modo leitura</span>` : ''}
+        </div>
+
+        ${isOwner ? formatToolbar() : ''}
+        ${imgUploadError ? `<p class="admin-error" style="display:block;">${escapeHtml(imgUploadError)}</p>` : ''}
+
+        ${
+          pages.length === 0
+            ? isOwner
+              ? `<p class="admin-empty">nenhuma página ainda.</p><button type="button" class="btn" id="notebook-add-page">+ nova página</button>`
+              : `<p class="admin-empty">nenhuma página compartilhada.</p>`
+            : theme.family === 'digital'
+              ? digitalBody(nb)
+              : physicalBody(nb)
+        }
+      </div>
+    `;
+  }
+
+  function settingsPanel(nb, theme) {
+    return `
+      <div class="notebook-settings-panel" id="notebook-settings-panel">
+        <div class="notebook-settings-row">
+          <label>Material</label>
+          <select id="notebook-variant-select">
+            ${theme.variants.map((v) => `<option value="${v.id}" ${v.id === nb.variant ? 'selected' : ''}>${escapeHtml(v.label)}</option>`).join('')}
+          </select>
+        </div>
+        <div class="notebook-settings-row">
+          <label>Fonte</label>
+          <select id="notebook-font-select">
+            ${theme.fonts.map((f) => `<option value="${escapeHtml(f.family)}" ${nb.customFont === null && f.family === nb.font ? 'selected' : ''}>${escapeHtml(f.label)}</option>`).join('')}
+            <option value="__custom__" ${nb.customFont !== null ? 'selected' : ''}>Outra (Google Fonts)...</option>
+          </select>
+        </div>
+        <div class="notebook-settings-row" id="notebook-custom-font-row" style="${nb.customFont !== null ? '' : 'display:none;'}">
+          <label>Nome exato</label>
+          <input type="text" id="notebook-custom-font-input" placeholder="ex: Bangers" value="${nb.customFont ? escapeHtml(nb.customFont) : ''}">
+        </div>
+        ${
+          theme.family === 'physical'
+            ? `
+          <div class="notebook-settings-row">
+            <label>Visualização</label>
+            <div class="notebook-view-toggle">
+              <button type="button" class="notebook-toggle-btn ${nb.pageViewMode === 'single' ? 'active' : ''}" data-view-mode="single">1 folha</button>
+              <button type="button" class="notebook-toggle-btn ${nb.pageViewMode === 'spread' ? 'active' : ''}" data-view-mode="spread">Caderno aberto</button>
+            </div>
+          </div>
+        `
+            : ''
+        }
+        ${
+          theme.family === 'digital'
+            ? `
+          <label class="notebook-share-toggle">
+            <input type="checkbox" id="notebook-expanded-check" ${nb.expandedView ? 'checked' : ''}> exibir tudo (sem rolagem)
+          </label>
+        `
+            : ''
+        }
+      </div>
+    `;
+  }
+
+  function formatToolbar() {
+    return `
+      <div class="notebook-toolbar">
+        <button type="button" class="notebook-fmt-btn" data-fmt="bold" title="negrito"><b>B</b></button>
+        <button type="button" class="notebook-fmt-btn" data-fmt="italic" title="itálico"><i>I</i></button>
+        <button type="button" class="notebook-fmt-btn" data-fmt="underline" title="sublinhado"><u>U</u></button>
+        <button type="button" class="notebook-fmt-btn" data-fmt="insertUnorderedList" title="lista">☰</button>
+        <button type="button" class="notebook-fmt-btn" data-fmt="insertOrderedList" title="lista numerada">①</button>
+        <button type="button" class="notebook-fmt-btn" id="notebook-img-btn" title="inserir imagem">🖼</button>
+        <input type="file" id="notebook-img-input" accept="image/*" style="display:none;">
+        <div class="notebook-color-wrap" id="notebook-color-wrap">
+          <button type="button" class="notebook-fmt-btn" id="notebook-color-btn" title="cor do texto">🎨</button>
+          ${colorPopoverOpen ? `<div class="notebook-color-popover">${TEXT_COLORS.map((c) => `<button type="button" class="notebook-color-swatch" data-color="${c}" style="background:${c};"></button>`).join('')}</div>` : ''}
+        </div>
+      </div>
+    `;
+  }
+
+  function pageTitleWithPencil(page, side) {
+    if (!isOwner) return escapeHtml(page.title);
+    return `${escapeHtml(page.title)} <button type="button" class="notebook-pencil-btn" data-rename-page="${page.id}" title="renomear página">✎</button>`;
+  }
+
+  function digitalBody(nb) {
+    const page = nb.pages.find((p) => p.id === nb.activePageId) || nb.pages[0];
+    return `
+      <div class="notebook-tabs">
+        ${nb.pages
+          .map(
+            (p) => `
+          <div class="notebook-tab-item">
+            <button type="button" class="notebook-tab-btn ${p.id === nb.activePageId ? 'active' : ''}" data-page-id="${p.id}">${escapeHtml(p.title)}</button>
+            ${isOwner ? `<button type="button" class="notebook-pencil-btn" data-rename-page="${p.id}" title="renomear">✎</button>` : ''}
+          </div>`
+          )
+          .join('')}
+        ${isOwner ? `<button type="button" class="notebook-tab-add" id="notebook-add-page" title="nova página">+</button>` : ''}
+      </div>
+      ${isOwner && page ? sharePageToggle(page) : ''}
+      ${isOwner ? deletePageRow() : ''}
+      <div class="notebook-stage">
+        <div class="notebook-page" id="notebook-page-surface" data-page-id="${page ? page.id : ''}" ${isOwner ? 'contenteditable="true"' : ''}>${page ? sanitizeNotebookHtml(page.html) : ''}</div>
+      </div>
+    `;
+  }
+
+  function physicalBody(nb) {
+    if (nb.pageViewMode === 'spread') return spreadBody(nb);
+    const idx = nb.pages.findIndex((p) => p.id === nb.activePageId);
+    const page = nb.pages[idx];
     return `
       <div class="notebook-physical-nav">
         <button type="button" class="notebook-page-arrow" id="notebook-prev-page" ${idx <= 0 ? 'disabled' : ''}>‹</button>
-        <span class="notebook-page-count">${escapeHtml(page ? page.title : '')} — ${idx + 1} / ${notebook.pages.length}</span>
-        <button type="button" class="notebook-page-arrow" id="notebook-next-page" ${idx >= notebook.pages.length - 1 ? 'disabled' : ''}>›</button>
+        <span class="notebook-page-count">${page ? pageTitleWithPencil(page, 'left') : ''} — ${idx + 1} / ${nb.pages.length}</span>
+        <button type="button" class="notebook-page-arrow" id="notebook-next-page" ${idx >= nb.pages.length - 1 ? 'disabled' : ''}>›</button>
         ${isOwner ? `<button type="button" class="notebook-tab-add" id="notebook-add-page" title="nova página">+</button>` : ''}
       </div>
-      ${isOwner ? pageActionsRow() : ''}
-    `;
-  }
-
-  function pageActionsRow() {
-    return `
-      <div class="notebook-page-actions">
-        <button type="button" class="btn btn-ghost" id="notebook-rename-page">renomear página</button>
-        <button type="button" class="combat-row-remove" id="notebook-delete-page" title="apagar página">✕</button>
+      ${isOwner && page ? sharePageToggle(page) : ''}
+      ${isOwner ? deletePageRow() : ''}
+      <div class="notebook-stage">
+        <div class="notebook-page" id="notebook-page-surface" data-page-id="${page ? page.id : ''}" ${isOwner ? 'contenteditable="true"' : ''}>${page ? sanitizeNotebookHtml(page.html) : ''}</div>
       </div>
     `;
   }
 
-  function capture() {
-    const el = $('notebook-page-surface');
-    const page = activePage();
-    if (!el || !page) return;
-    page.html = sanitizeNotebookHtml(el.innerHTML);
+  function spreadBody(nb) {
+    const idx = nb.pages.findIndex((p) => p.id === nb.activePageId);
+    const pairStart = idx - (idx % 2);
+    const left = nb.pages[pairStart];
+    const right = nb.pages[pairStart + 1];
+    return `
+      <div class="notebook-physical-nav">
+        <button type="button" class="notebook-page-arrow" id="notebook-prev-page" ${pairStart <= 0 ? 'disabled' : ''}>‹</button>
+        <span class="notebook-page-count">${pairStart + 1}-${pairStart + (right ? 2 : 1)} / ${nb.pages.length}</span>
+        <button type="button" class="notebook-page-arrow" id="notebook-next-page" ${pairStart + 2 >= nb.pages.length ? 'disabled' : ''}>›</button>
+        ${isOwner ? `<button type="button" class="notebook-tab-add" id="notebook-add-page" title="nova página">+</button>` : ''}
+      </div>
+      <div class="notebook-stage notebook-stage-spread">
+        <div class="notebook-page-half">
+          <div class="notebook-page-half-head">${left ? pageTitleWithPencil(left, 'left') : ''}</div>
+          <div class="notebook-page" id="notebook-page-surface" data-page-id="${left ? left.id : ''}" ${isOwner && left ? 'contenteditable="true"' : ''}>${left ? sanitizeNotebookHtml(left.html) : ''}</div>
+        </div>
+        <div class="notebook-spine"></div>
+        <div class="notebook-page-half">
+          <div class="notebook-page-half-head">${right ? pageTitleWithPencil(right, 'right') : ''}</div>
+          <div class="notebook-page" id="notebook-page-surface-right" data-page-id="${right ? right.id : ''}" ${isOwner && right ? 'contenteditable="true"' : ''}>${right ? sanitizeNotebookHtml(right.html) : right ? '' : '<span class="notebook-blank-half">fim do caderno</span>'}</div>
+        </div>
+      </div>
+      ${isOwner && left ? sharePageToggle(left, right) : ''}
+      ${isOwner ? deletePageRow() : ''}
+    `;
   }
 
-  function scheduleSave() {
-    const statusEl = $('notebook-save-status');
-    if (statusEl) statusEl.textContent = 'salvando...';
-    clearTimeout(saveTimer);
-    saveTimer = setTimeout(async () => {
-      try {
-        await saveOwnNotebook(characterId, notebook);
-        const el = $('notebook-save-status');
-        if (el) el.textContent = 'salvo ✓';
-      } catch (err) {
-        const el = $('notebook-save-status');
-        if (el) el.textContent = 'erro ao salvar: ' + err.message;
-      }
-    }, 1200);
+  function sharePageToggle(page, page2) {
+    return `
+      <div class="notebook-share-row">
+        <label class="notebook-share-toggle" title="o mestre consegue ver essa página">
+          <input type="checkbox" class="notebook-share-check" data-share-page="${page.id}" ${page.visibleToMaster ? 'checked' : ''}> compartilhar${page2 ? ' (esquerda)' : ''}
+        </label>
+        ${page2 ? `<label class="notebook-share-toggle"><input type="checkbox" class="notebook-share-check" data-share-page="${page2.id}" ${page2.visibleToMaster ? 'checked' : ''}> compartilhar (direita)</label>` : ''}
+      </div>
+    `;
   }
+
+  function deletePageRow() {
+    return `<div class="notebook-page-actions"><button type="button" class="combat-row-remove" id="notebook-delete-page" title="apagar página atual">✕ apagar página</button></div>`;
+  }
+
+  // ================= NAVEGAÇÃO / AÇÕES =================
 
   function navigateTo(newId, direction) {
     capture();
-    const family = themeInfo().family;
+    const nb = currentNotebook();
+    const theme = themeDef(nb.themeId);
     const stage = app.querySelector('.notebook-stage');
-    if (family === 'physical' && stage && direction) {
+    if (theme.family === 'physical' && stage && direction) {
       stage.classList.add(direction === 'next' ? 'notebook-flip-out-next' : 'notebook-flip-out-prev');
       setTimeout(() => {
-        notebook.activePageId = newId;
+        nb.activePageId = newId;
         render();
         const freshStage = app.querySelector('.notebook-stage');
         if (freshStage) {
@@ -178,20 +400,20 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         }
       }, 180);
     } else {
-      notebook.activePageId = newId;
+      nb.activePageId = newId;
       render();
     }
     scheduleSave();
   }
 
-  function saveSelection() {
+  function saveSelection(editorId) {
     const sel = window.getSelection();
-    const editor = $('notebook-page-surface');
+    const editor = $(editorId);
     if (sel.rangeCount > 0 && editor && editor.contains(sel.anchorNode)) savedRange = sel.getRangeAt(0).cloneRange();
   }
 
-  function restoreSelectionAndFocus() {
-    const editor = $('notebook-page-surface');
+  function restoreSelectionAndFocus(editorId) {
+    const editor = $(editorId);
     if (!editor) return;
     editor.focus();
     if (savedRange) {
@@ -199,6 +421,10 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
       sel.removeAllRanges();
       sel.addRange(savedRange);
     }
+  }
+
+  function activeEditorId() {
+    return lastFocusedSide === 'right' && $('notebook-page-surface-right') ? 'notebook-page-surface-right' : 'notebook-page-surface';
   }
 
   function startImageResize(img, e) {
@@ -221,23 +447,201 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
   }
 
   function wireEvents() {
-    // cada render() troca o innerHTML inteiro (páginas/tema mudam com
-    // pouca frequência) -- religar aqui é seguro, o DOM antigo (com
-    // seus listeners) já foi descartado junto.
-    const themeSelect = $('notebook-theme-select');
-    if (themeSelect) {
-      themeSelect.addEventListener('change', () => {
-        notebook.theme = themeSelect.value;
+    // --- lista ---
+    app.querySelectorAll('button[data-open-notebook]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (isOwner) notebookData.activeNotebookId = btn.dataset.openNotebook;
+        else sharedActiveId = btn.dataset.openNotebook;
+        view = 'notebook';
+        settingsOpen = false;
+        render();
+      });
+    });
+    const newNbBtn = $('notebook-new-btn');
+    if (newNbBtn) {
+      newNbBtn.addEventListener('click', () => {
+        creatingNotebook = true;
+        render();
+        const input = $('notebook-create-name');
+        if (input) input.select();
+      });
+    }
+    const closeCreateBtn = $('notebook-create-close');
+    if (closeCreateBtn) {
+      closeCreateBtn.addEventListener('click', () => {
+        creatingNotebook = false;
+        render();
+      });
+    }
+    app.querySelectorAll('button[data-create-theme]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const nameInput = $('notebook-create-name');
+        const name = (nameInput && nameInput.value.trim()) || `Caderno ${notebookData.notebooks.length + 1}`;
+        const nb = newNotebook(name, btn.dataset.createTheme);
+        notebookData.notebooks.push(nb);
+        notebookData.activeNotebookId = nb.id;
+        creatingNotebook = false;
+        view = 'notebook';
+        render();
+        scheduleSave();
+      });
+    });
+    app.querySelectorAll('button[data-rename-notebook]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nb = notebookData.notebooks.find((n) => n.id === btn.dataset.renameNotebook);
+        if (!nb) return;
+        const next = window.prompt('Nome do caderno', nb.name);
+        if (next && next.trim()) {
+          nb.name = next.trim();
+          render();
+          scheduleSave();
+        }
+      });
+    });
+    app.querySelectorAll('button[data-delete-notebook]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (notebookData.notebooks.length <= 1) {
+          window.alert('não dá pra apagar o único caderno.');
+          return;
+        }
+        if (!window.confirm('apagar esse caderno inteiro? não dá pra desfazer.')) return;
+        const id = btn.dataset.deleteNotebook;
+        notebookData.notebooks = notebookData.notebooks.filter((n) => n.id !== id);
+        if (notebookData.activeNotebookId === id) notebookData.activeNotebookId = notebookData.notebooks[0].id;
+        render();
+        scheduleSave();
+      });
+    });
+
+    // --- topo do caderno ---
+    const backBtn = $('notebook-back-to-list');
+    if (backBtn) {
+      backBtn.addEventListener('click', () => {
+        capture();
+        view = 'list';
+        settingsOpen = false;
+        render();
+      });
+    }
+    const renameCurrentBtn = $('notebook-rename-current');
+    if (renameCurrentBtn) {
+      renameCurrentBtn.addEventListener('click', () => {
+        const nb = currentNotebook();
+        const next = window.prompt('Nome do caderno', nb.name);
+        if (next && next.trim()) {
+          nb.name = next.trim();
+          render();
+          scheduleSave();
+        }
+      });
+    }
+    const focusBtn = $('notebook-focus-btn');
+    if (focusBtn) {
+      focusBtn.addEventListener('click', () => {
+        document.body.classList.toggle('notebook-focus-mode');
+      });
+    }
+
+    const settingsBtn = $('notebook-settings-btn');
+    if (settingsBtn) {
+      settingsBtn.addEventListener('click', () => {
+        settingsOpen = !settingsOpen;
+        render();
+      });
+    }
+    if (!docClickWired) {
+      docClickWired = true;
+      document.addEventListener('click', (e) => {
+        if (settingsOpen && !e.target.closest('#notebook-settings-wrap')) {
+          settingsOpen = false;
+          render();
+        }
+        if (colorPopoverOpen && !e.target.closest('#notebook-color-wrap')) {
+          colorPopoverOpen = false;
+          render();
+        }
+      });
+    }
+
+    const variantSelect = $('notebook-variant-select');
+    if (variantSelect) {
+      variantSelect.addEventListener('change', () => {
+        currentNotebook().variant = variantSelect.value;
+        render();
+        scheduleSave();
+      });
+    }
+    const fontSelect = $('notebook-font-select');
+    if (fontSelect) {
+      fontSelect.addEventListener('change', () => {
+        const nb = currentNotebook();
+        if (fontSelect.value === '__custom__') {
+          nb.customFont = nb.customFont || '';
+          settingsOpen = true;
+          render();
+          const input = $('notebook-custom-font-input');
+          if (input) input.focus();
+        } else {
+          nb.customFont = null;
+          nb.font = fontSelect.value;
+          render();
+          scheduleSave();
+        }
+      });
+    }
+    const customFontInput = $('notebook-custom-font-input');
+    if (customFontInput) {
+      customFontInput.addEventListener('change', () => {
+        const nb = currentNotebook();
+        nb.customFont = customFontInput.value.trim() || null;
+        render();
+        scheduleSave();
+      });
+    }
+    app.querySelectorAll('button[data-view-mode]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        currentNotebook().pageViewMode = btn.dataset.viewMode;
+        render();
+        scheduleSave();
+      });
+    });
+    const expandedCheck = $('notebook-expanded-check');
+    if (expandedCheck) {
+      expandedCheck.addEventListener('change', () => {
+        currentNotebook().expandedView = expandedCheck.checked;
         render();
         scheduleSave();
       });
     }
 
+    // --- formatação ---
     app.querySelectorAll('button[data-fmt]').forEach((btn) => {
-      btn.addEventListener('mousedown', (e) => e.preventDefault()); // não perde a seleção do texto
+      btn.addEventListener('mousedown', (e) => e.preventDefault());
       btn.addEventListener('click', () => {
         document.execCommand(btn.dataset.fmt, false, null);
         capture();
+        scheduleSave();
+      });
+    });
+
+    const colorBtn = $('notebook-color-btn');
+    if (colorBtn) {
+      colorBtn.addEventListener('mousedown', (e) => e.preventDefault());
+      colorBtn.addEventListener('click', () => {
+        colorPopoverOpen = !colorPopoverOpen;
+        render();
+      });
+    }
+    app.querySelectorAll('button[data-color]').forEach((btn) => {
+      btn.addEventListener('mousedown', (e) => e.preventDefault());
+      btn.addEventListener('click', () => {
+        document.execCommand('styleWithCSS', false, true);
+        document.execCommand('foreColor', false, btn.dataset.color);
+        colorPopoverOpen = false;
+        capture();
+        render();
         scheduleSave();
       });
     });
@@ -247,7 +651,7 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
     if (imgBtn && imgInput) {
       imgBtn.addEventListener('mousedown', (e) => e.preventDefault());
       imgBtn.addEventListener('click', () => {
-        saveSelection();
+        saveSelection(activeEditorId());
         imgInput.click();
       });
       imgInput.addEventListener('change', async () => {
@@ -257,7 +661,7 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         imgUploadError = '';
         try {
           const url = await uploadNotebookImage(characterId, file);
-          restoreSelectionAndFocus();
+          restoreSelectionAndFocus(activeEditorId());
           document.execCommand('insertHTML', false, `<img class="notebook-img" src="${url}" style="width:220px">`);
           capture();
           scheduleSave();
@@ -268,18 +672,21 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
       });
     }
 
-    const shareCheck = $('notebook-share-check');
-    if (shareCheck) {
-      shareCheck.addEventListener('change', () => {
-        const page = activePage();
-        if (!page) return;
-        page.visibleToMaster = shareCheck.checked;
-        scheduleSave();
+    app.querySelectorAll('input.notebook-share-check').forEach((el) => {
+      el.addEventListener('change', () => {
+        const nb = currentNotebook();
+        const page = nb.pages.find((p) => p.id === el.dataset.sharePage);
+        if (page) {
+          page.visibleToMaster = el.checked;
+          scheduleSave();
+        }
       });
-    }
+    });
 
-    const editor = $('notebook-page-surface');
-    if (editor) {
+    app.querySelectorAll('.notebook-page[contenteditable]').forEach((editor) => {
+      editor.addEventListener('focus', () => {
+        lastFocusedSide = editor.id === 'notebook-page-surface-right' ? 'right' : 'left';
+      });
       editor.addEventListener('input', () => {
         capture();
         scheduleSave();
@@ -290,43 +697,17 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         const nearCorner = e.clientX > rect.right - 16 && e.clientY > rect.bottom - 16;
         if (nearCorner) startImageResize(e.target, e);
       });
-    }
+    });
 
+    // --- páginas ---
     app.querySelectorAll('button[data-page-id]').forEach((btn) => {
       btn.addEventListener('click', () => navigateTo(btn.dataset.pageId, null));
     });
-
-    const prevBtn = $('notebook-prev-page');
-    if (prevBtn) {
-      prevBtn.addEventListener('click', () => {
-        const idx = notebook.pages.findIndex((p) => p.id === notebook.activePageId);
-        if (idx > 0) navigateTo(notebook.pages[idx - 1].id, 'prev');
-      });
-    }
-    const nextBtn = $('notebook-next-page');
-    if (nextBtn) {
-      nextBtn.addEventListener('click', () => {
-        const idx = notebook.pages.findIndex((p) => p.id === notebook.activePageId);
-        if (idx < notebook.pages.length - 1) navigateTo(notebook.pages[idx + 1].id, 'next');
-      });
-    }
-
-    const addBtn = $('notebook-add-page');
-    if (addBtn) {
-      addBtn.addEventListener('click', () => {
-        capture();
-        const p = newPage(`Página ${notebook.pages.length + 1}`);
-        notebook.pages.push(p);
-        notebook.activePageId = p.id;
-        render();
-        scheduleSave();
-      });
-    }
-
-    const renameBtn = $('notebook-rename-page');
-    if (renameBtn) {
-      renameBtn.addEventListener('click', () => {
-        const page = activePage();
+    app.querySelectorAll('button[data-rename-page]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const nb = currentNotebook();
+        const page = nb.pages.find((p) => p.id === btn.dataset.renamePage);
         if (!page) return;
         const next = window.prompt('Nome da página', page.title);
         if (next && next.trim()) {
@@ -335,19 +716,54 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
           scheduleSave();
         }
       });
+    });
+
+    const prevBtn = $('notebook-prev-page');
+    if (prevBtn) {
+      prevBtn.addEventListener('click', () => {
+        const nb = currentNotebook();
+        const step = nb.pageViewMode === 'spread' ? 2 : 1;
+        const idx = nb.pages.findIndex((p) => p.id === nb.activePageId);
+        const newIdx = Math.max(0, idx - step);
+        if (newIdx !== idx) navigateTo(nb.pages[newIdx].id, 'prev');
+      });
+    }
+    const nextBtn = $('notebook-next-page');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => {
+        const nb = currentNotebook();
+        const step = nb.pageViewMode === 'spread' ? 2 : 1;
+        const idx = nb.pages.findIndex((p) => p.id === nb.activePageId);
+        const newIdx = Math.min(nb.pages.length - 1, idx + step);
+        if (newIdx !== idx) navigateTo(nb.pages[newIdx].id, 'next');
+      });
+    }
+
+    const addBtn = $('notebook-add-page');
+    if (addBtn) {
+      addBtn.addEventListener('click', () => {
+        capture();
+        const nb = currentNotebook();
+        const p = newPage(`Página ${nb.pages.length + 1}`);
+        nb.pages.push(p);
+        nb.activePageId = p.id;
+        render();
+        scheduleSave();
+      });
     }
 
     const deleteBtn = $('notebook-delete-page');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', () => {
-        if (notebook.pages.length <= 1) {
+        const nb = currentNotebook();
+        if (nb.pages.length <= 1) {
           window.alert('não dá pra apagar a única página do caderno.');
           return;
         }
         if (!window.confirm('apagar essa página? não dá pra desfazer.')) return;
-        const idx = notebook.pages.findIndex((p) => p.id === notebook.activePageId);
-        notebook.pages.splice(idx, 1);
-        notebook.activePageId = notebook.pages[Math.max(0, idx - 1)].id;
+        const idx = nb.pages.findIndex((p) => p.id === nb.activePageId);
+        nb.pages.splice(idx, 1);
+        nb.activePageId = nb.pages[Math.max(0, idx - 1)].id;
         render();
         scheduleSave();
       });

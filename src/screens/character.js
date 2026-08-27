@@ -2427,6 +2427,10 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   let notebookMounted = false;
   function setMode(mode){
     currentMode = mode;
+    // sai do modo foco do caderno sempre que troca de aba -- senão,
+    // se o player ligou o foco e navegou embora sem desligar, o
+    // cabeçalho/campaign-strip sumiam pra sempre nas outras abas.
+    if(mode !== 'notebook') document.body.classList.remove('notebook-focus-mode');
     const invWrap = document.getElementById('inventory-mode-wrap');
     const transWrap = document.getElementById('transport-mode-wrap');
     const combatWrap = document.getElementById('combat-mode-wrap');
