@@ -607,6 +607,7 @@
   .gauge-max{ display:flex; align-items:center; gap:8px; font-size:11.5px; color: var(--ink-faint); letter-spacing:0.08em; }
   .gauge-max input{ width:64px; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--accent); font-family: var(--font-mono); font-size:12.5px; padding:5px 6px; border-radius:4px; text-align:center; transition: border-color 0.2s ease; }
   .gauge-max input:focus{ outline:none; border-color: var(--accent-core); box-shadow: 0 0 0 2px var(--accent-faint); }
+  .gauge-max-readout{ font-family: var(--font-mono); font-size:12.5px; color: var(--accent); }
   .overload-warn{ font-size:10.5px; letter-spacing:0.12em; color: var(--warn); text-shadow:0 0 8px rgba(var(--warn-rgb),0.6); display:none; }
   .overload-warn.show{ display:inline-block; animation: over-flicker 1s steps(8) infinite; }
 

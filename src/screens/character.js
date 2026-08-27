@@ -163,8 +163,13 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       <div class="gauge-track"><div class="gauge-fill" id="gauge-fill" style="width:0%"></div></div>
       <div class="gauge-bottom">
         <div class="gauge-max">
-          <label for="max-carga-input">CAPACIDADE MÁX.</label>
-          <input type="number" id="max-carga-input" min="0" step="0.5" value="60">
+          <label>CAPACIDADE MÁX.</label>
+          <span class="gauge-max-readout" id="max-carga-readout">60 (3× FOR + 0)</span>
+          ${
+            isAdminView
+              ? `<input type="number" id="max-carga-bonus-input" min="0" step="0.5" value="0" title="carga adicional, somada aos 3× Força">`
+              : ''
+          }
         </div>
         <span class="overload-warn" id="overload-warn">⚠ SOBRECARGA DETECTADA</span>
       </div>
@@ -480,7 +485,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   let characterName = 'Personagem';
 
   let state = {
-    maxCarga: 60, transportPersonalMaxCarga: 100, theme: 'caverna-azul',
+    maxCarga: 60, maxCargaBonus: 0, transportPersonalMaxCarga: 100, theme: 'caverna-azul',
     currency: { bronze: 0, silver: 0, gold: 0, platinum: 0 },
     // status da ficha (Fase 5) -- usado só pra calcular fórmula de dano
     // de arma aqui (ex: "2 + FOR/2"), a ficha em si é editada em ficha.js.
@@ -596,7 +601,10 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     } else {
       state.theme = 'caverna-azul';
     }
-    state.maxCarga = (row.max_carga !== undefined && row.max_carga !== null) ? row.max_carga : 60;
+    // capacidade máxima é fórmula (3x Força + adicional do mestre), não
+    // mais um número livre -- ver db/028_patch_max_carga_formula.sql.
+    state.maxCargaBonus = (typeof row.max_carga_bonus === 'number') ? row.max_carga_bonus : 0;
+    state.maxCarga = 3 * (typeof row.forca === 'number' ? row.forca : 10) + state.maxCargaBonus;
     state.currency = (row.currency && typeof row.currency === 'object') ? row.currency : { bronze:0, silver:0, gold:0, platinum:0 };
     ['vitalidade','forca','agilidade','destreza','inteligencia','estamina','observacao'].forEach(k => {
       if(typeof row[k] === 'number') state.status[k] = row[k];
@@ -672,7 +680,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     state.equip = (d.equip && typeof d.equip === 'object') ? d.equip : state.equip;
     state.transportPersonal = Array.isArray(d.transportPersonal) ? d.transportPersonal : [];
     state.transportPersonalMaxCarga = d.transportPersonalMaxCarga !== undefined ? d.transportPersonalMaxCarga : 100;
-    state.maxCarga = (row.max_carga !== undefined && row.max_carga !== null) ? row.max_carga : 60;
+    state.maxCargaBonus = (typeof row.max_carga_bonus === 'number') ? row.max_carga_bonus : 0;
+    state.maxCarga = 3 * (typeof row.forca === 'number' ? row.forca : 10) + state.maxCargaBonus;
     state.currency = (row.currency && typeof row.currency === 'object') ? row.currency : { bronze:0, silver:0, gold:0, platinum:0 };
     ['vitalidade','forca','agilidade','destreza','inteligencia','estamina','observacao'].forEach(k => {
       if(typeof row[k] === 'number') state.status[k] = row[k];
@@ -718,6 +727,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         },
         currency: state.currency,
         max_carga: state.maxCarga,
+        max_carga_bonus: state.maxCargaBonus,
         name: characterName,
         updated_at: updatedAt,
         inventory_updated_at: updatedAt,
@@ -913,7 +923,9 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     document.getElementById('gauge-readout').classList.toggle('over', over);
     document.getElementById('gauge-readout').textContent = round(total) + ' / ' + round(max) + ' CARGA';
     document.getElementById('overload-warn').classList.toggle('show', over);
-    document.getElementById('max-carga-input').value = state.maxCarga;
+    document.getElementById('max-carga-readout').textContent = `${round(state.maxCarga)} (3× FOR + ${round(state.maxCargaBonus)})`;
+    const bonusInput = document.getElementById('max-carga-bonus-input');
+    if(bonusInput && document.activeElement !== bonusInput) bonusInput.value = state.maxCargaBonus;
     const panelEl = document.getElementById('gauge-panel-main');
     if(panelEl) panelEl.classList.toggle('over-limit', over);
   }
@@ -2260,8 +2272,10 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     }, 150);
   });
 
-  document.getElementById('max-carga-input').addEventListener('input', (e)=>{
-    state.maxCarga = Math.max(0, parseFloat(e.target.value) || 0);
+  const maxCargaBonusInput = document.getElementById('max-carga-bonus-input');
+  if(maxCargaBonusInput) maxCargaBonusInput.addEventListener('input', (e)=>{
+    state.maxCargaBonus = Math.max(0, parseFloat(e.target.value) || 0);
+    state.maxCarga = 3 * (state.status.forca || 0) + state.maxCargaBonus;
     renderGauge(); saveState();
   });
   document.getElementById('max-carga-input-personal').addEventListener('input', (e)=>{
