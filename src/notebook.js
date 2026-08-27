@@ -24,6 +24,10 @@ export const NOTEBOOK_THEMES = [
       { id: 'amarelado-liso', label: 'Amarelada' },
       { id: 'reciclado', label: 'Reciclada' },
       { id: 'craft', label: 'Kraft' },
+      { id: 'couro', label: 'Couro' },
+      { id: 'marmorizado', label: 'Marmorizado' },
+      { id: 'jornal', label: 'Jornal Velho' },
+      { id: 'linho', label: 'Linho' },
     ],
     defaultVariant: 'branco-liso',
     fonts: [
@@ -41,6 +45,12 @@ export const NOTEBOOK_THEMES = [
     variants: [
       { id: 'velho', label: 'Pergaminho velho' },
       { id: 'novo', label: 'Pergaminho novo' },
+      { id: 'rasgado', label: 'Rasgado' },
+      { id: 'elfico', label: 'Élfico' },
+      { id: 'real', label: 'Real' },
+      { id: 'queimado', label: 'Queimado' },
+      { id: 'amaldicoado', label: 'Amaldiçoado' },
+      { id: 'gelido', label: 'Gélido' },
     ],
     defaultVariant: 'velho',
     fonts: [
@@ -59,6 +69,10 @@ export const NOTEBOOK_THEMES = [
       { id: 'cmd', label: 'CMD do Windows' },
       { id: 'cyberpunk', label: 'Cyberpunk' },
       { id: 'moderno', label: 'Bloco Moderno' },
+      { id: 'ambar', label: 'Âmbar' },
+      { id: 'azul-retro', label: 'Azul Retrô' },
+      { id: 'alerta-vermelho', label: 'Alerta Vermelho' },
+      { id: 'solarized', label: 'Solarized' },
     ],
     defaultVariant: 'classico',
     fonts: [

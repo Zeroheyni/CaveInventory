@@ -229,6 +229,39 @@ body.notebook-focus-mode #backpack-return-btn{ display:none !important; }
   background: repeating-linear-gradient(115deg, rgba(0,0,0,0.03) 0px, transparent 2px, transparent 6px), #c8a876;
   color:#3d2b15; box-shadow:0 10px 30px rgba(0,0,0,0.4);
 }
+.notebook-theme-papel.notebook-variant-couro .notebook-page{
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(255,255,255,0.06), transparent 40%),
+    repeating-linear-gradient(100deg, rgba(0,0,0,0.06) 0px, transparent 3px, transparent 7px),
+    #6b4226;
+  color:#f0e0c0; box-shadow: inset 0 0 60px rgba(0,0,0,0.5), 0 10px 30px rgba(0,0,0,0.45);
+}
+.notebook-theme-papel.notebook-variant-marmorizado .notebook-page{
+  background:
+    radial-gradient(circle at 20% 30%, rgba(60,90,140,0.25), transparent 25%),
+    radial-gradient(circle at 60% 15%, rgba(150,110,40,0.2), transparent 30%),
+    radial-gradient(circle at 80% 70%, rgba(60,90,140,0.2), transparent 28%),
+    radial-gradient(circle at 35% 80%, rgba(150,110,40,0.18), transparent 25%),
+    #ece3d0;
+  color:#2b2a28; box-shadow:0 10px 30px rgba(0,0,0,0.35);
+}
+.notebook-theme-papel.notebook-variant-jornal .notebook-page{
+  background:
+    radial-gradient(circle at 25% 35%, rgba(0,0,0,0.06) 0, transparent 2px),
+    radial-gradient(circle at 65% 65%, rgba(0,0,0,0.05) 0, transparent 2px),
+    radial-gradient(circle at 45% 85%, rgba(0,0,0,0.06) 0, transparent 2px),
+    radial-gradient(circle at 85% 15%, rgba(0,0,0,0.05) 0, transparent 2px),
+    #d8d3c4;
+  background-size: 5px 5px;
+  color:#3a382f; box-shadow:0 10px 30px rgba(0,0,0,0.3);
+}
+.notebook-theme-papel.notebook-variant-linho .notebook-page{
+  background:
+    repeating-linear-gradient(45deg, rgba(0,0,0,0.025) 0px, transparent 1px, transparent 3px),
+    repeating-linear-gradient(-45deg, rgba(0,0,0,0.02) 0px, transparent 1px, transparent 3px),
+    #f5f0e6;
+  color:#2b2a28; box-shadow:0 10px 30px rgba(0,0,0,0.28);
+}
 .notebook-theme-papel .notebook-page{ font-size:19px; }
 
 /* Pergaminho Antigo */
@@ -244,6 +277,52 @@ body.notebook-focus-mode #backpack-return-btn{ display:none !important; }
     radial-gradient(ellipse at top left, rgba(120,95,50,0.12), transparent 60%),
     #ecdcaf;
   color:#3b2c1a; box-shadow: inset 0 0 30px rgba(120,95,50,0.15), 0 10px 30px rgba(0,0,0,0.3);
+}
+.notebook-theme-pergaminho.notebook-variant-rasgado .notebook-page{
+  background:
+    radial-gradient(ellipse at top left, rgba(60,35,10,0.4), transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(60,35,10,0.45), transparent 55%),
+    radial-gradient(ellipse at 50% 50%, rgba(30,15,5,0.15), transparent 70%),
+    #c9ad78;
+  color:#33220f; box-shadow: inset 0 0 90px rgba(40,20,5,0.55), 0 10px 30px rgba(0,0,0,0.45);
+}
+.notebook-theme-pergaminho.notebook-variant-elfico .notebook-page{
+  background:
+    radial-gradient(ellipse at top left, rgba(40,90,50,0.18), transparent 60%),
+    radial-gradient(ellipse at bottom right, rgba(40,90,50,0.15), transparent 55%),
+    #d8dfc0;
+  color:#243019; box-shadow: inset 0 0 40px rgba(40,90,50,0.15), 0 10px 30px rgba(0,0,0,0.35);
+}
+.notebook-theme-pergaminho.notebook-variant-real .notebook-page{
+  background:
+    radial-gradient(ellipse at top left, rgba(190,150,40,0.22), transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(190,150,40,0.2), transparent 55%),
+    #ecdca0;
+  color:#3b2c0f; box-shadow: inset 0 0 0 3px rgba(190,150,40,0.35), inset 0 0 40px rgba(190,150,40,0.15), 0 10px 30px rgba(0,0,0,0.35);
+}
+.notebook-theme-pergaminho.notebook-variant-queimado .notebook-page{
+  background:
+    radial-gradient(ellipse at top left, rgba(20,10,5,0.55), transparent 45%),
+    radial-gradient(ellipse at bottom right, rgba(20,10,5,0.55), transparent 45%),
+    radial-gradient(ellipse at top right, rgba(20,10,5,0.4), transparent 40%),
+    radial-gradient(ellipse at bottom left, rgba(20,10,5,0.4), transparent 40%),
+    #b98f56;
+  color:#241708; box-shadow: inset 0 0 90px rgba(10,5,0,0.6), 0 10px 30px rgba(0,0,0,0.5);
+}
+.notebook-theme-pergaminho.notebook-variant-amaldicoado .notebook-page{
+  background:
+    radial-gradient(ellipse at 30% 20%, rgba(120,20,20,0.18), transparent 50%),
+    radial-gradient(ellipse at 70% 80%, rgba(20,10,10,0.4), transparent 55%),
+    #7a6248;
+  color:#e8d9b8; box-shadow: inset 0 0 60px rgba(120,20,20,0.25), 0 10px 30px rgba(0,0,0,0.5);
+  text-shadow: 0 0 4px rgba(120,20,20,0.3);
+}
+.notebook-theme-pergaminho.notebook-variant-gelido .notebook-page{
+  background:
+    radial-gradient(ellipse at top left, rgba(150,190,220,0.25), transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(150,190,220,0.2), transparent 55%),
+    #dce6ea;
+  color:#25313a; box-shadow: inset 0 0 40px rgba(150,190,220,0.2), 0 10px 30px rgba(0,0,0,0.3);
 }
 
 /* Terminal Digital (com variantes) */
@@ -262,5 +341,22 @@ body.notebook-focus-mode #backpack-return-btn{ display:none !important; }
 }
 .notebook-theme-digital.notebook-variant-moderno .notebook-page{
   background:#f4f5f7; color:#1c1e21; box-shadow:0 10px 30px rgba(0,0,0,0.3); text-shadow:none;
+}
+.notebook-theme-digital.notebook-variant-ambar .notebook-page{
+  background: repeating-linear-gradient(rgba(255,255,255,0.02) 0px, rgba(255,255,255,0.02) 1px, transparent 1px, transparent 3px), #1a0f00;
+  color:#ffb000; box-shadow: inset 0 0 40px rgba(255,176,0,0.08), 0 10px 30px rgba(0,0,0,0.45);
+  text-shadow: 0 0 4px rgba(255,176,0,0.4);
+}
+.notebook-theme-digital.notebook-variant-azul-retro .notebook-page{
+  background:#00040c; color:#5fc9ff; box-shadow: inset 0 0 40px rgba(95,201,255,0.08), 0 10px 30px rgba(0,0,0,0.45);
+  text-shadow: 0 0 4px rgba(95,201,255,0.35);
+}
+.notebook-theme-digital.notebook-variant-alerta-vermelho .notebook-page{
+  background: radial-gradient(ellipse at top right, rgba(255,0,0,0.1), transparent 55%), #140303;
+  color:#ff5555; box-shadow: inset 0 0 50px rgba(255,0,0,0.12), 0 10px 30px rgba(0,0,0,0.5);
+  text-shadow: 0 0 5px rgba(255,85,85,0.4);
+}
+.notebook-theme-digital.notebook-variant-solarized .notebook-page{
+  background:#002b36; color:#93a1a1; box-shadow: inset 0 0 30px rgba(0,0,0,0.2), 0 10px 30px rgba(0,0,0,0.4); text-shadow:none;
 }
 .notebook-theme-digital .notebook-page:empty::before{ content:'> escreva aqui...'; }
