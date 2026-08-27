@@ -171,7 +171,7 @@
    por tema acima), só dividindo o espaço disponível em vez de esticar
    pra largura inteira -- por isso o width:100% aqui tem que vir
    DEPOIS das regras de tema pra ganhar no empate de especificidade. */
-.notebook-stage-spread{ display:flex; align-items:flex-start; justify-content:center; gap:0; max-width:1100px; margin:0 auto; }
+.notebook-stage-spread{ display:flex; align-items:flex-start; justify-content:center; gap:0; width:100%; max-width:1100px; margin:0 auto; }
 .notebook-page-half{ flex:0 1 420px; min-width:0; display:flex; flex-direction:column; }
 .notebook-page-half .notebook-page{ width:100%; max-width:none; margin:0; border-radius:0; }
 .notebook-page-half:first-child .notebook-page{ border-radius:10px 0 0 10px; }
@@ -262,6 +262,19 @@ body.notebook-focus-mode #backpack-return-btn{ display:none !important; }
     #f5f0e6;
   color:#2b2a28; box-shadow:0 10px 30px rgba(0,0,0,0.28);
 }
+.notebook-theme-papel.notebook-variant-aquarela .notebook-page{
+  background:
+    radial-gradient(ellipse at 20% 25%, rgba(255,120,150,0.12), transparent 35%),
+    radial-gradient(ellipse at 75% 20%, rgba(120,180,255,0.12), transparent 35%),
+    radial-gradient(ellipse at 60% 75%, rgba(255,210,80,0.12), transparent 35%),
+    radial-gradient(ellipse at 15% 80%, rgba(140,220,160,0.1), transparent 35%),
+    #fbfaf5;
+  color:#2b2a28; box-shadow:0 10px 30px rgba(0,0,0,0.3);
+}
+.notebook-theme-papel.notebook-variant-grafite .notebook-page{
+  background: repeating-linear-gradient(80deg, rgba(0,0,0,0.035) 0px, transparent 1px, transparent 4px), #b9bcc0;
+  color:#202225; box-shadow:0 10px 30px rgba(0,0,0,0.4);
+}
 .notebook-theme-papel .notebook-page{ font-size:19px; }
 
 /* Pergaminho Antigo */
@@ -324,6 +337,21 @@ body.notebook-focus-mode #backpack-return-btn{ display:none !important; }
     #dce6ea;
   color:#25313a; box-shadow: inset 0 0 40px rgba(150,190,220,0.2), 0 10px 30px rgba(0,0,0,0.3);
 }
+.notebook-theme-pergaminho.notebook-variant-nautico .notebook-page{
+  background:
+    radial-gradient(ellipse at top left, rgba(30,100,110,0.22), transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(30,100,110,0.2), transparent 55%),
+    #d3c48f;
+  color:#2a3a2e; box-shadow: inset 0 0 45px rgba(30,100,110,0.18), 0 10px 30px rgba(0,0,0,0.35);
+}
+.notebook-theme-pergaminho.notebook-variant-arcano .notebook-page{
+  background:
+    radial-gradient(ellipse at top left, rgba(110,60,160,0.22), transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(110,60,160,0.2), transparent 55%),
+    #ded0c8;
+  color:#3a2540; box-shadow: inset 0 0 45px rgba(110,60,160,0.2), 0 10px 30px rgba(0,0,0,0.35);
+  text-shadow: 0 0 4px rgba(160,100,220,0.2);
+}
 
 /* Terminal Digital (com variantes) */
 .notebook-theme-digital.notebook-variant-classico .notebook-page{
@@ -358,5 +386,13 @@ body.notebook-focus-mode #backpack-return-btn{ display:none !important; }
 }
 .notebook-theme-digital.notebook-variant-solarized .notebook-page{
   background:#002b36; color:#93a1a1; box-shadow: inset 0 0 30px rgba(0,0,0,0.2), 0 10px 30px rgba(0,0,0,0.4); text-shadow:none;
+}
+.notebook-theme-digital.notebook-variant-synthwave .notebook-page{
+  background: linear-gradient(180deg, rgba(255,0,150,0.08), transparent 40%), #1a0b2e;
+  color:#ff71ce; box-shadow: inset 0 0 55px rgba(255,113,206,0.15), 0 10px 30px rgba(0,0,0,0.5);
+  text-shadow: 0 0 6px rgba(255,113,206,0.5);
+}
+.notebook-theme-digital.notebook-variant-mono-claro .notebook-page{
+  background:#f7f1e3; color:#4a3f2a; box-shadow:0 10px 30px rgba(0,0,0,0.25); text-shadow:none;
 }
 .notebook-theme-digital .notebook-page:empty::before{ content:'> escreva aqui...'; }

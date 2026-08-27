@@ -28,6 +28,8 @@ export const NOTEBOOK_THEMES = [
       { id: 'marmorizado', label: 'Marmorizado' },
       { id: 'jornal', label: 'Jornal Velho' },
       { id: 'linho', label: 'Linho' },
+      { id: 'aquarela', label: 'Aquarela' },
+      { id: 'grafite', label: 'Grafite' },
     ],
     defaultVariant: 'branco-liso',
     fonts: [
@@ -51,6 +53,8 @@ export const NOTEBOOK_THEMES = [
       { id: 'queimado', label: 'Queimado' },
       { id: 'amaldicoado', label: 'Amaldiçoado' },
       { id: 'gelido', label: 'Gélido' },
+      { id: 'nautico', label: 'Náutico' },
+      { id: 'arcano', label: 'Arcano' },
     ],
     defaultVariant: 'velho',
     fonts: [
@@ -73,6 +77,8 @@ export const NOTEBOOK_THEMES = [
       { id: 'azul-retro', label: 'Azul Retrô' },
       { id: 'alerta-vermelho', label: 'Alerta Vermelho' },
       { id: 'solarized', label: 'Solarized' },
+      { id: 'synthwave', label: 'Synthwave' },
+      { id: 'mono-claro', label: 'Mono Claro' },
     ],
     defaultVariant: 'classico',
     fonts: [
