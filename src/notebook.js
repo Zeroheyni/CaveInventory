@@ -20,12 +20,12 @@ export const NOTEBOOK_THEMES = [
     label: 'Caderno de Papel',
     family: 'physical',
     variants: [
-      { id: 'branco-pautado', label: 'Branca, com linha' },
-      { id: 'branco-liso', label: 'Branca, lisa' },
-      { id: 'amarelado-pautado', label: 'Amarelada, com linha' },
-      { id: 'amarelado-liso', label: 'Amarelada, lisa' },
+      { id: 'branco-liso', label: 'Branca' },
+      { id: 'amarelado-liso', label: 'Amarelada' },
+      { id: 'reciclado', label: 'Reciclada' },
+      { id: 'craft', label: 'Kraft' },
     ],
-    defaultVariant: 'branco-pautado',
+    defaultVariant: 'branco-liso',
     fonts: [
       { label: 'Caveat', family: "'Caveat', cursive" },
       { label: 'Kalam', family: "'Kalam', cursive" },
