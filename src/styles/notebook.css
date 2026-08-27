@@ -120,16 +120,25 @@
 .notebook-page:empty::before{ content:'escreva aqui...'; opacity:0.4; }
 .notebook-img{ max-width:100%; border-radius:4px; cursor:default; }
 
-.notebook-family-physical .notebook-page{ max-width:660px; min-height:680px; margin:0 auto; }
+.notebook-family-physical .notebook-page{ margin:0 auto; }
+/* aspect-ratio (não min-height fixo) -- a folha mantém a proporção de
+   papel de verdade em qualquer largura disponível, e ainda cresce
+   junto com o texto se o conteúdo passar da altura sugerida. */
+.notebook-theme-papel .notebook-page{ aspect-ratio:3/4; width:min(100%, 680px); }
+.notebook-theme-pergaminho .notebook-page{ aspect-ratio:4/3; width:min(100%, 860px); }
 .notebook-family-digital .notebook-page{ min-height:340px; max-height:480px; overflow-y:auto; }
 .notebook-expanded .notebook-page{ max-height:none; overflow:visible; }
 .notebook-family-digital .notebook-page::-webkit-scrollbar{ width:8px; }
 .notebook-family-digital .notebook-page::-webkit-scrollbar-thumb{ background: rgba(255,255,255,0.15); border-radius:4px; }
 
-/* folha dupla ("caderno aberto") */
-.notebook-stage-spread{ display:flex; align-items:stretch; gap:0; max-width:1180px; margin:0 auto; }
-.notebook-page-half{ flex:1; min-width:0; display:flex; flex-direction:column; }
-.notebook-page-half .notebook-page{ flex:1; max-width:none; margin:0; border-radius:0; }
+/* folha dupla ("caderno aberto") -- cada metade mantém a MESMA
+   proporção de página do modo "1 folha" (a aspect-ratio já definida
+   por tema acima), só dividindo o espaço disponível em vez de esticar
+   pra largura inteira -- por isso o width:100% aqui tem que vir
+   DEPOIS das regras de tema pra ganhar no empate de especificidade. */
+.notebook-stage-spread{ display:flex; align-items:flex-start; justify-content:center; gap:0; flex-wrap:wrap; max-width:1100px; margin:0 auto; }
+.notebook-page-half{ flex:0 1 420px; min-width:260px; display:flex; flex-direction:column; }
+.notebook-page-half .notebook-page{ width:100%; max-width:none; margin:0; border-radius:0; }
 .notebook-page-half:first-child .notebook-page{ border-radius:10px 0 0 10px; }
 .notebook-page-half:last-child .notebook-page{ border-radius:0 10px 10px 0; }
 .notebook-page-half-head{ font-family: var(--font-mono); font-size:11px; color: var(--ink-faint); margin-bottom:4px; display:flex; align-items:center; gap:4px; }
