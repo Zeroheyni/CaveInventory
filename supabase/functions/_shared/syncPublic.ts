@@ -16,7 +16,9 @@ export async function syncPublicArea(campaignId: string) {
 async function syncPublicAreaInner(campaignId: string) {
   const client = serviceClient();
   const { data: config } = await client.from('discord_config').select('channel_id').eq('campaign_id', campaignId).maybeSingle();
-  if (!config) return; // mestre ainda não vinculou o canal de transporte pra essa campanha
+  // channel_id é opcional desde a Fase 8 (db/034) -- a linha pode existir só
+  // por causa do combat_channel_id, sem o canal de transporte vinculado.
+  if (!config?.channel_id) return;
 
   const [{ data: compartments }, { data: items }, { data: containers }, { data: currency }, { data: sections }] = await Promise.all([
     client.from('public_compartments').select('id, name, currency').eq('campaign_id', campaignId),
