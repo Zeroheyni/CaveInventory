@@ -24,3 +24,6 @@ verify_jwt = false
 
 [functions.discord-notify-turn]
 verify_jwt = false
+
+[functions.discord-notify-roll]
+verify_jwt = false
