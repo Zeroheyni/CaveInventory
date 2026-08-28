@@ -4,9 +4,7 @@
 // subárvore do embed.
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
-import { rollDice, listRecentRolls, subscribeDiceRolls, clearRolls } from '../dice.js';
-
-const DICE_TYPES = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20'];
+import { rollDice, listRecentRolls, subscribeDiceRolls, clearRolls, DICE_PRESETS, normalizeCustomDie } from '../dice.js';
 
 let activeChannel = null;
 
@@ -30,6 +28,7 @@ export function renderDiceScreen(app, { session, profile, campaign }) {
   let rolls = [];
   let qty = 1;
   let modifier = 0;
+  let customValue = '';
   let rolling = false;
   let error = '';
 
@@ -55,7 +54,12 @@ export function renderDiceScreen(app, { session, profile, campaign }) {
 
         <div class="dice-controls">
           <div class="dice-buttons">
-            ${DICE_TYPES.map((d) => `<button type="button" class="dice-die-btn" data-die="${d}" ${rolling ? 'disabled' : ''}>${d}</button>`).join('')}
+            ${DICE_PRESETS.map((d) => `<button type="button" class="dice-die-btn" data-die="${d}" ${rolling ? 'disabled' : ''}>${d}</button>`).join('')}
+            <div class="dice-custom-row">
+              <span class="dice-custom-prefix">d</span>
+              <input type="number" id="dice-custom-value" min="2" max="1000" placeholder="ex: 132" value="${escapeHtml(customValue)}">
+              <button type="button" class="dice-custom-roll-btn" id="dice-custom-roll-btn" ${rolling ? 'disabled' : ''}>rolar</button>
+            </div>
           </div>
           <div class="dice-modifiers">
             <label class="dice-field">
@@ -99,20 +103,35 @@ export function renderDiceScreen(app, { session, profile, campaign }) {
     $('dice-modifier').addEventListener('change', (e) => {
       modifier = parseInt(e.target.value, 10) || 0;
     });
+    $('dice-custom-value').addEventListener('change', (e) => {
+      customValue = e.target.value;
+    });
+
+    async function performRoll(die) {
+      if (rolling) return;
+      rolling = true;
+      error = '';
+      render();
+      try {
+        await rollDice(campaignId, rollerId, rollerName, die, qty, modifier);
+      } catch (err) {
+        error = err.message;
+      }
+      rolling = false;
+      render();
+    }
+
     app.querySelectorAll('.dice-die-btn').forEach((btn) => {
-      btn.addEventListener('click', async () => {
-        if (rolling) return;
-        rolling = true;
-        error = '';
+      btn.addEventListener('click', () => performRoll(btn.dataset.die));
+    });
+    $('dice-custom-roll-btn').addEventListener('click', () => {
+      const die = normalizeCustomDie($('dice-custom-value').value);
+      if (!die) {
+        error = 'dado customizado precisa ser um número entre 2 e 1000.';
         render();
-        try {
-          await rollDice(campaignId, rollerId, rollerName, btn.dataset.die, qty, modifier);
-        } catch (err) {
-          error = err.message;
-        }
-        rolling = false;
-        render();
-      });
+        return;
+      }
+      performRoll(die);
     });
     const clearBtn = $('dice-clear-btn');
     if (clearBtn) {

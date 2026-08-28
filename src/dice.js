@@ -3,10 +3,27 @@
 // jogo de mesa) -- o client rola com Math.random e só grava o resultado.
 import { supabase } from './supabaseClient.js';
 
-const DICE_SIDES = { d4: 4, d6: 6, d8: 8, d10: 10, d12: 12, d20: 20 };
+// presets fixos + dado customizado ("d" + valor digitado, ex: d132) --
+// qualquer "d<N>" é aceito, não só esses; ver db/036_patch_dice_d100_custom.sql
+// (o check da tabela virou validação de formato, não lista fixa).
+export const DICE_PRESETS = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
+
+export function sidesFromDie(die) {
+  const m = /^d(\d+)$/.exec(die || '');
+  return m ? parseInt(m[1], 10) : 0;
+}
+
+// normaliza o valor digitado no campo de dado customizado -- 2 a 1000
+// lados (bate com o check de formato, "d" + até 4 dígitos). Retorna
+// null se o valor não faz sentido (vazio, 0, negativo, etc).
+export function normalizeCustomDie(rawValue) {
+  const n = parseInt(rawValue, 10);
+  if (!Number.isFinite(n) || n < 2 || n > 1000) return null;
+  return 'd' + n;
+}
 
 export function rollValues(die, qty) {
-  const sides = DICE_SIDES[die];
+  const sides = sidesFromDie(die);
   return Array.from({ length: qty }, () => 1 + Math.floor(Math.random() * sides));
 }
 
