@@ -15,10 +15,14 @@ export async function listAllProfiles() {
 }
 
 export async function listCharactersInCampaign(campaignId) {
+  // painel admin (contas de jogador: canal do Discord, Discord user id,
+  // excluir conta) -- NPC do banco (is_npc=true, owner_id=null) não é
+  // conta de jogador, não deve aparecer aqui (ver banco de NPCs, Fase 6).
   const { data, error } = await supabase
     .from('characters')
     .select('*')
     .eq('campaign_id', campaignId)
+    .eq('is_npc', false)
     .order('name');
   if (error) throw error;
   return data;
