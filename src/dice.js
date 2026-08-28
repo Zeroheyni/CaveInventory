@@ -27,7 +27,10 @@ export function rollValues(die, qty) {
   return Array.from({ length: qty }, () => 1 + Math.floor(Math.random() * sides));
 }
 
-export async function rollDice(campaignId, rollerId, rollerName, die, qty, modifier) {
+// label opcional (ex: "Força") -- usado pelo botão de teste de atributo
+// da ficha (db/039_patch_dice_roll_label.sql); null pra rolagem solta
+// normal. Também é o que aparece (ou não) no aviso de rolagem no Discord.
+export async function rollDice(campaignId, rollerId, rollerName, die, qty, modifier, label) {
   const results = rollValues(die, qty);
   const total = results.reduce((a, b) => a + b, 0) + modifier;
   const { error } = await supabase.from('dice_rolls').insert({
@@ -39,6 +42,7 @@ export async function rollDice(campaignId, rollerId, rollerName, die, qty, modif
     modifier,
     results,
     total,
+    label: label || null,
   });
   if (error) throw error;
 }

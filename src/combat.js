@@ -133,6 +133,44 @@ export async function removeCondition(participantId, conditionId) {
   if (error) throw error;
 }
 
+// ---- condições customizadas por campanha (Fase 8, db/037_patch_custom_conditions.sql) --
+// o mestre cria as próprias, com ícone/cor/barra-alvo escolhidos por ele
+// (o catálogo fixo acima não tinge barra nenhuma, só essas fazem).
+export async function listCustomConditions(campaignId) {
+  const { data, error } = await supabase.from('custom_conditions').select('*').eq('campaign_id', campaignId).order('created_at');
+  if (error) throw error;
+  return data;
+}
+
+export async function createCustomCondition(campaignId, { label, icon, bar, color }) {
+  const { error } = await supabase.from('custom_conditions').insert({
+    campaign_id: campaignId,
+    label,
+    icon: icon || '☠',
+    bar: bar || null,
+    color: color || '#ff5a5a',
+  });
+  if (error) throw error;
+}
+
+export async function deleteCustomCondition(id) {
+  const { error } = await supabase.from('custom_conditions').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// Resolve uma condição aplicada (o "tipo" gravado em
+// combat_participants.conditions[]) pro seu label/ícone/cor/barra --
+// funciona tanto pra chave do catálogo fixo (ex: 'envenenado') quanto
+// pra uuid de condição customizada, sem quem chama precisar saber qual
+// é qual.
+export function resolveCondition(tipo, customConditions) {
+  const preset = CONDITION_TYPES.find((c) => c.key === tipo);
+  if (preset) return { key: preset.key, label: preset.label, icon: preset.icon, color: preset.color, bar: null };
+  const custom = (customConditions || []).find((c) => c.id === tipo);
+  if (custom) return { key: custom.id, label: custom.label, icon: custom.icon, color: custom.color, bar: custom.bar };
+  return { key: tipo, label: tipo, icon: '❔', color: '#9db4c7', bar: null };
+}
+
 // hiddenMode: 'visible' | 'countdown' | 'always'
 // Pra NPC (characterId nulo), hpCurrent/staminaCurrent/staminaMax vêm
 // digitados pelo mestre. Pra personagem vinculado, quem chama já deve

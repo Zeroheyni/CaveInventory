@@ -27,6 +27,7 @@ import {
   addModuleToSheetData,
   removeModuleFromSheetData,
 } from '../characterSheet.js';
+import { rollDice } from '../dice.js';
 
 let activeChannel = null;
 const HISTORIA_COLLAPSED_H = 90;
@@ -229,6 +230,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
             <span class="ficha-stat-value">${sheet[s.key]}</span>
             <button type="button" class="ficha-stat-btn" data-master-stat-delta="1" data-stat="${s.key}">+</button>
           </div>
+          ${rollStatBtn(s, sheet[s.key])}
         </div>`;
     }
     if (editingStatus) {
@@ -246,7 +248,17 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
       <div class="ficha-stat-card" ${style}>
         ${label}
         <div class="ficha-stat-value">${value}</div>
+        ${rollStatBtn(s, value)}
       </div>`;
+  }
+
+  // d20 + valor do status, sem digitar nada -- usa o nome do PERSONAGEM
+  // (não a conta logada) como roller_name: fica legível mesmo quando é o
+  // mestre rolando pela ficha de outro jogador (via masterFicha.js), e
+  // combina com o resto do histórico de dados ("Lyra testou Força" em vez
+  // de "biel testou Força" quando biel só está com a ficha da Lyra aberta).
+  function rollStatBtn(s, value) {
+    return `<button type="button" class="ficha-stat-roll-btn" data-roll-stat data-roll-label="${escapeHtml(s.label)}" data-roll-mod="${value}" title="testar ${s.label} (d20${value >= 0 ? '+' : ''}${value})">🎲</button>`;
   }
 
   function moduleCard(m) {
@@ -280,6 +292,20 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
     app.addEventListener('click', async (e) => {
       const backBtn = e.target.closest('#ficha-back-btn');
       if (backBtn) return onBack && onBack();
+
+      const rollStatButton = e.target.closest('button[data-roll-stat]');
+      if (rollStatButton) {
+        const label = rollStatButton.dataset.rollLabel;
+        const mod = parseInt(rollStatButton.dataset.rollMod, 10) || 0;
+        rollStatButton.disabled = true;
+        try {
+          await rollDice(campaign.id, session.user.id, sheet.name, 'd20', 1, mod, label);
+        } catch (err) {
+          window.alert('Erro ao rolar: ' + err.message);
+        }
+        rollStatButton.disabled = false;
+        return;
+      }
 
       const uploadBtn = e.target.closest('#ficha-avatar-upload-btn');
       if (uploadBtn) return $('ficha-avatar-input').click();

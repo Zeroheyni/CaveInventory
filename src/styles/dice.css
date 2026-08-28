@@ -57,6 +57,7 @@
 .dice-roll-entry:last-child{ border-bottom:none; }
 .dice-roll-entry:first-child{ animation: form-in 0.25s cubic-bezier(.22,1,.36,1); }
 .dice-roll-who{ color: var(--ink); font-weight:700; }
+.dice-roll-label{ color: var(--accent); font-size:10.5px; background: var(--accent-faint); border-radius:4px; padding:2px 6px; }
 .dice-roll-formula{ color: var(--ink-faint); }
 .dice-roll-results{ color: var(--ink-faint); font-size:11px; }
 .dice-roll-total{

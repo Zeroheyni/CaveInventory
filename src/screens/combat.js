@@ -31,6 +31,9 @@ import {
   CONDITION_TYPES,
   applyCondition,
   removeCondition,
+  listCustomConditions,
+  createCustomCondition,
+  resolveCondition,
 } from '../combat.js';
 import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, STATUS_STATS } from '../characterSheet.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
@@ -75,11 +78,15 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   let dragId = null;
   let openWeaponInfo = null; // id do participante com o popover de dano da arma aberto (só mestre)
   let conditionPickerFor = null; // id do participante com o mini-form de "aplicar condição" aberto (só mestre)
+  let customConditions = []; // condições customizadas da campanha (db/037) -- todo mundo lê, só mestre cria
+  let customConditionFormOpen = false; // "+ nova" dentro do picker de condição
+  let customConditionError = '';
   let masterCardTab = 'jogadores'; // 'jogadores' | 'aliados' | 'inimigos'
 
   async function load() {
     combatState = await getCombatState(campaignId);
     participants = await getParticipants(campaignId);
+    customConditions = await listCustomConditions(campaignId);
     if (isMaster) {
       const [{ data: chars }, { data: profs }] = await Promise.all([
         supabase
@@ -109,6 +116,11 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       realtimeReloadTimer = setTimeout(async () => {
         combatState = await getCombatState(campaignId);
         participants = await getParticipants(campaignId);
+        // condições customizadas não têm canal de Realtime próprio (baixo
+        // custo, o mestre não cria/edita com frequência) -- reaproveita
+        // esse debounce, que já dispara toda vez que algo no combate muda,
+        // pra manter a lista fresca sem precisar de outra assinatura.
+        customConditions = await listCustomConditions(campaignId);
         render();
       }, 700);
     });
@@ -170,6 +182,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
                       (r) => `
               <div class="dice-roll-entry">
                 <span class="dice-roll-who">${escapeHtml(r.roller_name)}</span>
+                ${r.label ? `<span class="dice-roll-label">🎯 ${escapeHtml(r.label)}</span>` : ''}
                 <span class="dice-roll-formula">${r.qty}${r.die}${r.modifier ? (r.modifier > 0 ? '+' + r.modifier : r.modifier) : ''}</span>
                 <span class="dice-roll-total">${r.total}</span>
               </div>`
@@ -212,28 +225,77 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     const left = cond.round_expira - combatState.round;
     return left > 0 ? `${left} rodada${left === 1 ? '' : 's'}` : 'expirando...';
   }
+  // cor da condição ATIVA mais recente que mira essa barra (hp/estamina)
+  // -- catálogo fixo nunca tinge barra (bar:null sempre), só condição
+  // customizada com "bar" escolhido pelo mestre na criação.
+  function activeBarColor(p, bar) {
+    const conds = Array.isArray(p.conditions) ? p.conditions : [];
+    for (let i = conds.length - 1; i >= 0; i--) {
+      const meta = resolveCondition(conds[i].tipo, customConditions);
+      if (meta.bar === bar) return meta.color;
+    }
+    return null;
+  }
   function conditionPickerHtml(p) {
+    if (customConditionFormOpen) {
+      return `
+        <div class="combat-condition-picker" data-pid="${p.id}">
+          <div class="combat-condition-custom-form">
+            <input type="text" id="custom-cond-label" placeholder="nome (ex: Amaldiçoado)" maxlength="30">
+            <div class="combat-condition-custom-row">
+              <input type="text" id="custom-cond-icon" placeholder="ícone" maxlength="4" value="☠">
+              <select id="custom-cond-bar">
+                <option value="">não tinge barra</option>
+                <option value="hp">tinge HP</option>
+                <option value="estamina">tinge Estamina</option>
+              </select>
+              <input type="color" id="custom-cond-color" value="#ff5a5a">
+            </div>
+            ${customConditionError ? `<p class="admin-error" style="display:block;">${escapeHtml(customConditionError)}</p>` : ''}
+            <div class="combat-condition-custom-actions">
+              <button type="button" class="btn" id="combat-condition-custom-save">criar</button>
+              <button type="button" class="btn btn-ghost" id="combat-condition-custom-cancel">cancelar</button>
+            </div>
+          </div>
+        </div>`;
+    }
     return `
       <div class="combat-condition-picker" data-pid="${p.id}">
         <select class="combat-condition-select">
-          ${CONDITION_TYPES.map((t) => `<option value="${t.key}">${t.icon} ${t.label}</option>`).join('')}
+          <optgroup label="Catálogo">
+            ${CONDITION_TYPES.map((t) => `<option value="${t.key}">${t.icon} ${t.label}</option>`).join('')}
+          </optgroup>
+          ${
+            customConditions.length > 0
+              ? `<optgroup label="Customizadas">${customConditions.map((c) => `<option value="${c.id}">${c.icon} ${escapeHtml(c.label)}</option>`).join('')}</optgroup>`
+              : ''
+          }
         </select>
         <input type="number" class="combat-condition-duration" min="1" placeholder="rodadas (vazio=manual)">
         <button type="button" class="btn" data-condition-apply="${p.id}">aplicar</button>
+        <button type="button" class="btn btn-ghost" id="combat-condition-custom-toggle" title="criar condição customizada">+ nova</button>
       </div>`;
   }
-  function conditionsRowHtml(p) {
+  // `allowAdd` desliga o botão "+"/picker de aplicar condição -- usado no
+  // card do mestre (masterCard), que mostra o MESMO participante que já
+  // aparece na lista principal (participantRow) ao mesmo tempo; ter os
+  // dois pickers abertos juntos duplicaria os ids do mini-formulário
+  // (select/inputs) e um dos dois pararia de funcionar direito. Remover
+  // condição (clique no badge) não tem esse problema -- é só uma chamada
+  // de RPC, sem estado de formulário pra colidir -- por isso continua
+  // disponível nos dois lugares.
+  function conditionsRowHtml(p, allowAdd = true) {
     const conds = Array.isArray(p.conditions) ? p.conditions : [];
     if (conds.length === 0 && !isMaster) return '';
     const badges = conds
       .map((c) => {
-        const meta = CONDITION_TYPES.find((t) => t.key === c.tipo) || { label: c.tipo, icon: '❔', color: '#9db4c7' };
+        const meta = resolveCondition(c.tipo, customConditions);
         const title = `${meta.label} — ${conditionExpiryLabel(c)}${isMaster ? ' (clique pra remover)' : ''}`;
         return `<button type="button" class="combat-condition-badge" style="--cond-color:${meta.color};" data-remove-condition="${c.id}" data-pid="${p.id}" title="${escapeHtml(title)}" ${isMaster ? '' : 'disabled'}>${meta.icon}</button>`;
       })
       .join('');
-    const addBtn = isMaster ? `<button type="button" class="combat-condition-add-btn" data-condition-add-toggle="${p.id}" title="aplicar condição">+</button>` : '';
-    const picker = isMaster && conditionPickerFor === p.id ? conditionPickerHtml(p) : '';
+    const addBtn = isMaster && allowAdd ? `<button type="button" class="combat-condition-add-btn" data-condition-add-toggle="${p.id}" title="aplicar condição">+</button>` : '';
+    const picker = isMaster && allowAdd && conditionPickerFor === p.id ? conditionPickerHtml(p) : '';
     return `<div class="combat-conditions-row">${badges}${addBtn}${picker}</div>`;
   }
 
@@ -356,6 +418,8 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     const isNext = nextTurn && p.id === nextTurn.id;
     const weapon = isRealPlayer || isCompleteNpc ? findEquippedWeapon(char) : null;
     const infoOpen = openWeaponInfo === p.id;
+    const hpColor = activeBarColor(p, 'hp');
+    const estColor = activeBarColor(p, 'estamina');
     return `
       <div class="combat-master-player-card ${isCurrent ? 'current-turn' : ''} ${isNext ? 'next-turn' : ''}">
         <div class="combat-master-player-head">
@@ -363,18 +427,19 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           <span class="combat-master-player-name">${escapeHtml(p.display_name)}</span>
           ${weapon ? `<button type="button" class="combat-weapon-btn ${infoOpen ? 'active' : ''}" data-weapon-toggle="${p.id}" title="dano da arma equipada">⚔</button>` : ''}
         </div>
-        <div class="combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hPct)}" style="width:${hPct}%"></div></div>
+        <div class="combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hPct)}" style="width:${hPct}%${hpColor ? `; background:${hpColor}` : ''}"></div></div>
         <div class="combat-master-bar-row">
           <button type="button" class="combat-hp-btn" data-hp-delta="-1" data-pid="${p.id}">−</button>
           <span class="combat-master-bar-txt">❤ ${p.hp_current}/${p.hp_max}</span>
           <button type="button" class="combat-hp-btn" data-hp-delta="1" data-pid="${p.id}">+</button>
         </div>
-        <div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${ePct}%"></div></div>
+        <div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${ePct}%${estColor ? `; background:${estColor}` : ''}"></div></div>
         <div class="combat-master-bar-row">
           <button type="button" class="combat-hp-btn" data-est-delta="-1" data-pid="${p.id}">−</button>
           <span class="combat-master-bar-txt">⚡ ${p.stamina_current}/${p.stamina_max}</span>
           <button type="button" class="combat-hp-btn" data-est-delta="1" data-pid="${p.id}">+</button>
         </div>
+        ${conditionsRowHtml(p, false)}
         ${
           showStatusChips
             ? `<div class="combat-master-stat-row">
@@ -425,6 +490,8 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     }
 
     const mySelf = participants.find((p) => p.character_id === characterId);
+    const mySelfHpColor = mySelf ? activeBarColor(mySelf, 'hp') : null;
+    const mySelfEstColor = mySelf ? activeBarColor(mySelf, 'estamina') : null;
     const list = visibleParticipants().slice().sort((a, b) => a.position - b.position);
     const currentTurnVisible = currentTurn && (isMaster || list.some((p) => p.id === currentTurn.id));
     const rankMap = new Map(allSorted.map((p, i) => [p.id, i + 1]));
@@ -457,7 +524,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             <span class="combat-self-name">${avatarThumb(mySelf)}<span class="combat-rank-badge">${rankMap.get(mySelf.id)}º</span>${escapeHtml(mySelf.display_name)}${currentTurn && mySelf.id === currentTurn.id ? ' <span class="combat-turn-indicator" style="display:inline-flex;"><span class="combat-turn-dot"></span>sua vez!</span>' : ''}</span>
             <span class="combat-hp-readout"><b>${mySelf.hp_current}</b> / ${mySelf.hp_max} HP</span>
           </div>
-          <div class="combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hpPct(mySelf))}" style="width:${hpPct(mySelf)}%"></div></div>
+          <div class="combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hpPct(mySelf))}" style="width:${hpPct(mySelf)}%${mySelfHpColor ? `; background:${mySelfHpColor}` : ''}"></div></div>
           <div class="combat-hp-controls">
             <button type="button" class="combat-hp-btn" data-hp-delta="-1" data-pid="${mySelf.id}">−</button>
             <input type="number" class="combat-hp-input" data-hp-input data-pid="${mySelf.id}" value="${mySelf.hp_current}">
@@ -467,12 +534,13 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             <span class="combat-self-name">⚡ Estamina</span>
             <span class="combat-hp-readout"><b>${mySelf.stamina_current}</b> / ${mySelf.stamina_max}</span>
           </div>
-          <div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${staminaPct(mySelf)}%"></div></div>
+          <div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${staminaPct(mySelf)}%${mySelfEstColor ? `; background:${mySelfEstColor}` : ''}"></div></div>
           <div class="combat-hp-controls">
             <button type="button" class="combat-hp-btn" data-est-delta="-1" data-pid="${mySelf.id}">−</button>
             <input type="number" class="combat-hp-input" data-est-input data-pid="${mySelf.id}" value="${mySelf.stamina_current}">
             <button type="button" class="combat-hp-btn" data-est-delta="1" data-pid="${mySelf.id}">+</button>
           </div>
+          ${conditionsRowHtml(mySelf, false)}
         </div>`
           : ''
       }
@@ -489,6 +557,8 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   function participantRow(p, isCurrentTurn, rank) {
     const hiddenLabel = isMaster ? hiddenStatusLabel(p) : null;
     const showHp = canSeeHp(p);
+    const hpColor = activeBarColor(p, 'hp');
+    const estColor = activeBarColor(p, 'estamina');
     return `
       <div class="combat-participant-row team-${p.team} ${isCurrentTurn ? 'current-turn' : ''}" data-row-pid="${p.id}" ${isMaster ? 'draggable="true"' : ''}>
         ${isMaster ? '<span class="combat-drag-handle" title="arraste pra reordenar">⋮⋮</span>' : ''}
@@ -501,7 +571,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             ${
               showHp
                 ? `
-              <div class="combat-row-hpbar combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hpPct(p))}" style="width:${hpPct(p)}%"></div></div>
+              <div class="combat-row-hpbar combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hpPct(p))}" style="width:${hpPct(p)}%${hpColor ? `; background:${hpColor}` : ''}"></div></div>
               <span class="combat-row-hptxt">${p.hp_current}/${p.hp_max}</span>`
                 : '<span class="combat-row-hptxt">HP oculto</span>'
             }
@@ -510,7 +580,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             showHp && p.stamina_max > 0
               ? `
           <div class="combat-row-sub">
-            <div class="combat-row-hpbar combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${staminaPct(p)}%"></div></div>
+            <div class="combat-row-hpbar combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${staminaPct(p)}%${estColor ? `; background:${estColor}` : ''}"></div></div>
             <span class="combat-row-hptxt">${p.stamina_current}/${p.stamina_max} ⚡</span>
           </div>`
               : ''
@@ -782,7 +852,47 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       if (conditionAddToggleBtn) {
         const id = conditionAddToggleBtn.dataset.conditionAddToggle;
         conditionPickerFor = conditionPickerFor === id ? null : id;
+        customConditionFormOpen = false;
+        customConditionError = '';
         render();
+        return;
+      }
+
+      const customCondToggleBtn = e.target.closest('#combat-condition-custom-toggle');
+      if (customCondToggleBtn) {
+        customConditionFormOpen = true;
+        customConditionError = '';
+        render();
+        return;
+      }
+      const customCondCancelBtn = e.target.closest('#combat-condition-custom-cancel');
+      if (customCondCancelBtn) {
+        customConditionFormOpen = false;
+        customConditionError = '';
+        render();
+        return;
+      }
+      const customCondSaveBtn = e.target.closest('#combat-condition-custom-save');
+      if (customCondSaveBtn) {
+        const label = ($('custom-cond-label')?.value || '').trim();
+        const icon = $('custom-cond-icon')?.value || '☠';
+        const bar = $('custom-cond-bar')?.value || null;
+        const color = $('custom-cond-color')?.value || '#ff5a5a';
+        if (!label) {
+          customConditionError = 'dê um nome pra condição.';
+          render();
+          return;
+        }
+        try {
+          await createCustomCondition(campaignId, { label, icon, bar, color });
+          customConditions = await listCustomConditions(campaignId);
+          customConditionFormOpen = false;
+          customConditionError = '';
+          render();
+        } catch (err) {
+          customConditionError = err.message;
+          render();
+        }
         return;
       }
 

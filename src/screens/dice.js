@@ -86,6 +86,7 @@ export function renderDiceScreen(app, { session, profile, campaign }) {
               <div class="dice-roll-entry">
                 <span class="log-time">${formatTime(r.created_at)}</span>
                 <span class="dice-roll-who">${escapeHtml(r.roller_name)}</span>
+                ${r.label ? `<span class="dice-roll-label">🎯 ${escapeHtml(r.label)}</span>` : ''}
                 <span class="dice-roll-formula">${r.qty}${r.die}${r.modifier ? (r.modifier > 0 ? '+' + r.modifier : r.modifier) : ''}</span>
                 <span class="dice-roll-results">[${r.results.join(', ')}]</span>
                 <span class="dice-roll-total">${r.total}</span>

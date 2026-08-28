@@ -61,6 +61,12 @@
 }
 .ficha-stat-btn:hover{ color: var(--accent); border-color: var(--accent-core); }
 .ficha-stat-btn:disabled{ opacity:0.3; cursor:not-allowed; }
+.ficha-stat-roll-btn{
+  margin-top:6px; width:100%; border-radius:6px; border:1px dashed var(--stone-line); background:none;
+  color: var(--ink-faint); cursor:pointer; font-size:13px; padding:4px; transition: all 0.15s ease;
+}
+.ficha-stat-roll-btn:hover:not(:disabled){ color: var(--accent); border-color: var(--accent-core); border-style:solid; background: var(--accent-faint); transform: rotate(-6deg) scale(1.05); }
+.ficha-stat-roll-btn:disabled{ opacity:0.4; cursor:default; }
 .ficha-status-actions{ display:flex; gap:8px; }
 
 .ficha-fields-grid{ display:flex; flex-wrap:wrap; gap:10px; }

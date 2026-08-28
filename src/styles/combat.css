@@ -232,6 +232,23 @@
 }
 .combat-condition-duration{ width:150px; }
 
+/* ---- "+ nova" condição customizada (Fase 8) ---- */
+.combat-condition-custom-form{ display:flex; flex-direction:column; gap:8px; width:230px; }
+.combat-condition-custom-form input[type="text"]{
+  background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
+  font-family: var(--font-mono); font-size:11.5px; padding:7px 8px; border-radius:6px; width:100%;
+}
+.combat-condition-custom-row{ display:flex; gap:6px; align-items:center; }
+.combat-condition-custom-row input[type="text"]{ width:56px; text-align:center; }
+.combat-condition-custom-row select{
+  flex:1; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
+  font-family: var(--font-mono); font-size:11px; padding:6px 5px; border-radius:6px;
+}
+.combat-condition-custom-row input[type="color"]{
+  width:32px; height:30px; padding:2px; border-radius:6px; border:1px solid var(--stone-line); background: var(--stone-900); cursor:pointer;
+}
+.combat-condition-custom-actions{ display:flex; gap:8px; }
+
 .combat-add-trigger{ margin-top:12px; }
 .combat-add-card{
   background: var(--stone-800); border:1px solid var(--stone-line); border-radius:10px; padding:14px 16px; margin-top:12px;
@@ -286,3 +303,4 @@
 .battlelog-cura .battlelog-icon{ color:#4ade80; }
 .battlelog-entrada .battlelog-icon, .battlelog-saida .battlelog-icon{ color: var(--ink-faint); }
 .battlelog-condicao .battlelog-icon{ color: var(--accent); }
+.battlelog-rolagem .battlelog-icon{ color:#b98bff; }

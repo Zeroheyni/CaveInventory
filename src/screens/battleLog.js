@@ -13,6 +13,7 @@ const TYPE_META = {
   saida: { icon: '←', label: 'saiu do combate', cls: 'battlelog-saida' },
   condicao_aplicada: { icon: '☠', label: 'recebeu condição', cls: 'battlelog-condicao' },
   condicao_removida: { icon: '✓', label: 'perdeu condição', cls: 'battlelog-condicao' },
+  rolagem: { icon: '🎲', label: 'rolagem', cls: 'battlelog-rolagem' },
 };
 
 let activeChannel = null;
@@ -30,6 +31,7 @@ function eventText(ev) {
   if (ev.type === 'condicao_aplicada' || ev.type === 'condicao_removida') {
     return `${meta.label}${ev.detail ? ': ' + ev.detail : ''}`;
   }
+  if (ev.type === 'rolagem') return ev.detail || meta.label;
   return meta.label;
 }
 
