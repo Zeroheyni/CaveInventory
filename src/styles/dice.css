@@ -55,6 +55,7 @@
   font-size:12px; font-family: var(--font-mono); flex-wrap:wrap;
 }
 .dice-roll-entry:last-child{ border-bottom:none; }
+.dice-roll-entry:first-child{ animation: form-in 0.25s cubic-bezier(.22,1,.36,1); }
 .dice-roll-who{ color: var(--ink); font-weight:700; }
 .dice-roll-formula{ color: var(--ink-faint); }
 .dice-roll-results{ color: var(--ink-faint); font-size:11px; }
@@ -62,6 +63,8 @@
   margin-left:auto; font-family: var(--font-display); font-size:15px; color: var(--accent);
   text-shadow:0 0 8px var(--accent-faint);
 }
+@keyframes dice-total-pop{ 0%{ transform:scale(0.5); opacity:0; } 65%{ transform:scale(1.18); opacity:1; } 100%{ transform:scale(1); } }
+.dice-roll-entry:first-child .dice-roll-total{ display:inline-block; animation: dice-total-pop 0.4s cubic-bezier(.34,1.56,.64,1); }
 
 @media (max-width: 640px){
   .dice-die-btn{ width:48px; height:48px; font-size:12px; }

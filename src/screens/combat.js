@@ -145,7 +145,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   function diceTrayHtml() {
     return `
       <div class="combat-dice-tray ${diceTrayOpen ? 'open' : ''}" id="combat-dice-tray">
-        <button type="button" class="combat-dice-tray-handle" id="combat-dice-tray-toggle" title="${diceTrayOpen ? 'fechar dados' : 'rolar dados'}">🎲</button>
+        <button type="button" class="combat-dice-tray-handle" id="combat-dice-tray-toggle" title="${diceTrayOpen ? 'fechar dados' : 'rolar dados'}"><span>🎲</span></button>
         <div class="combat-dice-tray-panel">
           <div class="combat-dice-tray-buttons">
             ${DICE_PRESETS.map((d) => `<button type="button" class="dice-die-btn" data-combat-die="${d}" ${diceRolling ? 'disabled' : ''}>${d}</button>`).join('')}

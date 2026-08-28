@@ -7,6 +7,7 @@
   background: linear-gradient(180deg, var(--stone-800), var(--stone-900));
   border:1px solid var(--stone-line); border-radius:12px; padding:16px;
   box-shadow:0 4px 16px rgba(0,0,0,0.22), inset 0 1px 0 rgba(255,255,255,0.03);
+  animation: form-in 0.22s cubic-bezier(.22,1,.36,1);
 }
 .journal-form-card textarea{
   width:100%; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
@@ -20,7 +21,14 @@
 .journal-entry-card{
   background: var(--stone-800); border:1px solid var(--stone-line); border-left:3px solid var(--accent-core);
   border-radius:8px; padding:14px 16px;
+  animation: fade-in 0.3s cubic-bezier(.22,1,.36,1) both;
 }
+/* cascata sutil -- os primeiros cards da lista entram em sequência, não todos de uma vez */
+.journal-entry-card:nth-child(1){ animation-delay:0s; }
+.journal-entry-card:nth-child(2){ animation-delay:0.04s; }
+.journal-entry-card:nth-child(3){ animation-delay:0.08s; }
+.journal-entry-card:nth-child(4){ animation-delay:0.12s; }
+.journal-entry-card:nth-child(n+5){ animation-delay:0.16s; }
 .journal-entry-head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .journal-entry-date{
   font-family: var(--font-mono); font-size:11px; color: var(--accent); background: var(--accent-faint);

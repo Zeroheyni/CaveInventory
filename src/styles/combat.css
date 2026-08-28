@@ -24,9 +24,14 @@
   width:28px; height:52px; flex-shrink:0; border-radius:0 12px 12px 0;
   background: linear-gradient(160deg, var(--stone-800), var(--stone-900)); border:1px solid var(--accent-core); border-left:none;
   color: var(--accent); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px;
-  box-shadow: 3px 0 14px rgba(0,0,0,0.35), 0 0 10px var(--accent-faint); transition: all 0.15s ease;
+  box-shadow: 3px 0 14px rgba(0,0,0,0.35), 0 0 10px var(--accent-faint); transition: color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
+  animation: side-nav-handle-pulse 2.6s ease-in-out infinite; /* mesmo convite sutil do .side-nav-handle (theme.css) */
 }
-.combat-dice-tray-handle:hover{ background: var(--accent-faint); box-shadow: 3px 0 14px rgba(0,0,0,0.35), 0 0 16px var(--accent-faint); }
+.combat-dice-tray-handle span{ display:inline-block; transition: transform 0.3s cubic-bezier(.22,1,.36,1); }
+.combat-dice-tray-handle:hover{ background: var(--accent-faint); box-shadow: 3px 0 14px rgba(0,0,0,0.35), 0 0 16px var(--accent-faint); animation:none; }
+.combat-dice-tray-handle:hover span{ transform: rotate(-14deg) scale(1.08); }
+.combat-dice-tray.open .combat-dice-tray-handle{ animation:none; }
+.combat-dice-tray.open .combat-dice-tray-handle span{ transform: rotate(18deg); }
 .combat-dice-tray-panel{
   max-width:0; overflow:hidden; padding:0; background: var(--stone-800); border:1px solid var(--stone-line); border-left:none;
   border-radius:0 12px 12px 0; box-shadow: 3px 0 16px rgba(0,0,0,0.4);
@@ -206,6 +211,7 @@
   background: color-mix(in srgb, var(--cond-color, var(--stone-line)) 18%, var(--stone-900));
   color: var(--cond-color, var(--ink-faint)); cursor:pointer; font-size:12px; display:flex; align-items:center; justify-content:center;
   transition: transform 0.15s ease; flex-shrink:0;
+  animation: tab-pop 0.3s cubic-bezier(.34,1.56,.64,1); /* condição nova "salta" ao aparecer -- mesmo pop do .tab-btn.active (theme.css) */
 }
 .combat-condition-badge:hover:not(:disabled){ transform:scale(1.12); }
 .combat-condition-badge:disabled{ cursor:default; }
@@ -213,11 +219,12 @@
   width:22px; height:22px; border-radius:50%; border:1px dashed var(--stone-line); background:none;
   color: var(--ink-faint); cursor:pointer; font-size:12px; transition: all 0.15s ease; flex-shrink:0;
 }
-.combat-condition-add-btn:hover{ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); }
+.combat-condition-add-btn:hover{ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); transform:rotate(90deg); }
 .combat-condition-picker{
   position:absolute; top:calc(100% + 6px); left:0; z-index:15; display:flex; gap:6px; align-items:center; flex-wrap:wrap;
   background: var(--stone-800); border:1px solid var(--stone-line); border-radius:9px; padding:9px;
   box-shadow:0 14px 32px rgba(0,0,0,0.45); width:max-content; max-width:260px;
+  animation: menu-in 0.15s cubic-bezier(.22,1,.36,1); transform-origin: top left;
 }
 .combat-condition-select, .combat-condition-duration{
   background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
@@ -270,6 +277,8 @@
   font-size:12px; font-family: var(--font-mono); flex-wrap:wrap;
 }
 .battlelog-entry:last-child{ border-bottom:none; }
+@keyframes battlelog-in{ from{ opacity:0; transform:translateX(-10px); } to{ opacity:1; transform:translateX(0); } }
+.battlelog-entry:first-child{ animation: battlelog-in 0.3s cubic-bezier(.22,1,.36,1); }
 .battlelog-icon{ width:20px; text-align:center; flex-shrink:0; }
 .battlelog-who{ color: var(--ink); font-weight:700; }
 .battlelog-text{ color: var(--ink-faint); }
