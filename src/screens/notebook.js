@@ -280,6 +280,7 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         <button type="button" class="notebook-fmt-btn" data-fmt="underline" title="sublinhado"><u>U</u></button>
         <button type="button" class="notebook-fmt-btn" data-fmt="insertUnorderedList" title="lista">☰</button>
         <button type="button" class="notebook-fmt-btn" data-fmt="insertOrderedList" title="lista numerada">①</button>
+        <button type="button" class="notebook-fmt-btn" id="notebook-spoiler-btn" title="marcar trecho selecionado como spoiler (tarja preta -- clique no texto pra revelar)">🙈</button>
         <button type="button" class="notebook-fmt-btn" id="notebook-img-btn" title="inserir imagem">🖼</button>
         <input type="file" id="notebook-img-input" accept="image/*" style="display:none;">
         <div class="notebook-color-wrap" id="notebook-color-wrap">
@@ -621,6 +622,34 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         document.execCommand(btn.dataset.fmt, false, null);
         capture();
         scheduleSave();
+      });
+    });
+
+    const spoilerBtn = $('notebook-spoiler-btn');
+    if (spoilerBtn) {
+      spoilerBtn.addEventListener('mousedown', (e) => e.preventDefault());
+      spoilerBtn.addEventListener('click', () => {
+        const sel = window.getSelection();
+        if (!sel || sel.rangeCount === 0 || sel.isCollapsed) return; // precisa selecionar um trecho antes
+        const range = sel.getRangeAt(0);
+        const span = document.createElement('span');
+        span.className = 'notebook-spoiler';
+        span.appendChild(range.extractContents());
+        range.insertNode(span);
+        sel.removeAllRanges();
+        capture();
+        scheduleSave();
+      });
+    }
+    // clique num spoiler revela na hora (só no DOM ao vivo -- nunca
+    // salva revelado, ver sanitizeNotebookHtml) -- funciona tanto
+    // editando quanto lendo um caderno compartilhado (a página não-dona
+    // não é contenteditable, mas o spoiler continua clicável do mesmo
+    // jeito).
+    app.querySelectorAll('.notebook-spoiler').forEach((span) => {
+      span.addEventListener('click', (e) => {
+        e.stopPropagation();
+        span.classList.toggle('revealed');
       });
     });
 

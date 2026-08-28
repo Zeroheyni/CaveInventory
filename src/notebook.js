@@ -250,6 +250,19 @@ export function sanitizeNotebookHtml(html) {
         const name = attr.name.toLowerCase();
         if (child.tagName === 'IMG' && (name === 'src' || name === 'alt')) return;
         if (child.tagName === 'FONT' && name === 'color' && SAFE_COLOR.test(attr.value)) return;
+        if (name === 'class') {
+          // única classe permitida -- e sempre grava só ela, nunca junto
+          // com "revealed" (classe que o clique de "revelar" adiciona só
+          // no DOM ao vivo, nunca deve ir pro banco -- senão um spoiler
+          // salvo bem na hora em que alguém clicou pra espiar ficava
+          // permanentemente revelado da próxima vez que a página abrisse).
+          if (child.tagName === 'SPAN' && attr.value.split(/\s+/).includes('notebook-spoiler')) {
+            child.setAttribute('class', 'notebook-spoiler');
+          } else {
+            child.removeAttribute('class');
+          }
+          return;
+        }
         if (name === 'style') {
           const safe = attr.value
             .split(';')

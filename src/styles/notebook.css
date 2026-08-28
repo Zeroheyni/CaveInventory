@@ -155,6 +155,14 @@
 .notebook-page:empty::before{ content:'escreva aqui...'; opacity:0.4; font-style:italic; }
 .notebook-img{ max-width:100%; border-radius:6px; cursor:default; box-shadow:0 4px 14px rgba(0,0,0,0.3); }
 
+/* ---- spoiler (tarja preta -- clique pra revelar) ---- */
+.notebook-spoiler{
+  background:#000; color:transparent; cursor:pointer; border-radius:3px; padding:0 2px;
+  transition: background 0.15s ease, color 0.15s ease; user-select:none;
+}
+.notebook-spoiler:hover:not(.revealed){ background:#1a1a1a; }
+.notebook-spoiler.revealed{ background: rgba(0,0,0,0.18); color:inherit; user-select:text; }
+
 .notebook-family-physical .notebook-page{ margin:0 auto; }
 /* aspect-ratio (não min-height fixo) -- a folha mantém a proporção de
    papel de verdade em qualquer largura disponível, e ainda cresce
