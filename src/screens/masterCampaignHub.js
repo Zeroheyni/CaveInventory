@@ -12,6 +12,8 @@ import { renderCombatScreen } from './combat.js';
 import { renderMasterFichaScreen } from './masterFicha.js';
 import { renderNpcBankScreen } from './npcBank.js';
 import { renderMasterInventoryChooser } from './masterInventoryChooser.js';
+import { renderDiceScreen } from './dice.js';
+import { renderSessionJournalScreen } from './sessionJournal.js';
 
 const NAV_ITEMS = [
   {
@@ -34,14 +36,25 @@ const NAV_ITEMS = [
     label: 'Banco de NPCs',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3"/><path d="M6 10c-1.5 1-2.5 2.7-2.5 4.6" stroke-linecap="round"/><path d="M18 10c1.5 1 2.5 2.7 2.5 4.6" stroke-linecap="round"/><path d="M5 20c1-3.5 3.8-6 7-6s6 2.5 7 6"/></svg>',
   },
+  {
+    mode: 'dice',
+    label: 'Dados',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="4"/><circle cx="8.5" cy="8.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="8.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="12" cy="12" r="1.1" fill="currentColor" stroke="none"/><circle cx="8.5" cy="15.5" r="1.1" fill="currentColor" stroke="none"/><circle cx="15.5" cy="15.5" r="1.1" fill="currentColor" stroke="none"/></svg>',
+  },
+  {
+    mode: 'journal',
+    label: 'Diário',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/><path d="M4 7h16" stroke-dasharray="2 2"/></svg>',
+  },
 ];
 
-const MODE_TITLES = { inventory: 'INVENTÁRIO', combat: 'COMBATE', ficha: 'FICHA', npcs: 'BANCO DE NPCS' };
+const MODES = ['inventory', 'combat', 'ficha', 'npcs', 'dice', 'journal'];
+const MODE_TITLES = { inventory: 'INVENTÁRIO', combat: 'COMBATE', ficha: 'FICHA', npcs: 'BANCO DE NPCS', dice: 'DADOS', journal: 'DIÁRIO' };
 
 export function renderMasterCampaignHub(app, { session, profile, campaign, onBack, initialMode }) {
   let mode = initialMode || 'ficha';
   let theme = profile.theme || 'caverna-azul';
-  const mounted = { inventory: false, combat: false, ficha: false, npcs: false };
+  const mounted = Object.fromEntries(MODES.map((m) => [m, false]));
 
   function render() {
     // render() sempre reconstrói o DOM inteiro (chamado de novo depois que o
@@ -75,10 +88,7 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
           </div>
         </div>
 
-        <div id="hub-mode-inventory" style="display:none;"><div id="hub-embed-inventory"></div></div>
-        <div id="hub-mode-combat" style="display:none;"><div id="hub-embed-combat"></div></div>
-        <div id="hub-mode-ficha" style="display:none;"><div id="hub-embed-ficha"></div></div>
-        <div id="hub-mode-npcs" style="display:none;"><div id="hub-embed-npcs"></div></div>
+        ${MODES.map((m) => `<div id="hub-mode-${m}" style="display:none;"><div id="hub-embed-${m}"></div></div>`).join('')}
       </div>
 
       <nav class="side-nav" id="side-nav">
@@ -153,7 +163,7 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
   function showMode(next) {
     mode = next;
     document.getElementById('hub-title-text').textContent = MODE_TITLES[mode];
-    ['inventory', 'combat', 'ficha', 'npcs'].forEach((m) => {
+    MODES.forEach((m) => {
       const wrap = document.getElementById('hub-mode-' + m);
       wrap.style.display = m === mode ? 'block' : 'none';
       if (m === mode) {
@@ -175,6 +185,10 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
         renderMasterFichaScreen(embed, { session, profile, campaign });
       } else if (mode === 'npcs') {
         renderNpcBankScreen(embed, { session, profile, campaign, topApp: app, escapeBack: () => render() });
+      } else if (mode === 'dice') {
+        renderDiceScreen(embed, { session, profile, campaign });
+      } else if (mode === 'journal') {
+        renderSessionJournalScreen(embed, { session, profile, campaign });
       }
     }
   }
