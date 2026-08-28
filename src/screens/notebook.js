@@ -689,6 +689,20 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         capture();
         scheduleSave();
       });
+      // Colar sem tratar deixa o navegador inserir a formatação rica do
+      // que foi copiado de fora (cor de fundo, fonte, etc.) direto no
+      // DOM -- sanitizeNotebookHtml só rodava ao salvar/exibir, então o
+      // destaque feio (ex: texto "marcado" com fundo preto vindo de um
+      // doc externo) aparecia na tela até recarregar a página. Agora
+      // sanitiza JÁ na hora de colar, antes de inserir -- mesma função
+      // que já limpa ao salvar, só que também na entrada.
+      editor.addEventListener('paste', (e) => {
+        e.preventDefault();
+        const html = e.clipboardData.getData('text/html');
+        const text = e.clipboardData.getData('text/plain');
+        const clean = html ? sanitizeNotebookHtml(html) : escapeHtml(text).replace(/\n/g, '<br>');
+        document.execCommand('insertHTML', false, clean);
+      });
       editor.addEventListener('mousedown', (e) => {
         if (e.target.tagName !== 'IMG') return;
         const rect = e.target.getBoundingClientRect();
