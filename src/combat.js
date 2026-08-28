@@ -66,20 +66,31 @@ export async function endCombat(campaignId) {
 // `newOrder` já vem pronto (rotacionado) de quem chamou -- não
 // recalcula aqui pra não rotacionar de novo em cima da atualização
 // otimista que a tela já aplicou nos mesmos objetos.
+//
+// As posições são gravadas ANTES do update de campaign_combat (não em
+// paralelo com Promise.all) de propósito: o trigger de aviso de turno do
+// Discord (db/033_patch_discord_turn_notify.sql) lê "quem está na
+// position=0" assim que campaign_combat muda -- se as duas escritas
+// disparassem juntas, o trigger podia rodar antes da rotação de posições
+// confirmar no banco e anunciar o participante ERRADO (o de antes de
+// passar o turno, não o novo). Esperar as posições confirmarem primeiro
+// garante que o trigger sempre vê a ordem já rotacionada.
 export async function passTurn(campaignId, newOrder, combatState) {
   if (newOrder.length === 0) return;
-  const writes = newOrder.map((p, i) => supabase.from('combat_participants').update({ position: i }).eq('id', p.id));
+  const posResults = await Promise.all(newOrder.map((p, i) => supabase.from('combat_participants').update({ position: i }).eq('id', p.id)));
+  const posFailed = posResults.find((r) => r.error);
+  if (posFailed) throw posFailed.error;
 
   const turnsPassed = (combatState.turns_passed_this_round || 0) + 1;
   const cycleComplete = turnsPassed >= newOrder.length;
   const nextState = cycleComplete
     ? { round: combatState.round + 1, turns_passed_this_round: 0 }
     : { turns_passed_this_round: turnsPassed };
-  writes.push(supabase.from('campaign_combat').update({ ...nextState, updated_at: new Date().toISOString() }).eq('campaign_id', campaignId));
-
-  const results = await Promise.all(writes);
-  const failed = results.find((r) => r.error);
-  if (failed) throw failed.error;
+  const { error } = await supabase
+    .from('campaign_combat')
+    .update({ ...nextState, updated_at: new Date().toISOString() })
+    .eq('campaign_id', campaignId);
+  if (error) throw error;
 }
 
 // Variante de "passar o turno" pro modo iniciativa fixa -- não mexe em
