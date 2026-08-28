@@ -21,3 +21,6 @@ verify_jwt = false
 
 [functions.discord-sync-campaign-all]
 verify_jwt = false
+
+[functions.discord-notify-turn]
+verify_jwt = false
