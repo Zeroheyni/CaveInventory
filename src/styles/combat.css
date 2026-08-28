@@ -14,6 +14,39 @@
 .combat-page{ display:none; }
 .combat-page.active{ display:block; }
 
+/* ---- bandeja retrátil de dados (Fase 8) -- mesmo espírito do .side-nav
+   (character.js/theme.css), só que fixa mais alto na tela pra nunca
+   disputar espaço/altura com o menu principal (que fica centralizado
+   verticalmente). Só existe/aparece enquanto a aba Combate está visível
+   -- vive dentro do próprio embed do combate, então some junto com ele. */
+.combat-dice-tray{ position:fixed; left:0; top:110px; z-index:30; display:flex; align-items:flex-start; }
+.combat-dice-tray-handle{
+  width:28px; height:52px; flex-shrink:0; border-radius:0 12px 12px 0;
+  background: linear-gradient(160deg, var(--stone-800), var(--stone-900)); border:1px solid var(--accent-core); border-left:none;
+  color: var(--accent); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:18px;
+  box-shadow: 3px 0 14px rgba(0,0,0,0.35), 0 0 10px var(--accent-faint); transition: all 0.15s ease;
+}
+.combat-dice-tray-handle:hover{ background: var(--accent-faint); box-shadow: 3px 0 14px rgba(0,0,0,0.35), 0 0 16px var(--accent-faint); }
+.combat-dice-tray-panel{
+  max-width:0; overflow:hidden; padding:0; background: var(--stone-800); border:1px solid var(--stone-line); border-left:none;
+  border-radius:0 12px 12px 0; box-shadow: 3px 0 16px rgba(0,0,0,0.4);
+  transition: max-width 0.3s cubic-bezier(.22,1,.36,1), padding 0.3s cubic-bezier(.22,1,.36,1);
+  display:flex; flex-direction:column; gap:10px;
+}
+.combat-dice-tray.open .combat-dice-tray-panel{ max-width:260px; padding:14px; }
+.combat-dice-tray-buttons{ display:flex; flex-wrap:wrap; gap:6px; width:230px; }
+.combat-dice-tray-buttons .dice-die-btn{ width:52px; height:38px; font-size:11.5px; }
+.combat-dice-tray-mods{ display:flex; gap:10px; width:230px; }
+.combat-dice-tray-recent{ display:flex; flex-direction:column; max-height:150px; overflow-y:auto; gap:2px; width:230px; }
+.combat-dice-tray-recent .dice-roll-entry{ font-size:11px; padding:4px 2px; gap:6px; }
+.combat-dice-tray-footer{ font-size:10px; color: var(--ink-faint); text-align:center; width:230px; }
+
+@media (max-width: 640px){
+  .combat-dice-tray{ top:90px; }
+  .combat-dice-tray.open .combat-dice-tray-panel{ max-width:200px; }
+  .combat-dice-tray-buttons, .combat-dice-tray-mods, .combat-dice-tray-recent, .combat-dice-tray-footer{ width:170px; }
+}
+
 .combat-empty{
   background: var(--stone-800); border:1px dashed var(--stone-line); border-radius:10px;
   padding:30px 20px; text-align:center; color: var(--ink-faint); font-size:12.5px;

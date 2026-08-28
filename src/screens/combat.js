@@ -34,8 +34,10 @@ import {
 } from '../combat.js';
 import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, STATUS_STATS } from '../characterSheet.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
+import { rollDice, listRecentRolls, subscribeDiceRolls, DICE_PRESETS, normalizeCustomDie } from '../dice.js';
 
 let activeChannel = null;
+let diceChannel = null;
 
 export function renderCombatScreen(app, { session, profile, campaign, characterId, characterName }) {
   const campaignId = campaign.id;
@@ -46,6 +48,20 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     supabase.removeChannel(activeChannel);
     activeChannel = null;
   }
+  if (diceChannel) {
+    supabase.removeChannel(diceChannel);
+    diceChannel = null;
+  }
+
+  const rollerId = session.user.id;
+  const rollerName = profile.username || 'jogador';
+  let diceTrayOpen = false;
+  let diceRolls = [];
+  let diceQty = 1;
+  let diceModifier = 0;
+  let diceCustomValue = '';
+  let diceRolling = false;
+  let diceError = '';
 
   let combatState = { active: false, round: 1 };
   let participants = [];
@@ -96,6 +112,75 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         render();
       }, 700);
     });
+  }
+
+  // ---- bandeja retrátil de dados (Fase 8) -- rolar sem sair do combate,
+  // histórico completo/limpeza continuam só na aba dedicada "Dados"
+  // (mesma tabela dice_rolls, mesmo Realtime -- as duas telas ficam em
+  // sincronia). Carrega/assina só quando a bandeja abre pela primeira
+  // vez, pra não gastar um canal de Realtime à toa se ninguém usar.
+  async function loadDiceRolls() {
+    diceRolls = await listRecentRolls(campaignId, 8);
+  }
+  function subscribeDiceRealtime() {
+    if (diceChannel) return;
+    diceChannel = subscribeDiceRolls(campaignId, async () => {
+      diceRolls = await listRecentRolls(campaignId, 8);
+      render();
+    });
+  }
+  async function performDiceRoll(die) {
+    if (diceRolling) return;
+    diceRolling = true;
+    diceError = '';
+    render();
+    try {
+      await rollDice(campaignId, rollerId, rollerName, die, diceQty, diceModifier);
+    } catch (err) {
+      diceError = err.message;
+    }
+    diceRolling = false;
+    render();
+  }
+  function diceTrayHtml() {
+    return `
+      <div class="combat-dice-tray ${diceTrayOpen ? 'open' : ''}" id="combat-dice-tray">
+        <button type="button" class="combat-dice-tray-handle" id="combat-dice-tray-toggle" title="${diceTrayOpen ? 'fechar dados' : 'rolar dados'}">🎲</button>
+        <div class="combat-dice-tray-panel">
+          <div class="combat-dice-tray-buttons">
+            ${DICE_PRESETS.map((d) => `<button type="button" class="dice-die-btn" data-combat-die="${d}" ${diceRolling ? 'disabled' : ''}>${d}</button>`).join('')}
+          </div>
+          <div class="dice-custom-row">
+            <span class="dice-custom-prefix">d</span>
+            <input type="number" id="combat-dice-custom-value" min="2" max="1000" placeholder="ex: 132" value="${escapeHtml(diceCustomValue)}">
+            <button type="button" class="dice-custom-roll-btn" id="combat-dice-custom-roll-btn" ${diceRolling ? 'disabled' : ''}>rolar</button>
+          </div>
+          <div class="combat-dice-tray-mods">
+            <label class="dice-field"><span>qtd</span><input type="number" id="combat-dice-qty" min="1" max="10" value="${diceQty}"></label>
+            <label class="dice-field"><span>mod</span><input type="number" id="combat-dice-modifier" value="${diceModifier}"></label>
+          </div>
+          ${diceError ? `<p class="admin-error" style="display:block;">${escapeHtml(diceError)}</p>` : ''}
+          <div class="combat-dice-tray-recent">
+            ${
+              diceRolls.length === 0
+                ? `<p class="admin-empty">ninguém rolou nada ainda.</p>`
+                : diceRolls
+                    .slice(0, 6)
+                    .map(
+                      (r) => `
+              <div class="dice-roll-entry">
+                <span class="dice-roll-who">${escapeHtml(r.roller_name)}</span>
+                <span class="dice-roll-formula">${r.qty}${r.die}${r.modifier ? (r.modifier > 0 ? '+' + r.modifier : r.modifier) : ''}</span>
+                <span class="dice-roll-total">${r.total}</span>
+              </div>`
+                    )
+                    .join('')
+            }
+          </div>
+          <div class="combat-dice-tray-footer">histórico completo na aba <b>Dados</b></div>
+        </div>
+      </div>
+    `;
   }
 
   // ---- helpers ----
@@ -325,8 +410,10 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       : null;
     const nextTurn = computeNextTurn(allSorted, currentTurn);
     const summaryHtml = isMaster ? masterPlayersSummary(currentTurn, nextTurn) : '';
+    const trayHtml = diceTrayHtml();
     if (!combatState.active) {
       app.innerHTML =
+        trayHtml +
         summaryHtml +
         `
         <div class="combat-empty">
@@ -343,6 +430,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     const rankMap = new Map(allSorted.map((p, i) => [p.id, i + 1]));
 
     app.innerHTML =
+      trayHtml +
       summaryHtml +
       `
       <div class="combat-round-bar">
@@ -645,6 +733,31 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     wired = true;
 
     app.addEventListener('click', async (e) => {
+      const trayToggleBtn = e.target.closest('#combat-dice-tray-toggle');
+      if (trayToggleBtn) {
+        diceTrayOpen = !diceTrayOpen;
+        if (diceTrayOpen && !diceChannel) {
+          await loadDiceRolls();
+          subscribeDiceRealtime();
+        }
+        render();
+        return;
+      }
+
+      const trayDieBtn = e.target.closest('button[data-combat-die]');
+      if (trayDieBtn) return performDiceRoll(trayDieBtn.dataset.combatDie);
+
+      const trayCustomBtn = e.target.closest('#combat-dice-custom-roll-btn');
+      if (trayCustomBtn) {
+        const die = normalizeCustomDie($('combat-dice-custom-value').value);
+        if (!die) {
+          diceError = 'dado customizado precisa ser um número entre 2 e 1000.';
+          render();
+          return;
+        }
+        return performDiceRoll(die);
+      }
+
       const startBtn = e.target.closest('#combat-start-btn');
       if (startBtn) return onStartCombat();
 
@@ -789,6 +902,22 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     });
 
     app.addEventListener('change', async (e) => {
+      const trayQtyInput = e.target.closest('#combat-dice-qty');
+      if (trayQtyInput) {
+        diceQty = Math.min(10, Math.max(1, parseInt(trayQtyInput.value, 10) || 1));
+        return;
+      }
+      const trayModInput = e.target.closest('#combat-dice-modifier');
+      if (trayModInput) {
+        diceModifier = parseInt(trayModInput.value, 10) || 0;
+        return;
+      }
+      const trayCustomInput = e.target.closest('#combat-dice-custom-value');
+      if (trayCustomInput) {
+        diceCustomValue = trayCustomInput.value;
+        return;
+      }
+
       const npcDamageInput = e.target.closest('input[data-npc-damage-input]');
       if (npcDamageInput) {
         const pid = npcDamageInput.dataset.pid;
