@@ -82,11 +82,21 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   let customConditionFormOpen = false; // "+ nova" dentro do picker de condição
   let customConditionError = '';
   let masterCardTab = 'jogadores'; // 'jogadores' | 'aliados' | 'inimigos'
+  let myStatusStats = null; // status (forca, agilidade...) do PERSONAGEM do jogador logado -- carregado uma vez, usado pra testar atributo sem sair do combate
+  let mySelectedStat = 'forca';
 
   async function load() {
     combatState = await getCombatState(campaignId);
     participants = await getParticipants(campaignId);
     customConditions = await listCustomConditions(campaignId);
+    if (!isMaster && characterId && !myStatusStats) {
+      const { data: charRow } = await supabase
+        .from('characters')
+        .select('vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao')
+        .eq('id', characterId)
+        .maybeSingle();
+      myStatusStats = charRow || null;
+    }
     if (isMaster) {
       const [{ data: chars }, { data: profs }] = await Promise.all([
         supabase
@@ -540,6 +550,20 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             <input type="number" class="combat-hp-input" data-est-input data-pid="${mySelf.id}" value="${mySelf.stamina_current}">
             <button type="button" class="combat-hp-btn" data-est-delta="1" data-pid="${mySelf.id}">+</button>
           </div>
+          ${
+            myStatusStats
+              ? `
+          <div class="combat-self-stat-test">
+            <select id="combat-self-stat-select" title="escolher status pra testar">
+              ${STATUS_STATS.map((s) => {
+                const value = myStatusStats[s.key] ?? 0;
+                return `<option value="${s.key}" ${mySelectedStat === s.key ? 'selected' : ''}>${s.icon} ${s.label} (${value >= 0 ? '+' : ''}${value})</option>`;
+              }).join('')}
+            </select>
+            <button type="button" class="btn btn-ghost" id="combat-self-stat-roll-btn" ${diceRolling ? 'disabled' : ''}>🎲 testar</button>
+          </div>`
+              : ''
+          }
           ${conditionsRowHtml(mySelf, false)}
         </div>`
           : ''
@@ -832,6 +856,25 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         return performDiceRoll(die);
       }
 
+      const selfStatRollBtn = e.target.closest('#combat-self-stat-roll-btn');
+      if (selfStatRollBtn) {
+        if (diceRolling || !myStatusStats) return;
+        const stat = STATUS_STATS.find((s) => s.key === mySelectedStat);
+        if (!stat) return;
+        const mod = myStatusStats[stat.key] || 0;
+        diceRolling = true;
+        diceError = '';
+        render();
+        try {
+          await rollDice(campaignId, rollerId, characterName || rollerName, 'd20', 1, mod, stat.label);
+        } catch (err) {
+          diceError = err.message;
+        }
+        diceRolling = false;
+        render();
+        return;
+      }
+
       const startBtn = e.target.closest('#combat-start-btn');
       if (startBtn) return onStartCombat();
 
@@ -1029,6 +1072,12 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       const trayCustomInput = e.target.closest('#combat-dice-custom-value');
       if (trayCustomInput) {
         diceCustomValue = trayCustomInput.value;
+        return;
+      }
+
+      const selfStatSelect = e.target.closest('#combat-self-stat-select');
+      if (selfStatSelect) {
+        mySelectedStat = selfStatSelect.value;
         return;
       }
 
