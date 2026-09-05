@@ -807,8 +807,12 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       if (trayToggleBtn) {
         diceTrayOpen = !diceTrayOpen;
         if (diceTrayOpen && !diceChannel) {
-          await loadDiceRolls();
-          subscribeDiceRealtime();
+          try {
+            await loadDiceRolls();
+            subscribeDiceRealtime();
+          } catch (err) {
+            diceError = err.message;
+          }
         }
         render();
         return;
