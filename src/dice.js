@@ -58,9 +58,18 @@ export async function listRecentRolls(campaignId, limit = 50) {
   return data;
 }
 
-export function subscribeDiceRolls(campaignId, onChange) {
+// `topic` tem valor default pra manter compatibilidade com quem já chama
+// isso sem o 3º argumento -- mas dois lugares diferentes assinando o
+// MESMO tópico ao mesmo tempo (ex: a aba "Dados" dedicada + a bandeja
+// retrátil de dados dentro do Combate, ambas montadas simultaneamente
+// via padrão de "mounted flag", nunca desmontadas) faz o supabase-js
+// devolver o MESMO objeto de canal já inscrito na segunda chamada, e
+// `.on(...)` depois de `.subscribe()` já ter rodado explode com "cannot
+// add postgres_changes callbacks ... after subscribe()". Cada tela que
+// assina dice_rolls precisa do seu próprio tópico exclusivo.
+export function subscribeDiceRolls(campaignId, onChange, topic) {
   return supabase
-    .channel('dice-' + campaignId)
+    .channel(topic || 'dice-' + campaignId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'dice_rolls', filter: `campaign_id=eq.${campaignId}` }, onChange)
     .subscribe();
 }

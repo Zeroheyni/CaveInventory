@@ -146,10 +146,14 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   }
   function subscribeDiceRealtime() {
     if (diceChannel) return;
-    diceChannel = subscribeDiceRolls(campaignId, async () => {
-      diceRolls = await listRecentRolls(campaignId, 8);
-      render();
-    });
+    diceChannel = subscribeDiceRolls(
+      campaignId,
+      async () => {
+        diceRolls = await listRecentRolls(campaignId, 8);
+        render();
+      },
+      'dice-combat-' + campaignId
+    );
   }
   async function performDiceRoll(die) {
     if (diceRolling) return;
@@ -177,6 +181,20 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             <input type="number" id="combat-dice-custom-value" min="2" max="1000" placeholder="ex: 132" value="${escapeHtml(diceCustomValue)}">
             <button type="button" class="dice-custom-roll-btn" id="combat-dice-custom-roll-btn" ${diceRolling ? 'disabled' : ''}>rolar</button>
           </div>
+          ${
+            myStatusStats
+              ? `
+          <div class="combat-dice-tray-stat-row">
+            <select id="combat-tray-stat-select" title="escolher status pra testar">
+              ${STATUS_STATS.map((s) => {
+                const value = myStatusStats[s.key] ?? 0;
+                return `<option value="${s.key}" ${mySelectedStat === s.key ? 'selected' : ''}>${s.icon} ${s.label} (${value >= 0 ? '+' : ''}${value})</option>`;
+              }).join('')}
+            </select>
+            <button type="button" class="dice-custom-roll-btn" id="combat-tray-stat-roll-btn" ${diceRolling ? 'disabled' : ''}>🎲 testar</button>
+          </div>`
+              : ''
+          }
           <div class="combat-dice-tray-mods">
             <label class="dice-field"><span>qtd</span><input type="number" id="combat-dice-qty" min="1" max="10" value="${diceQty}"></label>
             <label class="dice-field"><span>mod</span><input type="number" id="combat-dice-modifier" value="${diceModifier}"></label>
@@ -550,20 +568,6 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             <input type="number" class="combat-hp-input" data-est-input data-pid="${mySelf.id}" value="${mySelf.stamina_current}">
             <button type="button" class="combat-hp-btn" data-est-delta="1" data-pid="${mySelf.id}">+</button>
           </div>
-          ${
-            myStatusStats
-              ? `
-          <div class="combat-self-stat-test">
-            <select id="combat-self-stat-select" title="escolher status pra testar">
-              ${STATUS_STATS.map((s) => {
-                const value = myStatusStats[s.key] ?? 0;
-                return `<option value="${s.key}" ${mySelectedStat === s.key ? 'selected' : ''}>${s.icon} ${s.label} (${value >= 0 ? '+' : ''}${value})</option>`;
-              }).join('')}
-            </select>
-            <button type="button" class="btn btn-ghost" id="combat-self-stat-roll-btn" ${diceRolling ? 'disabled' : ''}>🎲 testar</button>
-          </div>`
-              : ''
-          }
           ${conditionsRowHtml(mySelf, false)}
         </div>`
           : ''
@@ -856,8 +860,8 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         return performDiceRoll(die);
       }
 
-      const selfStatRollBtn = e.target.closest('#combat-self-stat-roll-btn');
-      if (selfStatRollBtn) {
+      const trayStatRollBtn = e.target.closest('#combat-tray-stat-roll-btn');
+      if (trayStatRollBtn) {
         if (diceRolling || !myStatusStats) return;
         const stat = STATUS_STATS.find((s) => s.key === mySelectedStat);
         if (!stat) return;
@@ -1075,9 +1079,9 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         return;
       }
 
-      const selfStatSelect = e.target.closest('#combat-self-stat-select');
-      if (selfStatSelect) {
-        mySelectedStat = selfStatSelect.value;
+      const trayStatSelect = e.target.closest('#combat-tray-stat-select');
+      if (trayStatSelect) {
+        mySelectedStat = trayStatSelect.value;
         return;
       }
 
