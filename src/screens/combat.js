@@ -43,6 +43,7 @@ import {
   listCharacterCustomBars,
   createCustomBar,
   deleteCustomBar,
+  updateCustomBarColor,
   assignCustomBar,
   unassignCustomBar,
   updateCharacterCustomBarValue,
@@ -907,7 +908,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     return `
       <div class="combat-custom-bar-def">
         <div class="combat-custom-bar-def-head">
-          <span class="combat-custom-bar-dot" style="background:${escapeHtml(def.color)}"></span>
+          <input type="color" class="combat-custom-bar-color-input" data-custom-bar-color-id="${def.id}" value="${escapeHtml(def.color)}" title="mudar a cor da barra">
           <span class="combat-custom-bar-def-name">${escapeHtml(def.name)}</span>
           <span class="combat-custom-bar-def-formula">${escapeHtml(customBarFormulaLabel(def))}</span>
           <button type="button" class="btn btn-ghost" data-custom-bar-assign-toggle="${def.id}">${expanded ? 'fechar' : `atribuir (${assigned.length})`}</button>
@@ -1352,6 +1353,22 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       const trayStatSelect = e.target.closest('#combat-tray-stat-select');
       if (trayStatSelect) {
         mySelectedStat = trayStatSelect.value;
+        return;
+      }
+
+      const customBarColorInput = e.target.closest('input[data-custom-bar-color-id]');
+      if (customBarColorInput) {
+        const id = customBarColorInput.dataset.customBarColorId;
+        const def = customBarDefs.find((d) => d.id === id);
+        const color = customBarColorInput.value;
+        if (def) def.color = color;
+        try {
+          await updateCustomBarColor(id, color);
+          characterCustomBars = await listCharacterCustomBars(campaignId);
+        } catch (err) {
+          window.alert('Erro ao mudar a cor: ' + err.message);
+        }
+        render();
         return;
       }
 

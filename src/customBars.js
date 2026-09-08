@@ -38,6 +38,11 @@ export async function deleteCustomBar(id) {
   if (error) throw error;
 }
 
+export async function updateCustomBarColor(id, color) {
+  const { error } = await supabase.from('custom_bars').update({ color }).eq('id', id);
+  if (error) throw error;
+}
+
 // todas as atribuições da campanha de uma vez, com a definição
 // embutida -- usado pelo combate (várias fichas na tela ao mesmo tempo).
 // Duas queries + join no client (em vez de embedding do PostgREST,

@@ -28,7 +28,7 @@ import {
   removeModuleFromSheetData,
 } from '../characterSheet.js';
 import { rollDice } from '../dice.js';
-import { listCharacterCustomBarsFor, updateCharacterCustomBarValue, customBarMax } from '../customBars.js';
+import { listCharacterCustomBarsFor, updateCharacterCustomBarValue, customBarMax, createCustomBar, assignCustomBar } from '../customBars.js';
 
 let activeChannel = null;
 const HISTORIA_COLLAPSED_H = 90;
@@ -50,6 +50,9 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
   let historiaExpanded = false;
   const expandedModules = new Set();
   let customBars = []; // barras customizadas (Fase 8) atribuídas a ESTE personagem
+  let customBarFormOpen = false; // "+ nova barra" -- só mestre, cria já direto pra ESTE personagem
+  let customBarFormMode = 'manual'; // 'manual' | 'formula'
+  let customBarFormError = '';
 
   // debounce -- sem isso, edições rápidas em sequência (bio, história,
   // módulos) disparam vários eventos de realtime seguidos, cada um
@@ -146,6 +149,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
           </div>
         </div>
         ${customBars.map((cb) => customBarBlock(cb)).join('')}
+        ${isMaster ? customBarAddHtml() : ''}
       </div>
 
       <div class="ficha-section">
@@ -239,6 +243,43 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
           <button type="button" class="combat-hp-btn" data-custom-bar-delta="-1" data-custom-bar-id="${cb.id}">−</button>
           <input type="number" class="combat-hp-input" data-custom-bar-input data-custom-bar-id="${cb.id}" value="${cb.current_value}">
           <button type="button" class="combat-hp-btn" data-custom-bar-delta="1" data-custom-bar-id="${cb.id}">+</button>
+        </div>
+      </div>`;
+  }
+
+  // "+ nova barra" -- só mestre, direto na ficha do jogador (em vez de
+  // ir até o Combate e escolher o personagem numa lista) -- já nasce
+  // atribuída a ESTE characterId, sem precisar de seletor de jogador.
+  function customBarAddHtml() {
+    if (!customBarFormOpen) {
+      return `<button type="button" class="btn btn-ghost" id="ficha-custom-bar-open-form" style="align-self:flex-start; margin-top:4px;">+ nova barra</button>`;
+    }
+    return `
+      <div class="combat-condition-custom-form" style="margin-top:8px; grid-column: 1 / -1;">
+        <input type="text" id="ficha-custom-bar-name" placeholder="nome (ex: Fúria, Mana, Insanidade)" maxlength="30">
+        <div class="combat-condition-custom-row">
+          <input type="color" id="ficha-custom-bar-color" value="#5ad4ff">
+          <label class="combat-custom-bar-mode-radio"><input type="radio" name="ficha-custom-bar-mode" value="manual" ${customBarFormMode === 'manual' ? 'checked' : ''}> personalizável</label>
+          <label class="combat-custom-bar-mode-radio"><input type="radio" name="ficha-custom-bar-mode" value="formula" ${customBarFormMode === 'formula' ? 'checked' : ''}> fórmula de status</label>
+        </div>
+        ${
+          customBarFormMode === 'manual'
+            ? `<input type="number" id="ficha-custom-bar-manual-max" placeholder="máximo (ex: 20)" min="1">`
+            : `<div class="combat-condition-custom-row">
+                <select id="ficha-custom-bar-formula-stat">
+                  ${STATS.map((s) => `<option value="${s.key}">${s.icon} ${s.label}</option>`).join('')}
+                </select>
+                <select id="ficha-custom-bar-formula-op">
+                  <option value="mult">×</option>
+                  <option value="div">÷</option>
+                </select>
+                <input type="number" id="ficha-custom-bar-formula-value" placeholder="valor (ex: 2)" step="0.5" min="0.5" value="2">
+              </div>`
+        }
+        ${customBarFormError ? `<p class="admin-error" style="display:block;">${escapeHtml(customBarFormError)}</p>` : ''}
+        <div class="combat-condition-custom-actions">
+          <button type="button" class="btn" id="ficha-custom-bar-save">criar</button>
+          <button type="button" class="btn btn-ghost" id="ficha-custom-bar-cancel">cancelar</button>
         </div>
       </div>`;
   }
@@ -366,6 +407,59 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
         return;
       }
 
+      const customBarOpenFormBtn = e.target.closest('#ficha-custom-bar-open-form');
+      if (customBarOpenFormBtn) {
+        customBarFormOpen = true;
+        customBarFormMode = 'manual';
+        customBarFormError = '';
+        render();
+        return;
+      }
+      const customBarCancelBtn = e.target.closest('#ficha-custom-bar-cancel');
+      if (customBarCancelBtn) {
+        customBarFormOpen = false;
+        customBarFormError = '';
+        render();
+        return;
+      }
+      const customBarSaveBtn = e.target.closest('#ficha-custom-bar-save');
+      if (customBarSaveBtn) {
+        const name = ($('ficha-custom-bar-name')?.value || '').trim();
+        const color = $('ficha-custom-bar-color')?.value || '#5ad4ff';
+        const mode = customBarFormMode;
+        const manualMax = mode === 'manual' ? parseInt($('ficha-custom-bar-manual-max')?.value, 10) : null;
+        const formulaStat = mode === 'formula' ? $('ficha-custom-bar-formula-stat')?.value : null;
+        const formulaOp = mode === 'formula' ? $('ficha-custom-bar-formula-op')?.value : null;
+        const formulaValue = mode === 'formula' ? parseFloat($('ficha-custom-bar-formula-value')?.value) : null;
+        if (!name) {
+          customBarFormError = 'dê um nome pra barra.';
+          render();
+          return;
+        }
+        if (mode === 'manual' && (!manualMax || manualMax < 1)) {
+          customBarFormError = 'defina um máximo válido (1 ou mais).';
+          render();
+          return;
+        }
+        if (mode === 'formula' && (!formulaValue || formulaValue <= 0)) {
+          customBarFormError = 'defina um valor de fórmula válido (maior que 0).';
+          render();
+          return;
+        }
+        try {
+          const newBar = await createCustomBar(campaign.id, { name, color, mode, manualMax, formulaStat, formulaOp, formulaValue });
+          await assignCustomBar(campaign.id, newBar.id, characterId, customBarMax(newBar, sheet));
+          customBars = await listCharacterCustomBarsFor(characterId);
+          customBarFormOpen = false;
+          customBarFormError = '';
+          render();
+        } catch (err) {
+          customBarFormError = err.message;
+          render();
+        }
+        return;
+      }
+
       const draftBtn = e.target.closest('button[data-draft-stat-delta]');
       if (draftBtn) {
         const key = draftBtn.dataset.stat;
@@ -439,6 +533,13 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
     });
 
     app.addEventListener('change', async (e) => {
+      const customBarModeRadio = e.target.closest('input[name="ficha-custom-bar-mode"]');
+      if (customBarModeRadio) {
+        customBarFormMode = customBarModeRadio.value;
+        render();
+        return;
+      }
+
       const avatarInput = e.target.closest('#ficha-avatar-input');
       if (avatarInput && avatarInput.files[0]) {
         uploadingAvatar = true;
