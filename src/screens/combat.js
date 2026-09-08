@@ -103,13 +103,14 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   let customBarFormError = '';
   let customBarAssignOpenFor = null; // id da definição com a lista de atribuição expandida
 
-  async function load() {
-    combatState = await getCombatState(campaignId);
-    participants = await getParticipants(campaignId);
-    customConditions = await listCustomConditions(campaignId);
-    customBarDefs = await listCustomBars(campaignId);
-    characterCustomBars = await listCharacterCustomBars(campaignId);
-    if (!isMaster && characterId && !myStatusStats) {
+  // status bruto (forca, inteligencia...) de todo mundo -- alimenta o
+  // cálculo das barras customizadas de fórmula (customBarMax). Extraído
+  // do load() e chamado TAMBÉM no reload do realtime (não só uma vez no
+  // mount): sem isso, mudar o status de alguém (ex: confirmar alocação
+  // de pontos na ficha) deixava as barras de fórmula calculando em cima
+  // do valor ANTIGO até a tela de combate ser fechada e reaberta.
+  async function refreshCharacterStats() {
+    if (!isMaster && characterId) {
       const { data: charRow } = await supabase
         .from('characters')
         .select('vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao')
@@ -132,6 +133,15 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       charactersInCampaign = chars || [];
       members = (profs || []).filter((p) => p.role !== 'master');
     }
+  }
+
+  async function load() {
+    combatState = await getCombatState(campaignId);
+    participants = await getParticipants(campaignId);
+    customConditions = await listCustomConditions(campaignId);
+    customBarDefs = await listCustomBars(campaignId);
+    characterCustomBars = await listCharacterCustomBars(campaignId);
+    await refreshCharacterStats();
     render();
   }
 
@@ -153,6 +163,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         customConditions = await listCustomConditions(campaignId);
         customBarDefs = await listCustomBars(campaignId);
         characterCustomBars = await listCharacterCustomBars(campaignId);
+        await refreshCharacterStats();
         render();
       }, 700);
     });
@@ -1171,8 +1182,16 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         const selectedCharIds = Array.from(app.querySelectorAll('input[data-custom-bar-form-char]:checked')).map((el) => el.dataset.customBarFormChar);
         try {
           const newBar = await createCustomBar(campaignId, { name, color, mode, manualMax, formulaStat, formulaOp, formulaValue });
+          // busca o status de cada personagem marcado direto do banco na
+          // hora (em vez de reusar charactersInCampaign, que pode estar
+          // um instante desatualizado) -- garante que o valor inicial já
+          // nasce calculado em cima do status ATUAL de cada um.
           for (const charId of selectedCharIds) {
-            const char = charactersInCampaign.find((c) => c.id === charId);
+            const { data: char } = await supabase
+              .from('characters')
+              .select('vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao')
+              .eq('id', charId)
+              .maybeSingle();
             const initialValue = customBarMax(newBar, char);
             await assignCustomBar(campaignId, newBar.id, charId, initialValue);
           }
@@ -1386,7 +1405,11 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         try {
           if (customBarAssignCheck.checked) {
             const def = customBarDefs.find((d) => d.id === defId);
-            const char = charactersInCampaign.find((c) => c.id === charId);
+            const { data: char } = await supabase
+              .from('characters')
+              .select('vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao')
+              .eq('id', charId)
+              .maybeSingle();
             await assignCustomBar(campaignId, defId, charId, customBarMax(def, char));
           } else {
             const existing = characterCustomBars.find((cb) => cb.custom_bar_id === defId && cb.character_id === charId);

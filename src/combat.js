@@ -37,6 +37,12 @@ export function subscribeCombat(campaignId, onChange) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'combat_participants', filter: `campaign_id=eq.${campaignId}` }, onChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_combat', filter: `campaign_id=eq.${campaignId}` }, onChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'character_custom_bars', filter: `campaign_id=eq.${campaignId}` }, onChange)
+    // status bruto (forca, inteligencia...) mudando dispara aqui pra
+    // charactersInCampaign (mestre) recarregar -- sem isso, uma barra
+    // customizada de fórmula ficava calculando em cima do status
+    // ANTIGO até alguém sair e voltar da tela de combate, porque
+    // charactersInCampaign só era buscado uma vez no load() inicial.
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'characters', filter: `campaign_id=eq.${campaignId}` }, onChange)
     .subscribe();
 }
 
