@@ -68,6 +68,7 @@ export function subscribeCharacterSheet(characterId, onChange) {
   return supabase
     .channel('sheet-' + characterId)
     .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'characters', filter: `id=eq.${characterId}` }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'character_custom_bars', filter: `character_id=eq.${characterId}` }, onChange)
     .subscribe();
 }
 

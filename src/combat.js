@@ -36,6 +36,7 @@ export function subscribeCombat(campaignId, onChange) {
     .channel('combat-' + campaignId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'combat_participants', filter: `campaign_id=eq.${campaignId}` }, onChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_combat', filter: `campaign_id=eq.${campaignId}` }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'character_custom_bars', filter: `campaign_id=eq.${campaignId}` }, onChange)
     .subscribe();
 }
 

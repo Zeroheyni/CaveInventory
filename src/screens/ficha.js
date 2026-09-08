@@ -28,6 +28,7 @@ import {
   removeModuleFromSheetData,
 } from '../characterSheet.js';
 import { rollDice } from '../dice.js';
+import { listCharacterCustomBarsFor, updateCharacterCustomBarValue, customBarMax } from '../customBars.js';
 
 let activeChannel = null;
 const HISTORIA_COLLAPSED_H = 90;
@@ -48,6 +49,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
   let statusError = '';
   let historiaExpanded = false;
   const expandedModules = new Set();
+  let customBars = []; // barras customizadas (Fase 8) atribuídas a ESTE personagem
 
   // debounce -- sem isso, edições rápidas em sequência (bio, história,
   // módulos) disparam vários eventos de realtime seguidos, cada um
@@ -57,6 +59,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
   let realtimeReloadTimer = null;
   async function load() {
     sheet = await getCharacterSheet(characterId);
+    customBars = await listCharacterCustomBarsFor(characterId);
     if (sheet && sheet.status_points_unspent > 0 && !draftStats) {
       draftStats = Object.fromEntries(STATS.map((s) => [s.key, sheet[s.key]]));
     }
@@ -68,6 +71,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
           const fresh = await getCharacterSheet(characterId);
           if (!fresh) return;
           sheet = fresh;
+          customBars = await listCharacterCustomBarsFor(characterId);
           // não pisa num rascunho de alocação em andamento
           if (sheet.status_points_unspent <= 0) draftStats = null;
           render();
@@ -141,6 +145,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
             <button type="button" class="combat-hp-btn" data-est-delta="1">+</button>
           </div>
         </div>
+        ${customBars.map((cb) => customBarBlock(cb)).join('')}
       </div>
 
       <div class="ficha-section">
@@ -214,6 +219,28 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
       ta.style.height = (expanded ? natural : collapsedH) + 'px';
       btn.style.display = natural > collapsedH + 4 ? '' : 'none';
     });
+  }
+
+  // barra customizada (Fase 8) -- igual HP/Estamina visualmente, mas o
+  // máximo vem da definição do mestre (fixo ou calculado a partir de
+  // um status, ver customBarMax em ../customBars.js) e o dono do
+  // personagem também pode ajustar o valor atual (RLS já garante que
+  // ele só mexe em current_value, não em nome/cor/fórmula).
+  function customBarBlock(cb) {
+    const bar = cb.bar;
+    if (!bar) return '';
+    const max = customBarMax(bar, sheet);
+    const pct = max > 0 ? Math.max(0, Math.min(100, Math.round((cb.current_value / max) * 100))) : 0;
+    return `
+      <div class="ficha-bar-block">
+        <div class="ficha-bar-label">${escapeHtml(bar.name)} <span class="ficha-bar-readout">${cb.current_value} / ${max}</span></div>
+        <div class="combat-hp-bar"><div class="combat-hp-fill" style="width:${pct}%; background:${escapeHtml(bar.color)}"></div></div>
+        <div class="ficha-bar-controls">
+          <button type="button" class="combat-hp-btn" data-custom-bar-delta="-1" data-custom-bar-id="${cb.id}">−</button>
+          <input type="number" class="combat-hp-input" data-custom-bar-input data-custom-bar-id="${cb.id}" value="${cb.current_value}">
+          <button type="button" class="combat-hp-btn" data-custom-bar-delta="1" data-custom-bar-id="${cb.id}">+</button>
+        </div>
+      </div>`;
   }
 
   function statCard(s, editingStatus) {
@@ -327,6 +354,18 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
         return;
       }
 
+      const customBarDelta = e.target.closest('button[data-custom-bar-delta]');
+      if (customBarDelta) {
+        const cb = customBars.find((c) => c.id === customBarDelta.dataset.customBarId);
+        if (!cb) return;
+        const max = customBarMax(cb.bar, sheet);
+        const next = Math.max(0, Math.min(max, cb.current_value + Number(customBarDelta.dataset.customBarDelta)));
+        cb.current_value = next;
+        render();
+        await updateCharacterCustomBarValue(cb.id, next);
+        return;
+      }
+
       const draftBtn = e.target.closest('button[data-draft-stat-delta]');
       if (draftBtn) {
         const key = draftBtn.dataset.stat;
@@ -426,6 +465,17 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
         const next = Math.max(0, Math.min(estaminaMax(sheet), parseInt(estInput.value) || 0));
         sheet.estamina_current = next;
         await updateEstaminaCurrent(characterId, next);
+        return;
+      }
+
+      const customBarInput = e.target.closest('input[data-custom-bar-input]');
+      if (customBarInput) {
+        const cb = customBars.find((c) => c.id === customBarInput.dataset.customBarId);
+        if (!cb) return;
+        const max = customBarMax(cb.bar, sheet);
+        const next = Math.max(0, Math.min(max, parseInt(customBarInput.value) || 0));
+        cb.current_value = next;
+        await updateCharacterCustomBarValue(cb.id, next);
         return;
       }
 

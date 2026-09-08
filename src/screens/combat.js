@@ -38,6 +38,17 @@ import {
 import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, STATUS_STATS } from '../characterSheet.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 import { rollDice, listRecentRolls, subscribeDiceRolls, DICE_PRESETS, normalizeCustomDie } from '../dice.js';
+import {
+  listCustomBars,
+  listCharacterCustomBars,
+  createCustomBar,
+  deleteCustomBar,
+  assignCustomBar,
+  unassignCustomBar,
+  updateCharacterCustomBarValue,
+  customBarMax,
+  customBarFormulaLabel,
+} from '../customBars.js';
 
 let activeChannel = null;
 let diceChannel = null;
@@ -84,11 +95,19 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   let masterCardTab = 'jogadores'; // 'jogadores' | 'aliados' | 'inimigos'
   let myStatusStats = null; // status (forca, agilidade...) do PERSONAGEM do jogador logado -- carregado uma vez, usado pra testar atributo sem sair do combate
   let mySelectedStat = 'forca';
+  let customBarDefs = []; // definições de barra customizada da campanha (Fase 8)
+  let characterCustomBars = []; // atribuições (personagem + valor atual), campanha inteira
+  let customBarFormOpen = false; // "+ nova barra" (só mestre)
+  let customBarFormMode = 'manual'; // 'manual' | 'formula' -- modo selecionado no form em andamento
+  let customBarFormError = '';
+  let customBarAssignOpenFor = null; // id da definição com a lista de atribuição expandida
 
   async function load() {
     combatState = await getCombatState(campaignId);
     participants = await getParticipants(campaignId);
     customConditions = await listCustomConditions(campaignId);
+    customBarDefs = await listCustomBars(campaignId);
+    characterCustomBars = await listCharacterCustomBars(campaignId);
     if (!isMaster && characterId && !myStatusStats) {
       const { data: charRow } = await supabase
         .from('characters')
@@ -131,6 +150,8 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         // esse debounce, que já dispara toda vez que algo no combate muda,
         // pra manter a lista fresca sem precisar de outra assinatura.
         customConditions = await listCustomConditions(campaignId);
+        customBarDefs = await listCustomBars(campaignId);
+        characterCustomBars = await listCharacterCustomBars(campaignId);
         render();
       }, 700);
     });
@@ -327,6 +348,69 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     return `<div class="combat-conditions-row">${badges}${addBtn}${picker}</div>`;
   }
 
+  // ---- barras customizadas (Fase 8) -- igual HP/Estamina mas definidas
+  // pelo mestre (nome, cor, e um máximo fixo OU calculado a partir de um
+  // status, ver customBarMax em ../customBars.js). `statSource` é a
+  // linha com os status brutos (vitalidade, forca...) do personagem --
+  // vem de charactersInCampaign (mestre) ou myStatusStats (o próprio
+  // jogador), únicas fontes que têm esses campos por perto aqui.
+  function customBarsOf(characterId) {
+    return characterId ? characterCustomBars.filter((cb) => cb.character_id === characterId) : [];
+  }
+  // compacta, com +/- -- usada no card do mestre (masterCard) e no
+  // card do próprio jogador (self-card).
+  function customBarsCompactHtml(characterId, statSource) {
+    return customBarsOf(characterId)
+      .map((cb) => {
+        const max = customBarMax(cb.bar, statSource);
+        const pct = max > 0 ? Math.max(0, Math.min(100, Math.round((cb.current_value / max) * 100))) : 0;
+        return `
+        <div class="combat-hp-bar"><div class="combat-hp-fill" style="width:${pct}%; background:${escapeHtml(cb.bar.color)}"></div></div>
+        <div class="combat-master-bar-row">
+          <button type="button" class="combat-hp-btn" data-custom-bar-delta="-1" data-custom-bar-id="${cb.id}">−</button>
+          <span class="combat-master-bar-txt">${escapeHtml(cb.bar.name)} ${cb.current_value}/${max}</span>
+          <button type="button" class="combat-hp-btn" data-custom-bar-delta="1" data-custom-bar-id="${cb.id}">+</button>
+        </div>`;
+      })
+      .join('');
+  }
+  // versão completa (rótulo + leitura + input numérico), no mesmo
+  // estilo do bloco de HP/Estamina do self-card -- usada só ali.
+  function customBarsSelfCardHtml(characterId, statSource) {
+    return customBarsOf(characterId)
+      .map((cb) => {
+        const max = customBarMax(cb.bar, statSource);
+        const pct = max > 0 ? Math.max(0, Math.min(100, Math.round((cb.current_value / max) * 100))) : 0;
+        return `
+        <div class="combat-self-card-head" style="margin-top:10px;">
+          <span class="combat-self-name">${escapeHtml(cb.bar.name)}</span>
+          <span class="combat-hp-readout"><b>${cb.current_value}</b> / ${max}</span>
+        </div>
+        <div class="combat-hp-bar"><div class="combat-hp-fill" style="width:${pct}%; background:${escapeHtml(cb.bar.color)}"></div></div>
+        <div class="combat-hp-controls">
+          <button type="button" class="combat-hp-btn" data-custom-bar-delta="-1" data-custom-bar-id="${cb.id}">−</button>
+          <input type="number" class="combat-hp-input" data-custom-bar-input data-custom-bar-id="${cb.id}" value="${cb.current_value}">
+          <button type="button" class="combat-hp-btn" data-custom-bar-delta="1" data-custom-bar-id="${cb.id}">+</button>
+        </div>`;
+      })
+      .join('');
+  }
+  // só leitura, uma linha fina -- usada na linha compacta da lista
+  // principal (participantRow), que já é bem cheia de controles.
+  function customBarsRowHtml(characterId, statSource) {
+    return customBarsOf(characterId)
+      .map((cb) => {
+        const max = customBarMax(cb.bar, statSource);
+        const pct = max > 0 ? Math.max(0, Math.min(100, Math.round((cb.current_value / max) * 100))) : 0;
+        return `
+        <div class="combat-row-sub">
+          <div class="combat-row-hpbar combat-hp-bar"><div class="combat-hp-fill" style="width:${pct}%; background:${escapeHtml(cb.bar.color)}"></div></div>
+          <span class="combat-row-hptxt">${escapeHtml(cb.bar.name)} ${cb.current_value}/${max}</span>
+        </div>`;
+      })
+      .join('');
+  }
+
   // ---- resumo do mestre (Fase 6) -- HP/estamina/status/arma equipada de todo mundo ----
   function statusValuesOf(char) {
     return {
@@ -467,6 +551,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           <span class="combat-master-bar-txt">⚡ ${p.stamina_current}/${p.stamina_max}</span>
           <button type="button" class="combat-hp-btn" data-est-delta="1" data-pid="${p.id}">+</button>
         </div>
+        ${customBarsCompactHtml(p.character_id, char)}
         ${conditionsRowHtml(p, false)}
         ${
           showStatusChips
@@ -504,6 +589,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     const nextTurn = computeNextTurn(allSorted, currentTurn);
     const summaryHtml = isMaster ? masterPlayersSummary(currentTurn, nextTurn) : '';
     const trayHtml = diceTrayHtml();
+    const barsMgmtHtml = isMaster ? customBarsManagementSection() : '';
     if (!combatState.active) {
       app.innerHTML =
         trayHtml +
@@ -513,7 +599,8 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           NENHUM COMBATE ATIVO NO MOMENTO
           ${isMaster ? '<div><button type="button" class="btn combat-start-btn" id="combat-start-btn">⚔ iniciar combate</button></div>' : ''}
         </div>
-      `;
+      ` +
+        barsMgmtHtml;
       return;
     }
 
@@ -568,6 +655,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             <input type="number" class="combat-hp-input" data-est-input data-pid="${mySelf.id}" value="${mySelf.stamina_current}">
             <button type="button" class="combat-hp-btn" data-est-delta="1" data-pid="${mySelf.id}">+</button>
           </div>
+          ${customBarsSelfCardHtml(mySelf.character_id, myStatusStats)}
           ${conditionsRowHtml(mySelf, false)}
         </div>`
           : ''
@@ -579,6 +667,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
       ${isMaster ? addParticipantSection() : ''}
       ${isMaster ? permissionsSection() : ''}
+      ${barsMgmtHtml}
     `;
   }
 
@@ -613,6 +702,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           </div>`
               : ''
           }
+          ${isMaster ? customBarsRowHtml(p.character_id, charOf(p)) : ''}
           ${conditionsRowHtml(p)}
         </div>
         ${
@@ -763,6 +853,97 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           </div>`
           )
           .join('')}
+      </div>
+    `;
+  }
+
+  // ---- gerenciamento de barras customizadas (Fase 8) -- só mestre.
+  // Fica fora do bloco "combate ativo" (é atribuído ao personagem, não
+  // ao participante da luta -- precisa funcionar mesmo sem combate
+  // rolando, já que também aparece na Ficha).
+  function customBarFormHtml() {
+    const players = charactersInCampaign.filter((c) => !c.is_npc);
+    return `
+      <div class="combat-condition-custom-form">
+        <input type="text" id="custom-bar-name" placeholder="nome (ex: Fúria, Mana, Insanidade)" maxlength="30">
+        <div class="combat-condition-custom-row">
+          <input type="color" id="custom-bar-color" value="#5ad4ff">
+          <label class="combat-custom-bar-mode-radio"><input type="radio" name="custom-bar-mode" value="manual" ${customBarFormMode === 'manual' ? 'checked' : ''}> personalizável</label>
+          <label class="combat-custom-bar-mode-radio"><input type="radio" name="custom-bar-mode" value="formula" ${customBarFormMode === 'formula' ? 'checked' : ''}> fórmula de status</label>
+        </div>
+        ${
+          customBarFormMode === 'manual'
+            ? `<input type="number" id="custom-bar-manual-max" placeholder="máximo (ex: 20)" min="1">`
+            : `<div class="combat-condition-custom-row">
+                <select id="custom-bar-formula-stat">
+                  ${STATUS_STATS.map((s) => `<option value="${s.key}">${s.icon} ${s.label}</option>`).join('')}
+                </select>
+                <select id="custom-bar-formula-op">
+                  <option value="mult">×</option>
+                  <option value="div">÷</option>
+                </select>
+                <input type="number" id="custom-bar-formula-value" placeholder="valor (ex: 2)" step="0.5" min="0.5" value="2">
+              </div>`
+        }
+        <div class="combat-custom-bar-form-chars">
+          <span class="combat-custom-bar-form-chars-label">dar essa barra pra:</span>
+          ${
+            players.length === 0
+              ? '<p class="admin-empty">nenhum jogador na campanha ainda.</p>'
+              : players.map((c) => `<label class="combat-custom-bar-assign-item"><input type="checkbox" data-custom-bar-form-char="${c.id}">${escapeHtml(c.name)}</label>`).join('')
+          }
+        </div>
+        ${customBarFormError ? `<p class="admin-error" style="display:block;">${escapeHtml(customBarFormError)}</p>` : ''}
+        <div class="combat-condition-custom-actions">
+          <button type="button" class="btn" id="combat-custom-bar-save">criar</button>
+          <button type="button" class="btn btn-ghost" id="combat-custom-bar-cancel">cancelar</button>
+        </div>
+      </div>`;
+  }
+  function customBarDefRow(def) {
+    const assigned = characterCustomBars.filter((cb) => cb.custom_bar_id === def.id);
+    const players = charactersInCampaign.filter((c) => !c.is_npc);
+    const expanded = customBarAssignOpenFor === def.id;
+    return `
+      <div class="combat-custom-bar-def">
+        <div class="combat-custom-bar-def-head">
+          <span class="combat-custom-bar-dot" style="background:${escapeHtml(def.color)}"></span>
+          <span class="combat-custom-bar-def-name">${escapeHtml(def.name)}</span>
+          <span class="combat-custom-bar-def-formula">${escapeHtml(customBarFormulaLabel(def))}</span>
+          <button type="button" class="btn btn-ghost" data-custom-bar-assign-toggle="${def.id}">${expanded ? 'fechar' : `atribuir (${assigned.length})`}</button>
+          <button type="button" class="admin-danger-btn" data-custom-bar-delete="${def.id}" title="apagar barra (remove de todo mundo)">✕</button>
+        </div>
+        ${
+          expanded
+            ? `<div class="combat-custom-bar-assign-list">
+                ${
+                  players.length === 0
+                    ? '<p class="admin-empty">nenhum jogador na campanha ainda.</p>'
+                    : players
+                        .map((c) => {
+                          const has = assigned.some((a) => a.character_id === c.id);
+                          return `<label class="combat-custom-bar-assign-item"><input type="checkbox" data-custom-bar-assign-check data-def-id="${def.id}" data-char-id="${c.id}" ${has ? 'checked' : ''}>${escapeHtml(c.name)}</label>`;
+                        })
+                        .join('')
+                }
+              </div>`
+            : ''
+        }
+      </div>`;
+  }
+  function customBarsManagementSection() {
+    return `
+      <div class="combat-custom-bars-mgmt">
+        <div class="combat-custom-bars-head">
+          <span class="combat-permissions-head" style="margin-bottom:0;">BARRAS CUSTOMIZADAS</span>
+          ${!customBarFormOpen ? `<button type="button" class="btn btn-ghost" id="combat-custom-bar-open-form">+ nova barra</button>` : ''}
+        </div>
+        ${customBarFormOpen ? customBarFormHtml() : ''}
+        ${
+          customBarDefs.length === 0
+            ? '<p class="admin-empty">nenhuma barra customizada ainda -- dá pra criar uma pra representar Mana, Fúria, Insanidade etc.</p>'
+            : customBarDefs.map((def) => customBarDefRow(def)).join('')
+        }
       </div>
     `;
   }
@@ -947,6 +1128,95 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         return;
       }
 
+      const customBarOpenFormBtn = e.target.closest('#combat-custom-bar-open-form');
+      if (customBarOpenFormBtn) {
+        customBarFormOpen = true;
+        customBarFormMode = 'manual';
+        customBarFormError = '';
+        render();
+        return;
+      }
+      const customBarCancelBtn = e.target.closest('#combat-custom-bar-cancel');
+      if (customBarCancelBtn) {
+        customBarFormOpen = false;
+        customBarFormError = '';
+        render();
+        return;
+      }
+      const customBarSaveBtn = e.target.closest('#combat-custom-bar-save');
+      if (customBarSaveBtn) {
+        const name = ($('custom-bar-name')?.value || '').trim();
+        const color = $('custom-bar-color')?.value || '#5ad4ff';
+        const mode = customBarFormMode;
+        const manualMax = mode === 'manual' ? parseInt($('custom-bar-manual-max')?.value, 10) : null;
+        const formulaStat = mode === 'formula' ? $('custom-bar-formula-stat')?.value : null;
+        const formulaOp = mode === 'formula' ? $('custom-bar-formula-op')?.value : null;
+        const formulaValue = mode === 'formula' ? parseFloat($('custom-bar-formula-value')?.value) : null;
+        if (!name) {
+          customBarFormError = 'dê um nome pra barra.';
+          render();
+          return;
+        }
+        if (mode === 'manual' && (!manualMax || manualMax < 1)) {
+          customBarFormError = 'defina um máximo válido (1 ou mais).';
+          render();
+          return;
+        }
+        if (mode === 'formula' && (!formulaValue || formulaValue <= 0)) {
+          customBarFormError = 'defina um valor de fórmula válido (maior que 0).';
+          render();
+          return;
+        }
+        const selectedCharIds = Array.from(app.querySelectorAll('input[data-custom-bar-form-char]:checked')).map((el) => el.dataset.customBarFormChar);
+        try {
+          const newBar = await createCustomBar(campaignId, { name, color, mode, manualMax, formulaStat, formulaOp, formulaValue });
+          for (const charId of selectedCharIds) {
+            const char = charactersInCampaign.find((c) => c.id === charId);
+            const initialValue = customBarMax(newBar, char);
+            await assignCustomBar(campaignId, newBar.id, charId, initialValue);
+          }
+          customBarDefs = await listCustomBars(campaignId);
+          characterCustomBars = await listCharacterCustomBars(campaignId);
+          customBarFormOpen = false;
+          customBarFormError = '';
+          render();
+        } catch (err) {
+          customBarFormError = err.message;
+          render();
+        }
+        return;
+      }
+
+      const customBarAssignToggleBtn = e.target.closest('button[data-custom-bar-assign-toggle]');
+      if (customBarAssignToggleBtn) {
+        const id = customBarAssignToggleBtn.dataset.customBarAssignToggle;
+        customBarAssignOpenFor = customBarAssignOpenFor === id ? null : id;
+        render();
+        return;
+      }
+      const customBarDeleteBtn = e.target.closest('button[data-custom-bar-delete]');
+      if (customBarDeleteBtn) {
+        if (!window.confirm('Apagar essa barra? Ela some de todo mundo que tinha.')) return;
+        await deleteCustomBar(customBarDeleteBtn.dataset.customBarDelete);
+        customBarDefs = await listCustomBars(campaignId);
+        characterCustomBars = await listCharacterCustomBars(campaignId);
+        render();
+        return;
+      }
+
+      const customBarDeltaBtn = e.target.closest('button[data-custom-bar-delta]');
+      if (customBarDeltaBtn) {
+        const cb = characterCustomBars.find((c) => c.id === customBarDeltaBtn.dataset.customBarId);
+        if (!cb) return;
+        const statSource = isMaster ? charactersInCampaign.find((c) => c.id === cb.character_id) : myStatusStats;
+        const max = customBarMax(cb.bar, statSource);
+        const next = Math.max(0, Math.min(max, cb.current_value + Number(customBarDeltaBtn.dataset.customBarDelta)));
+        cb.current_value = next;
+        render();
+        await updateCharacterCustomBarValue(cb.id, next);
+        return;
+      }
+
       const conditionApplyBtn = e.target.closest('button[data-condition-apply]');
       if (conditionApplyBtn) {
         const pid = conditionApplyBtn.dataset.conditionApply;
@@ -1082,6 +1352,46 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       const trayStatSelect = e.target.closest('#combat-tray-stat-select');
       if (trayStatSelect) {
         mySelectedStat = trayStatSelect.value;
+        return;
+      }
+
+      const customBarModeRadio = e.target.closest('input[name="custom-bar-mode"]');
+      if (customBarModeRadio) {
+        customBarFormMode = customBarModeRadio.value;
+        render();
+        return;
+      }
+
+      const customBarAssignCheck = e.target.closest('input[data-custom-bar-assign-check]');
+      if (customBarAssignCheck) {
+        const defId = customBarAssignCheck.dataset.defId;
+        const charId = customBarAssignCheck.dataset.charId;
+        try {
+          if (customBarAssignCheck.checked) {
+            const def = customBarDefs.find((d) => d.id === defId);
+            const char = charactersInCampaign.find((c) => c.id === charId);
+            await assignCustomBar(campaignId, defId, charId, customBarMax(def, char));
+          } else {
+            const existing = characterCustomBars.find((cb) => cb.custom_bar_id === defId && cb.character_id === charId);
+            if (existing) await unassignCustomBar(existing.id);
+          }
+          characterCustomBars = await listCharacterCustomBars(campaignId);
+          render();
+        } catch (err) {
+          window.alert('Erro ao atualizar atribuição: ' + err.message);
+        }
+        return;
+      }
+
+      const customBarInputEl = e.target.closest('input[data-custom-bar-input]');
+      if (customBarInputEl) {
+        const cb = characterCustomBars.find((c) => c.id === customBarInputEl.dataset.customBarId);
+        if (!cb) return;
+        const statSource = isMaster ? charactersInCampaign.find((c) => c.id === cb.character_id) : myStatusStats;
+        const max = customBarMax(cb.bar, statSource);
+        const next = Math.max(0, Math.min(max, parseInt(customBarInputEl.value) || 0));
+        cb.current_value = next;
+        await updateCharacterCustomBarValue(cb.id, next);
         return;
       }
 

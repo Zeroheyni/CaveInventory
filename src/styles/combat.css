@@ -287,6 +287,22 @@
 }
 .combat-perm-btn.granted{ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); }
 
+/* ---- barras customizadas (Fase 8) -- gerenciamento do mestre ---- */
+.combat-custom-bars-mgmt{ margin-top:16px; }
+.combat-custom-bars-head{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:8px; }
+.combat-custom-bar-def{
+  background: var(--stone-900); border:1px solid var(--stone-line); border-radius:8px; padding:9px 11px; margin-bottom:8px;
+}
+.combat-custom-bar-def-head{ display:flex; align-items:center; gap:8px; }
+.combat-custom-bar-dot{ width:10px; height:10px; border-radius:50%; flex-shrink:0; box-shadow:0 0 6px currentColor; }
+.combat-custom-bar-def-name{ font-family: var(--font-mono); font-size:12.5px; color: var(--ink); font-weight:600; }
+.combat-custom-bar-def-formula{ font-size:10.5px; color: var(--ink-faint); flex:1; }
+.combat-custom-bar-assign-list{ display:flex; flex-wrap:wrap; gap:8px 14px; margin-top:9px; padding-top:9px; border-top:1px solid var(--stone-line); }
+.combat-custom-bar-assign-item{ display:flex; align-items:center; gap:5px; font-size:11.5px; color: var(--ink-dim); cursor:pointer; }
+.combat-custom-bar-form-chars{ display:flex; flex-wrap:wrap; gap:8px 14px; }
+.combat-custom-bar-form-chars-label{ font-size:10.5px; color: var(--ink-faint); width:100%; }
+.combat-custom-bar-mode-radio{ display:flex; align-items:center; gap:5px; font-size:11px; color: var(--ink-dim); cursor:pointer; white-space:nowrap; }
+
 @media (max-width: 640px){
   .combat-layout{ flex-direction:column; }
   .combat-tabs{ flex-direction:row; width:auto; overflow-x:auto; }
