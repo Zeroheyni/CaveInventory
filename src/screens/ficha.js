@@ -50,8 +50,19 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
   let historiaExpanded = false;
   const expandedModules = new Set();
   let customBars = []; // barras customizadas (Fase 8) atribuídas a ESTE personagem
+  // "+ nova barra" -- todos os campos em estado, não só o modo, porque
+  // o form pode ser re-renderizado por um evento de realtime alheio
+  // (o próprio personagem levando dano, por exemplo) enquanto o mestre
+  // ainda tá preenchendo -- sem isso os campos voltam pro padrão do
+  // HTML no meio do preenchimento (mesmo bug já corrigido em combat.js).
   let customBarFormOpen = false; // "+ nova barra" -- só mestre, cria já direto pra ESTE personagem
   let customBarFormMode = 'manual'; // 'manual' | 'formula'
+  let customBarFormName = '';
+  let customBarFormColor = '#5ad4ff';
+  let customBarFormManualMax = '';
+  let customBarFormStat = 'vitalidade';
+  let customBarFormOp = 'mult';
+  let customBarFormValue = '2';
   let customBarFormError = '';
 
   // debounce -- sem isso, edições rápidas em sequência (bio, história,
@@ -256,24 +267,24 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
     }
     return `
       <div class="combat-condition-custom-form" style="margin-top:8px; grid-column: 1 / -1;">
-        <input type="text" id="ficha-custom-bar-name" placeholder="nome (ex: Fúria, Mana, Insanidade)" maxlength="30">
+        <input type="text" id="ficha-custom-bar-name" placeholder="nome (ex: Fúria, Mana, Insanidade)" maxlength="30" value="${escapeHtml(customBarFormName)}">
         <div class="combat-condition-custom-row">
-          <input type="color" id="ficha-custom-bar-color" value="#5ad4ff">
+          <input type="color" id="ficha-custom-bar-color" value="${escapeHtml(customBarFormColor)}">
           <label class="combat-custom-bar-mode-radio"><input type="radio" name="ficha-custom-bar-mode" value="manual" ${customBarFormMode === 'manual' ? 'checked' : ''}> personalizável</label>
           <label class="combat-custom-bar-mode-radio"><input type="radio" name="ficha-custom-bar-mode" value="formula" ${customBarFormMode === 'formula' ? 'checked' : ''}> fórmula de status</label>
         </div>
         ${
           customBarFormMode === 'manual'
-            ? `<input type="number" id="ficha-custom-bar-manual-max" placeholder="máximo (ex: 20)" min="1">`
+            ? `<input type="number" id="ficha-custom-bar-manual-max" placeholder="máximo (ex: 20)" min="1" value="${escapeHtml(customBarFormManualMax)}">`
             : `<div class="combat-condition-custom-row">
                 <select id="ficha-custom-bar-formula-stat">
-                  ${STATS.map((s) => `<option value="${s.key}">${s.icon} ${s.label}</option>`).join('')}
+                  ${STATS.map((s) => `<option value="${s.key}" ${customBarFormStat === s.key ? 'selected' : ''}>${s.icon} ${s.label}</option>`).join('')}
                 </select>
                 <select id="ficha-custom-bar-formula-op">
-                  <option value="mult">×</option>
-                  <option value="div">÷</option>
+                  <option value="mult" ${customBarFormOp === 'mult' ? 'selected' : ''}>×</option>
+                  <option value="div" ${customBarFormOp === 'div' ? 'selected' : ''}>÷</option>
                 </select>
-                <input type="number" id="ficha-custom-bar-formula-value" placeholder="valor (ex: 2)" step="0.5" min="0.5" value="2">
+                <input type="number" id="ficha-custom-bar-formula-value" placeholder="valor (ex: 2)" step="0.5" min="0.5" value="${escapeHtml(customBarFormValue)}">
               </div>`
         }
         ${customBarFormError ? `<p class="admin-error" style="display:block;">${escapeHtml(customBarFormError)}</p>` : ''}
@@ -411,6 +422,12 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
       if (customBarOpenFormBtn) {
         customBarFormOpen = true;
         customBarFormMode = 'manual';
+        customBarFormName = '';
+        customBarFormColor = '#5ad4ff';
+        customBarFormManualMax = '';
+        customBarFormStat = 'vitalidade';
+        customBarFormOp = 'mult';
+        customBarFormValue = '2';
         customBarFormError = '';
         render();
         return;
@@ -424,13 +441,13 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
       }
       const customBarSaveBtn = e.target.closest('#ficha-custom-bar-save');
       if (customBarSaveBtn) {
-        const name = ($('ficha-custom-bar-name')?.value || '').trim();
-        const color = $('ficha-custom-bar-color')?.value || '#5ad4ff';
+        const name = customBarFormName.trim();
+        const color = customBarFormColor || '#5ad4ff';
         const mode = customBarFormMode;
-        const manualMax = mode === 'manual' ? parseInt($('ficha-custom-bar-manual-max')?.value, 10) : null;
-        const formulaStat = mode === 'formula' ? $('ficha-custom-bar-formula-stat')?.value : null;
-        const formulaOp = mode === 'formula' ? $('ficha-custom-bar-formula-op')?.value : null;
-        const formulaValue = mode === 'formula' ? parseFloat($('ficha-custom-bar-formula-value')?.value) : null;
+        const manualMax = mode === 'manual' ? parseInt(customBarFormManualMax, 10) : null;
+        const formulaStat = mode === 'formula' ? customBarFormStat : null;
+        const formulaOp = mode === 'formula' ? customBarFormOp : null;
+        const formulaValue = mode === 'formula' ? parseFloat(customBarFormValue) : null;
         if (!name) {
           customBarFormError = 'dê um nome pra barra.';
           render();
@@ -537,6 +554,36 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
       if (customBarModeRadio) {
         customBarFormMode = customBarModeRadio.value;
         render();
+        return;
+      }
+      const customBarNameInput = e.target.closest('#ficha-custom-bar-name');
+      if (customBarNameInput) {
+        customBarFormName = customBarNameInput.value;
+        return;
+      }
+      const customBarColorFormInput = e.target.closest('#ficha-custom-bar-color');
+      if (customBarColorFormInput) {
+        customBarFormColor = customBarColorFormInput.value;
+        return;
+      }
+      const customBarManualMaxInput = e.target.closest('#ficha-custom-bar-manual-max');
+      if (customBarManualMaxInput) {
+        customBarFormManualMax = customBarManualMaxInput.value;
+        return;
+      }
+      const customBarStatSelect = e.target.closest('#ficha-custom-bar-formula-stat');
+      if (customBarStatSelect) {
+        customBarFormStat = customBarStatSelect.value;
+        return;
+      }
+      const customBarOpSelect = e.target.closest('#ficha-custom-bar-formula-op');
+      if (customBarOpSelect) {
+        customBarFormOp = customBarOpSelect.value;
+        return;
+      }
+      const customBarValueInput = e.target.closest('#ficha-custom-bar-formula-value');
+      if (customBarValueInput) {
+        customBarFormValue = customBarValueInput.value;
         return;
       }
 
