@@ -210,7 +210,13 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     diceError = '';
     render();
     try {
-      await rollDice(campaignId, rollerId, rollerName, die, diceQty, diceModifier);
+      // desenha a própria rolagem na hora com o que o insert já devolve,
+      // em vez de esperar o Realtime voltar com um SELECT + outro render
+      // inteiro da tela de combate -- é essa espera redundante que fazia
+      // rolar dado parecer lento. O Realtime continua ativo pra mostrar
+      // rolagens de OUTRAS pessoas.
+      const roll = await rollDice(campaignId, rollerId, rollerName, die, diceQty, diceModifier);
+      diceRolls = [roll, ...diceRolls];
     } catch (err) {
       diceError = err.message;
     }
@@ -1084,7 +1090,8 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         diceError = '';
         render();
         try {
-          await rollDice(campaignId, rollerId, characterName || rollerName, 'd20', 1, mod, stat.label);
+          const roll = await rollDice(campaignId, rollerId, characterName || rollerName, 'd20', 1, mod, stat.label);
+          diceRolls = [roll, ...diceRolls];
         } catch (err) {
           diceError = err.message;
         }

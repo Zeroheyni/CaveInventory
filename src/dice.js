@@ -30,21 +30,31 @@ export function rollValues(die, qty) {
 // label opcional (ex: "Força") -- usado pelo botão de teste de atributo
 // da ficha (db/039_patch_dice_roll_label.sql); null pra rolagem solta
 // normal. Também é o que aparece (ou não) no aviso de rolagem no Discord.
+// devolve a linha inserida (com o id/created_at de verdade) -- quem
+// rola já pode desenhar essa rolagem na hora, sem esperar o próprio
+// evento de Realtime voltar (round-trip redundante pra quem já sabe o
+// resultado; só os OUTROS espectadores da campanha realmente precisam
+// do Realtime pra saber que alguém rolou).
 export async function rollDice(campaignId, rollerId, rollerName, die, qty, modifier, label) {
   const results = rollValues(die, qty);
   const total = results.reduce((a, b) => a + b, 0) + modifier;
-  const { error } = await supabase.from('dice_rolls').insert({
-    campaign_id: campaignId,
-    roller_id: rollerId,
-    roller_name: rollerName,
-    die,
-    qty,
-    modifier,
-    results,
-    total,
-    label: label || null,
-  });
+  const { data, error } = await supabase
+    .from('dice_rolls')
+    .insert({
+      campaign_id: campaignId,
+      roller_id: rollerId,
+      roller_name: rollerName,
+      die,
+      qty,
+      modifier,
+      results,
+      total,
+      label: label || null,
+    })
+    .select()
+    .single();
   if (error) throw error;
+  return data;
 }
 
 export async function listRecentRolls(campaignId, limit = 50) {

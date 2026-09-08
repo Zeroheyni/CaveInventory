@@ -114,7 +114,12 @@ export function renderDiceScreen(app, { session, profile, campaign }) {
       error = '';
       render();
       try {
-        await rollDice(campaignId, rollerId, rollerName, die, qty, modifier);
+        // desenha a própria rolagem na hora (o insert já devolve a linha
+        // completa) em vez de esperar o Realtime voltar com outro SELECT
+        // -- essa espera redundante era o que fazia rolar dado parecer
+        // lento.
+        const roll = await rollDice(campaignId, rollerId, rollerName, die, qty, modifier);
+        rolls = [roll, ...rolls];
       } catch (err) {
         error = err.message;
       }
