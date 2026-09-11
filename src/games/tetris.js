@@ -10,6 +10,11 @@ const COLS = 10;
 const ROWS = 20;
 const CELL = 20;
 const DROP_MS = 550;
+// "lock delay" -- tempo extra depois que a peça encosta em algo antes
+// de travar de vez (igual Tetris de verdade), pra dar aquele último
+// segundo de ajuste fino. Qualquer movimento/giro válido reinicia essa
+// contagem; só o tempo parado sem mexer é que trava.
+const LOCK_DELAY_MS = 500;
 
 const SHAPES = {
   I: { color: '#5ad4ff', matrix: [[0, 0, 0, 0], [1, 1, 1, 1], [0, 0, 0, 0], [0, 0, 0, 0]] },
@@ -46,9 +51,15 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
   let canHold = true;
   let score;
   let timer = null;
+  let lockTimer = null; // contagem do "lock delay" -- null enquanto a peça não encostou em nada
   let running = false;
   let paused = true; // começa parada até a 1ª tecla -- senão a peça já cai sozinha e nem dá tempo de reagir
   let colors = readThemeColors();
+
+  function clearLockTimer() {
+    if (lockTimer) clearTimeout(lockTimer);
+    lockTimer = null;
+  }
 
   function nextFromBag() {
     if (bag.length === 0) bag = Object.keys(SHAPES).sort(() => Math.random() - 0.5);
@@ -223,19 +234,43 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     if (!piece) return;
     if (canPlace(piece.matrix, piece.x, piece.y + 1)) {
       piece.y += 1;
-    } else {
-      lockPiece();
+      clearLockTimer(); // saiu do "pouso" -- qualquer trava pendente não vale mais
+    } else if (!lockTimer) {
+      // encostou em algo pela primeira vez -- só trava de vez depois
+      // do lock delay, não na hora (dá tempo de ajustar no último
+      // segundo, igual Tetris de verdade).
+      lockTimer = setTimeout(() => {
+        lockTimer = null;
+        lockPiece();
+        draw();
+      }, LOCK_DELAY_MS);
     }
     draw();
   }
   function hardDrop() {
     if (!piece) return;
+    clearLockTimer();
     while (canPlace(piece.matrix, piece.x, piece.y + 1)) piece.y += 1;
     lockPiece();
     draw();
   }
+  // reinicia (ou cancela) o lock delay depois de um movimento/giro --
+  // se a peça ainda está pousada em algo, ganha mais tempo; se saiu do
+  // pouso (ex: girou por baixo de um saliente), cancela a trava.
+  function refreshLockDelay() {
+    if (!piece) return;
+    clearLockTimer();
+    if (!canPlace(piece.matrix, piece.x, piece.y + 1)) {
+      lockTimer = setTimeout(() => {
+        lockTimer = null;
+        lockPiece();
+        draw();
+      }, LOCK_DELAY_MS);
+    }
+  }
   function holdSwap() {
     if (!piece || !canHold) return;
+    clearLockTimer();
     const currentType = piece.type;
     if (heldType === null) {
       heldType = currentType;
@@ -300,6 +335,7 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
       holdSwap();
       return;
     }
+    refreshLockDelay();
     draw();
   }
 
@@ -310,6 +346,7 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     heldType = null;
     canHold = true;
     paused = true;
+    clearLockTimer();
     colors = readThemeColors();
     nextType = nextFromBag();
     piece = spawnPiece();
@@ -322,6 +359,7 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     running = false;
     if (timer) clearInterval(timer);
     timer = null;
+    clearLockTimer();
   }
 
   return { start, stop, handleKey, get running() { return running; } };
