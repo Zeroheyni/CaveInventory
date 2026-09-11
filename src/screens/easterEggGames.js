@@ -184,7 +184,7 @@ export function renderEasterEggOverlay({ campaign, profile }) {
               <div class="ee-canvas-col">
                 <canvas id="ee-canvas" width="${def.width}" height="${def.height}"></canvas>
                 <div class="ee-hint">
-                  ${selectedGame === 'tetris' ? '⌨ setas ou WASD · espaço derruba · ↑ gira · C guarda' : ''}
+                  ${selectedGame === 'tetris' ? '⌨ setas ou WASD · espaço derruba · ↑/X gira horário · Z gira anti-horário · C guarda' : ''}
                   ${selectedGame === 'snake' ? '⌨ setas ou WASD pra mover' : ''}
                   ${selectedGame === 'flappy' ? '⌨ espaço/↑ ou clique na tela pra bater asa' : ''}
                 </div>

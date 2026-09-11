@@ -22,11 +22,16 @@ const SHAPES = {
 };
 const LINE_SCORE = [0, 100, 300, 500, 800];
 
-function rotateMatrix(m) {
+function rotateCW(m) {
   const n = m.length;
   const out = Array.from({ length: n }, () => Array(n).fill(0));
   for (let y = 0; y < n; y++) for (let x = 0; x < n; x++) out[x][n - 1 - y] = m[y][x];
   return out;
+}
+// anti-horário é só o horário aplicado 3x -- mais simples e menos
+// sujeito a erro de índice do que rederivar a fórmula na mão.
+function rotateCCW(m) {
+  return rotateCW(rotateCW(rotateCW(m)));
 }
 
 // canvas principal é o tabuleiro; nextCanvas/holdCanvas (opcionais) são
@@ -234,6 +239,25 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     draw();
   }
 
+  // tenta girar pro lado pedido (1 = horário, -1 = anti-horário) --
+  // se não couber na posição atual, tenta um "kick" de 1 célula pra
+  // esquerda ou direita antes de desistir do giro.
+  function tryRotate(dir) {
+    const rotated = (dir === 1 ? rotateCW : rotateCCW)(piece.matrix);
+    if (canPlace(rotated, piece.x, piece.y)) {
+      piece.matrix = rotated;
+      sfx.rotate();
+    } else if (canPlace(rotated, piece.x - 1, piece.y)) {
+      piece.matrix = rotated;
+      piece.x -= 1;
+      sfx.rotate();
+    } else if (canPlace(rotated, piece.x + 1, piece.y)) {
+      piece.matrix = rotated;
+      piece.x += 1;
+      sfx.rotate();
+    }
+  }
+
   function handleKey(e) {
     if (!piece) return;
     if (e.key === 'ArrowLeft' || e.key === 'a') {
@@ -246,21 +270,14 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
       e.preventDefault();
       softDrop();
       return;
-    } else if (e.key === 'ArrowUp' || e.key === 'w') {
+    } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'x' || e.key === 'X') {
+      // seta pra cima/W e X giram no sentido horário
       e.preventDefault();
-      const rotated = rotateMatrix(piece.matrix);
-      if (canPlace(rotated, piece.x, piece.y)) {
-        piece.matrix = rotated;
-        sfx.rotate();
-      } else if (canPlace(rotated, piece.x - 1, piece.y)) {
-        piece.matrix = rotated;
-        piece.x -= 1;
-        sfx.rotate();
-      } else if (canPlace(rotated, piece.x + 1, piece.y)) {
-        piece.matrix = rotated;
-        piece.x += 1;
-        sfx.rotate();
-      }
+      tryRotate(1);
+    } else if (e.key === 'z' || e.key === 'Z') {
+      // Z gira no sentido anti-horário
+      e.preventDefault();
+      tryRotate(-1);
     } else if (e.key === ' ') {
       e.preventDefault();
       hardDrop();
