@@ -32,6 +32,7 @@ export function renderEasterEggOverlay({ campaign, profile }) {
   let isNewRecord = false;
   let activeEngine = null;
   let keyHandler = null;
+  let keyUpHandler = null;
 
   // pra quando o jogo em andamento fica "abandonado" -- o jogador
   // troca de aba/volta pro menu sem perder de verdade -- que sem isso
@@ -46,6 +47,10 @@ export function renderEasterEggOverlay({ campaign, profile }) {
     if (keyHandler) {
       document.removeEventListener('keydown', keyHandler);
       keyHandler = null;
+    }
+    if (keyUpHandler) {
+      document.removeEventListener('keyup', keyUpHandler);
+      keyUpHandler = null;
     }
   }
 
@@ -97,6 +102,10 @@ export function renderEasterEggOverlay({ campaign, profile }) {
     });
     keyHandler = (e) => activeEngine && activeEngine.handleKey(e);
     document.addEventListener('keydown', keyHandler);
+    if (activeEngine.handleKeyUp) {
+      keyUpHandler = (e) => activeEngine && activeEngine.handleKeyUp(e);
+      document.addEventListener('keyup', keyUpHandler);
+    }
     if (activeEngine.handleClick) canvas.addEventListener('click', activeEngine.handleClick);
     activeEngine.start();
   }
@@ -105,6 +114,10 @@ export function renderEasterEggOverlay({ campaign, profile }) {
     if (keyHandler) {
       document.removeEventListener('keydown', keyHandler);
       keyHandler = null;
+    }
+    if (keyUpHandler) {
+      document.removeEventListener('keyup', keyUpHandler);
+      keyUpHandler = null;
     }
     isNewRecord = finalScore > 0 && finalScore > myBest;
     view = 'gameover';
