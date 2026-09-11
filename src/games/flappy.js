@@ -24,6 +24,7 @@ export function createFlappyGame(canvas, { onScoreChange, onGameOver }) {
   let score;
   let raf = null;
   let running = false;
+  let paused = true; // começa parado até o 1º flap -- senão o pássaro já cai sozinho e nem dá tempo de reagir
   let colors = readThemeColors();
 
   function reset() {
@@ -42,6 +43,10 @@ export function createFlappyGame(canvas, { onScoreChange, onGameOver }) {
     if (!running) return;
     velocity = FLAP_VELOCITY;
     sfx.flap();
+    if (paused) {
+      paused = false;
+      raf = requestAnimationFrame(tick);
+    }
   }
 
   function draw() {
@@ -68,6 +73,17 @@ export function createFlappyGame(canvas, { onScoreChange, onGameOver }) {
     ctx.strokeStyle = colors.ink;
     ctx.lineWidth = 1.5;
     ctx.stroke();
+
+    if (paused) drawPausedOverlay();
+  }
+  function drawPausedOverlay() {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, canvas.height / 2 - 18, canvas.width, 36);
+    ctx.fillStyle = colors.ink;
+    ctx.font = '13px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('espaço/clique pra começar', canvas.width / 2, canvas.height / 2);
   }
 
   function tick() {
@@ -120,10 +136,10 @@ export function createFlappyGame(canvas, { onScoreChange, onGameOver }) {
 
   function start() {
     reset();
+    paused = true;
     draw();
     onScoreChange && onScoreChange(score);
     running = true;
-    raf = requestAnimationFrame(tick);
   }
   function stop() {
     running = false;

@@ -23,6 +23,7 @@ export function createSnakeGame(canvas, { onScoreChange, onGameOver }) {
   let score;
   let timer = null;
   let running = false;
+  let paused = true; // começa parada até a 1ª tecla -- senão a cobra já sai andando sozinha e nem dá tempo de reagir
   let colors = readThemeColors();
 
   function randomFood() {
@@ -75,6 +76,18 @@ export function createSnakeGame(canvas, { onScoreChange, onGameOver }) {
       ctx.fillStyle = i === 0 ? colors.accent : colors.accentCore;
       ctx.fillRect(seg.x * CELL + 2, seg.y * CELL + 2, CELL - 4, CELL - 4);
     });
+
+    if (paused) drawPausedOverlay();
+  }
+
+  function drawPausedOverlay() {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, canvas.height / 2 - 18, canvas.width, 36);
+    ctx.fillStyle = colors.ink;
+    ctx.font = '13px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('aperte uma seta pra começar', canvas.width / 2, canvas.height / 2);
   }
 
   function tick() {
@@ -116,19 +129,24 @@ export function createSnakeGame(canvas, { onScoreChange, onGameOver }) {
     const next = map[e.key];
     if (!next) return;
     e.preventDefault();
+    if (paused) {
+      paused = false;
+      timer = setInterval(tick, TICK_MS);
+    }
     // trava virar 180° em cima da própria direção atual (não da
     // `nextDir` pendente, pra dois toques rápidos não matarem a cobra
     // virando nela mesma antes do próximo tick processar o primeiro)
     if (next.x === -dir.x && next.y === -dir.y) return;
     nextDir = next;
+    draw();
   }
 
   function start() {
     reset();
+    paused = true;
     draw();
     onScoreChange && onScoreChange(score);
     running = true;
-    timer = setInterval(tick, TICK_MS);
   }
   function stop() {
     running = false;

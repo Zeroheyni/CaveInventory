@@ -47,6 +47,7 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
   let score;
   let timer = null;
   let running = false;
+  let paused = true; // começa parada até a 1ª tecla -- senão a peça já cai sozinha e nem dá tempo de reagir
   let colors = readThemeColors();
 
   function nextFromBag() {
@@ -175,10 +176,22 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
         })
       );
     }
+
+    if (paused) drawPausedOverlay();
   }
   function drawCell(x, y, color) {
     ctx.fillStyle = color;
     ctx.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
+  }
+  function drawPausedOverlay() {
+    ctx.fillStyle = 'rgba(0,0,0,0.55)';
+    ctx.fillRect(0, canvas.height / 2 - 18, canvas.width, 36);
+    ctx.fillStyle = colors.ink;
+    ctx.font = '12px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('aperte uma tecla', canvas.width / 2, canvas.height / 2 - 7);
+    ctx.fillText('pra começar', canvas.width / 2, canvas.height / 2 + 8);
   }
 
   // desenha o mini-preview de próxima peça/peça guardada num canvas à
@@ -258,35 +271,33 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     }
   }
 
+  const CONTROL_KEYS = ['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'a', 'd', 'w', 's', 'x', 'X', 'z', 'Z', ' ', 'c', 'C'];
+
   function handleKey(e) {
-    if (!piece) return;
+    if (!piece || !CONTROL_KEYS.includes(e.key)) return;
+    e.preventDefault();
+    if (paused) {
+      paused = false;
+      timer = setInterval(tick, DROP_MS);
+    }
     if (e.key === 'ArrowLeft' || e.key === 'a') {
-      e.preventDefault();
       if (canPlace(piece.matrix, piece.x - 1, piece.y)) piece.x -= 1;
     } else if (e.key === 'ArrowRight' || e.key === 'd') {
-      e.preventDefault();
       if (canPlace(piece.matrix, piece.x + 1, piece.y)) piece.x += 1;
     } else if (e.key === 'ArrowDown' || e.key === 's') {
-      e.preventDefault();
       softDrop();
       return;
     } else if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'x' || e.key === 'X') {
       // seta pra cima/W e X giram no sentido horário
-      e.preventDefault();
       tryRotate(1);
     } else if (e.key === 'z' || e.key === 'Z') {
       // Z gira no sentido anti-horário
-      e.preventDefault();
       tryRotate(-1);
     } else if (e.key === ' ') {
-      e.preventDefault();
       hardDrop();
       return;
     } else if (e.key === 'c' || e.key === 'C') {
-      e.preventDefault();
       holdSwap();
-      return;
-    } else {
       return;
     }
     draw();
@@ -298,6 +309,7 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     score = 0;
     heldType = null;
     canHold = true;
+    paused = true;
     colors = readThemeColors();
     nextType = nextFromBag();
     piece = spawnPiece();
@@ -305,7 +317,6 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     draw();
     onScoreChange && onScoreChange(score);
     running = true;
-    timer = setInterval(tick, DROP_MS);
   }
   function stop() {
     running = false;
