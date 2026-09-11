@@ -1,16 +1,18 @@
-// Easter egg — overlay dos minijogos escondidos (Cobrinha/Tetris),
-// destravado clicando 5x no pontinho do cabeçalho (ver wireEasterEgg
-// em character.js/masterCampaignHub.js). Anexado direto no
-// document.body (não dentro de #app) pra sobreviver a qualquer
+// Easter egg — overlay dos minijogos escondidos (Cobrinha/Tetris/
+// Flappy Bird), destravado clicando 5x no pontinho do cabeçalho (ver
+// wireEasterEgg em character.js/masterCampaignHub.js). Anexado direto
+// no document.body (não dentro de #app) pra sobreviver a qualquer
 // re-render da tela por baixo enquanto o overlay estiver aberto.
 import { escapeHtml } from '../shared/gameData.js';
 import { submitGameScore, listHighScores } from '../games.js';
 import { createSnakeGame } from '../games/snake.js';
 import { createTetrisGame } from '../games/tetris.js';
+import { createFlappyGame } from '../games/flappy.js';
 
 const GAMES = {
-  snake: { label: 'Cobrinha', icon: '🐍', factory: createSnakeGame, width: 324, height: 324 },
-  tetris: { label: 'Tetris', icon: '🧱', factory: createTetrisGame, width: 180, height: 360 },
+  snake: { label: 'Cobrinha', icon: '🐍', factory: createSnakeGame, width: 360, height: 360, hasPreview: false },
+  tetris: { label: 'Tetris', icon: '🧱', factory: createTetrisGame, width: 200, height: 400, hasPreview: true },
+  flappy: { label: 'Flappy Bird', icon: '🐤', factory: createFlappyGame, width: 300, height: 450, hasPreview: false },
 };
 
 export function renderEasterEggOverlay({ campaign, profile }) {
@@ -24,18 +26,36 @@ export function renderEasterEggOverlay({ campaign, profile }) {
   let view = 'menu'; // 'menu' | 'playing' | 'gameover'
   let selectedGame = 'snake';
   let scores = [];
+  let myBest = 0;
+  let campaignBest = 0;
   let currentScore = 0;
   let isNewRecord = false;
   let activeEngine = null;
   let keyHandler = null;
 
+  // pra quando o jogo em andamento fica "abandonado" -- o jogador
+  // troca de aba/volta pro menu sem perder de verdade -- que sem isso
+  // continuava rodando escondido (setInterval/rAF vivo) e um
+  // onScoreChange/onGameOver atrasado dele acabava disparando um
+  // render() por cima da tela que o jogador está vendo agora.
+  function stopActiveEngine() {
+    if (activeEngine) {
+      activeEngine.stop();
+      activeEngine = null;
+    }
+    if (keyHandler) {
+      document.removeEventListener('keydown', keyHandler);
+      keyHandler = null;
+    }
+  }
+
   function close() {
-    if (activeEngine) activeEngine.stop();
-    if (keyHandler) document.removeEventListener('keydown', keyHandler);
+    stopActiveEngine();
     root.remove();
   }
 
   async function openMenu(game) {
+    stopActiveEngine();
     selectedGame = game || selectedGame;
     view = 'menu';
     render();
@@ -44,16 +64,31 @@ export function renderEasterEggOverlay({ campaign, profile }) {
     } catch (err) {
       scores = [];
     }
-    render();
+    // essa busca é assíncrona -- se o jogador já clicou "jogar" antes
+    // dela terminar, `view` não é mais 'menu' nessa altura. Sem essa
+    // checagem, esse render() atrasado reconstruía a view "playing"
+    // (que já estava rodando com o canvas certo) do zero, criando um
+    // <canvas> NOVO e órfão -- o motor do jogo continuava desenhando
+    // no canvas antigo, agora invisível, e a tela ficava em branco.
+    if (view === 'menu') render();
   }
 
   function startGame() {
+    stopActiveEngine();
     view = 'playing';
     currentScore = 0;
+    isNewRecord = false;
+    myBest = (scores.find((s) => s.profile_id === profile.id) || {}).best_score || 0;
+    campaignBest = scores.length > 0 ? scores[0].best_score : 0;
     render();
-    const canvas = document.getElementById('ee-canvas');
+
     const def = GAMES[selectedGame];
+    const canvas = document.getElementById('ee-canvas');
+    const nextCanvas = document.getElementById('ee-next-canvas');
+    const holdCanvas = document.getElementById('ee-hold-canvas');
     activeEngine = def.factory(canvas, {
+      nextCanvas,
+      holdCanvas,
       onScoreChange: (s) => {
         currentScore = s;
         updateScoreReadout();
@@ -62,6 +97,7 @@ export function renderEasterEggOverlay({ campaign, profile }) {
     });
     keyHandler = (e) => activeEngine && activeEngine.handleKey(e);
     document.addEventListener('keydown', keyHandler);
+    if (activeEngine.handleClick) canvas.addEventListener('click', activeEngine.handleClick);
     activeEngine.start();
   }
 
@@ -70,8 +106,7 @@ export function renderEasterEggOverlay({ campaign, profile }) {
       document.removeEventListener('keydown', keyHandler);
       keyHandler = null;
     }
-    const prevBest = scores.length > 0 ? scores.find((s) => s.player_name === playerName)?.best_score || 0 : 0;
-    isNewRecord = finalScore > 0 && finalScore > prevBest;
+    isNewRecord = finalScore > 0 && finalScore > myBest;
     view = 'gameover';
     render();
     try {
@@ -81,12 +116,19 @@ export function renderEasterEggOverlay({ campaign, profile }) {
       // silencioso -- não vale travar o jogador numa tela de erro por
       // causa do placar, o jogo já acabou de qualquer forma.
     }
-    render();
+    // mesma corrida do openMenu -- se o jogador já clicou "jogar de
+    // novo" antes do placar voltar, esse render() atrasado não pode
+    // pisar na partida nova que já está rodando.
+    if (view === 'gameover') render();
   }
 
   function updateScoreReadout() {
     const el = document.getElementById('ee-score-readout');
     if (el) el.textContent = String(currentScore);
+    const beatMine = document.getElementById('ee-score-mine-item');
+    const beatCampaign = document.getElementById('ee-score-campaign-item');
+    if (beatMine) beatMine.classList.toggle('ee-beat', currentScore > myBest);
+    if (beatCampaign) beatCampaign.classList.toggle('ee-beat', currentScore > campaignBest);
   }
 
   function scoresHtml() {
@@ -95,6 +137,15 @@ export function renderEasterEggOverlay({ campaign, profile }) {
       <ol class="ee-leaderboard">
         ${scores.map((s) => `<li><span class="ee-lb-name">${escapeHtml(s.player_name)}</span><span class="ee-lb-score">${s.best_score}</span></li>`).join('')}
       </ol>`;
+  }
+
+  function scoreboardHtml() {
+    return `
+      <div class="ee-scoreboard">
+        <div class="ee-score-item"><span>pontos</span><b id="ee-score-readout">${currentScore}</b></div>
+        <div class="ee-score-item" id="ee-score-mine-item"><span>seu recorde</span><b>${myBest}</b></div>
+        <div class="ee-score-item" id="ee-score-campaign-item"><span>recorde da campanha</span><b>${campaignBest}</b></div>
+      </div>`;
   }
 
   function render() {
@@ -128,9 +179,26 @@ export function renderEasterEggOverlay({ campaign, profile }) {
         <div class="easter-egg-overlay">
           <div class="easter-egg-panel">
             <button type="button" class="easter-egg-close" id="ee-close" title="fechar">✕</button>
-            <div class="ee-title">${def.icon} ${def.label} <span class="ee-score-live">pontos: <b id="ee-score-readout">0</b></span></div>
-            <canvas id="ee-canvas" width="${def.width}" height="${def.height}"></canvas>
-            <div class="ee-hint">⌨ setas (ou WASD) pra mover${selectedGame === 'tetris' ? ' · espaço pra derrubar · ↑ gira' : ''}</div>
+            <div class="ee-title">${def.icon} ${def.label}</div>
+            <div class="ee-play-area">
+              <div class="ee-canvas-col">
+                <canvas id="ee-canvas" width="${def.width}" height="${def.height}"></canvas>
+                <div class="ee-hint">
+                  ${selectedGame === 'tetris' ? '⌨ setas ou WASD · espaço derruba · ↑ gira · C guarda' : ''}
+                  ${selectedGame === 'snake' ? '⌨ setas ou WASD pra mover' : ''}
+                  ${selectedGame === 'flappy' ? '⌨ espaço/↑ ou clique na tela pra bater asa' : ''}
+                </div>
+              </div>
+              ${
+                def.hasPreview
+                  ? `<div class="ee-side-col">
+                      <div class="ee-preview-block"><span>próxima</span><canvas id="ee-next-canvas" width="64" height="64"></canvas></div>
+                      <div class="ee-preview-block"><span>guardada</span><canvas id="ee-hold-canvas" width="64" height="64"></canvas></div>
+                    </div>`
+                  : ''
+              }
+            </div>
+            ${scoreboardHtml()}
           </div>
         </div>`;
       root.querySelector('#ee-close').addEventListener('click', close);

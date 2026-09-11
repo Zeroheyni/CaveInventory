@@ -1,7 +1,10 @@
 // Easter egg — Cobrinha clássica em canvas puro, sem lib externa
 // (mesmo espírito zero-dependência do resto do projeto). Ver uso em
 // src/screens/easterEggGames.js.
-const CELL = 18;
+import { readThemeColors } from './theme.js';
+import { sfx } from './sound.js';
+
+const CELL = 20;
 const TICK_MS = 130;
 
 // devolve { start(), stop(), handleKey(e) } -- onScoreChange(score) a
@@ -20,6 +23,7 @@ export function createSnakeGame(canvas, { onScoreChange, onGameOver }) {
   let score;
   let timer = null;
   let running = false;
+  let colors = readThemeColors();
 
   function randomFood() {
     let cell;
@@ -42,15 +46,34 @@ export function createSnakeGame(canvas, { onScoreChange, onGameOver }) {
   }
 
   function draw() {
-    ctx.fillStyle = '#0a1114';
+    colors = readThemeColors();
+    ctx.fillStyle = colors.bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-    ctx.fillStyle = '#ff5a5a';
-    ctx.fillRect(food.x * CELL + 2, food.y * CELL + 2, CELL - 4, CELL - 4);
+    // grade de cada célula que a cobra pode andar -- pedido explícito
+    // pra deixar visível onde cada "passo" cabe, não só a borda de
+    // fora.
+    ctx.strokeStyle = colors.line;
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= cols; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * CELL + 0.5, 0);
+      ctx.lineTo(x * CELL + 0.5, canvas.height);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= rows; y++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * CELL + 0.5);
+      ctx.lineTo(canvas.width, y * CELL + 0.5);
+      ctx.stroke();
+    }
+
+    ctx.fillStyle = colors.danger;
+    ctx.fillRect(food.x * CELL + 3, food.y * CELL + 3, CELL - 6, CELL - 6);
 
     snake.forEach((seg, i) => {
-      ctx.fillStyle = i === 0 ? '#5ad4ff' : '#2f8fb3';
-      ctx.fillRect(seg.x * CELL + 1, seg.y * CELL + 1, CELL - 2, CELL - 2);
+      ctx.fillStyle = i === 0 ? colors.accent : colors.accentCore;
+      ctx.fillRect(seg.x * CELL + 2, seg.y * CELL + 2, CELL - 4, CELL - 4);
     });
   }
 
@@ -62,6 +85,7 @@ export function createSnakeGame(canvas, { onScoreChange, onGameOver }) {
     const hitSelf = snake.some((s) => s.x === head.x && s.y === head.y);
     if (hitWall || hitSelf) {
       stop();
+      sfx.gameOver();
       onGameOver && onGameOver(score);
       return;
     }
@@ -69,6 +93,7 @@ export function createSnakeGame(canvas, { onScoreChange, onGameOver }) {
     snake.unshift(head);
     if (head.x === food.x && head.y === food.y) {
       score += 1;
+      sfx.eat();
       onScoreChange && onScoreChange(score);
       food = randomFood();
     } else {

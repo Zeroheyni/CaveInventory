@@ -10,7 +10,7 @@ export async function submitGameScore(game, score, playerName) {
 export async function listHighScores(campaignId, game, limit = 10) {
   const { data, error } = await supabase
     .from('game_high_scores')
-    .select('player_name, best_score, achieved_at')
+    .select('profile_id, player_name, best_score, achieved_at')
     .eq('campaign_id', campaignId)
     .eq('game', game)
     .order('best_score', { ascending: false })

@@ -1,10 +1,14 @@
 // Easter egg — Tetris clássico em canvas puro, sem lib externa. Grid
 // 10x20 padrão, 7 peças com "7-bag" (cada peça aparece uma vez antes
-// de repetir, evita sequência de azar), rotação simples com uma
-// tentativa de "kick" lateral se a rotação não couber no lugar.
+// de repetir), rotação simples com uma tentativa de "kick" lateral se
+// a rotação não couber, peça guardada (tecla C), preview da próxima
+// peça/peça guardada e "peça fantasma" mostrando onde vai cair.
+import { readThemeColors } from './theme.js';
+import { sfx } from './sound.js';
+
 const COLS = 10;
 const ROWS = 20;
-const CELL = 18;
+const CELL = 20;
 const DROP_MS = 550;
 
 const SHAPES = {
@@ -25,30 +29,46 @@ function rotateMatrix(m) {
   return out;
 }
 
-export function createTetrisGame(canvas, { onScoreChange, onGameOver }) {
+// canvas principal é o tabuleiro; nextCanvas/holdCanvas (opcionais) são
+// os quadradinhos de preview da próxima peça e da peça guardada.
+export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange, onGameOver }) {
   const ctx = canvas.getContext('2d');
   let board;
   let bag = [];
   let piece;
+  let nextType;
+  let heldType = null;
+  let canHold = true;
   let score;
   let timer = null;
   let running = false;
+  let colors = readThemeColors();
 
   function nextFromBag() {
     if (bag.length === 0) bag = Object.keys(SHAPES).sort(() => Math.random() - 0.5);
     return bag.pop();
   }
 
-  function spawnPiece() {
-    const type = nextFromBag();
+  function buildPiece(type) {
     const def = SHAPES[type];
     const matrix = def.matrix.map((row) => row.slice());
-    const p = { type, color: def.color, matrix, x: Math.floor((COLS - matrix.length) / 2), y: -1 };
+    return { type, color: def.color, matrix, x: Math.floor((COLS - matrix.length) / 2), y: -1 };
+  }
+
+  // `forceType` é usado pela troca com a peça guardada -- nesse caso
+  // não mexe no saco/`nextType`, só materializa o tipo que já estava
+  // guardado.
+  function spawnPiece(forceType) {
+    const type = forceType || nextType;
+    if (!forceType) nextType = nextFromBag();
+    const p = buildPiece(type);
     if (!canPlace(p.matrix, p.x, p.y + 1)) {
       stop();
+      sfx.gameOver();
       onGameOver && onGameOver(score);
       return null;
     }
+    drawPreview(nextCanvas, nextType);
     return p;
   }
 
@@ -65,6 +85,12 @@ export function createTetrisGame(canvas, { onScoreChange, onGameOver }) {
     return true;
   }
 
+  function ghostY() {
+    let gy = piece.y;
+    while (canPlace(piece.matrix, piece.x, gy + 1)) gy++;
+    return gy;
+  }
+
   function lockPiece() {
     piece.matrix.forEach((row, y) =>
       row.forEach((cell, x) => {
@@ -77,8 +103,12 @@ export function createTetrisGame(canvas, { onScoreChange, onGameOver }) {
     const cleared = clearLines();
     if (cleared > 0) {
       score += LINE_SCORE[cleared] || 0;
+      sfx.lineClear(cleared);
       onScoreChange && onScoreChange(score);
+    } else {
+      sfx.drop();
     }
+    canHold = true;
     piece = spawnPiece();
   }
 
@@ -93,16 +123,47 @@ export function createTetrisGame(canvas, { onScoreChange, onGameOver }) {
     return cleared;
   }
 
+  function drawGrid() {
+    ctx.strokeStyle = colors.line;
+    ctx.lineWidth = 1;
+    for (let x = 0; x <= COLS; x++) {
+      ctx.beginPath();
+      ctx.moveTo(x * CELL + 0.5, 0);
+      ctx.lineTo(x * CELL + 0.5, canvas.height);
+      ctx.stroke();
+    }
+    for (let y = 0; y <= ROWS; y++) {
+      ctx.beginPath();
+      ctx.moveTo(0, y * CELL + 0.5);
+      ctx.lineTo(canvas.width, y * CELL + 0.5);
+      ctx.stroke();
+    }
+  }
+
   function draw() {
-    ctx.fillStyle = '#0a1114';
+    colors = readThemeColors();
+    ctx.fillStyle = colors.bg;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
+    drawGrid();
 
     board.forEach((row, y) =>
       row.forEach((color, x) => {
         if (color) drawCell(x, y, color);
       })
     );
+
     if (piece) {
+      // peça fantasma -- prévia translúcida de onde a peça cai se
+      // continuar descendo reto a partir da posição atual.
+      const gy = ghostY();
+      ctx.globalAlpha = 0.22;
+      piece.matrix.forEach((row, y) =>
+        row.forEach((cell, x) => {
+          if (cell && gy + y >= 0) drawCell(piece.x + x, gy + y, piece.color);
+        })
+      );
+      ctx.globalAlpha = 1;
+
       piece.matrix.forEach((row, y) =>
         row.forEach((cell, x) => {
           if (cell && piece.y + y >= 0) drawCell(piece.x + x, piece.y + y, piece.color);
@@ -113,6 +174,28 @@ export function createTetrisGame(canvas, { onScoreChange, onGameOver }) {
   function drawCell(x, y, color) {
     ctx.fillStyle = color;
     ctx.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
+  }
+
+  // desenha o mini-preview de próxima peça/peça guardada num canvas à
+  // parte (pode não existir -- os dois são opcionais).
+  function drawPreview(previewCanvas, type) {
+    if (!previewCanvas) return;
+    const pctx = previewCanvas.getContext('2d');
+    pctx.fillStyle = colors.bg;
+    pctx.fillRect(0, 0, previewCanvas.width, previewCanvas.height);
+    if (!type) return;
+    const def = SHAPES[type];
+    const n = def.matrix.length;
+    const cell = Math.floor(previewCanvas.width / 4);
+    const offsetX = Math.floor((previewCanvas.width - n * cell) / 2);
+    const offsetY = Math.floor((previewCanvas.height - n * cell) / 2);
+    def.matrix.forEach((row, y) =>
+      row.forEach((v, x) => {
+        if (!v) return;
+        pctx.fillStyle = def.color;
+        pctx.fillRect(offsetX + x * cell + 1, offsetY + y * cell + 1, cell - 2, cell - 2);
+      })
+    );
   }
 
   function tick() {
@@ -133,6 +216,23 @@ export function createTetrisGame(canvas, { onScoreChange, onGameOver }) {
     lockPiece();
     draw();
   }
+  function holdSwap() {
+    if (!piece || !canHold) return;
+    const currentType = piece.type;
+    if (heldType === null) {
+      heldType = currentType;
+      piece = spawnPiece();
+    } else {
+      const swapType = heldType;
+      heldType = currentType;
+      piece = spawnPiece(swapType);
+    }
+    if (!piece) return; // spawnPiece já tratou o fim de jogo
+    canHold = false;
+    sfx.hold();
+    drawPreview(holdCanvas, heldType);
+    draw();
+  }
 
   function handleKey(e) {
     if (!piece) return;
@@ -149,17 +249,25 @@ export function createTetrisGame(canvas, { onScoreChange, onGameOver }) {
     } else if (e.key === 'ArrowUp' || e.key === 'w') {
       e.preventDefault();
       const rotated = rotateMatrix(piece.matrix);
-      if (canPlace(rotated, piece.x, piece.y)) piece.matrix = rotated;
-      else if (canPlace(rotated, piece.x - 1, piece.y)) {
+      if (canPlace(rotated, piece.x, piece.y)) {
+        piece.matrix = rotated;
+        sfx.rotate();
+      } else if (canPlace(rotated, piece.x - 1, piece.y)) {
         piece.matrix = rotated;
         piece.x -= 1;
+        sfx.rotate();
       } else if (canPlace(rotated, piece.x + 1, piece.y)) {
         piece.matrix = rotated;
         piece.x += 1;
+        sfx.rotate();
       }
     } else if (e.key === ' ') {
       e.preventDefault();
       hardDrop();
+      return;
+    } else if (e.key === 'c' || e.key === 'C') {
+      e.preventDefault();
+      holdSwap();
       return;
     } else {
       return;
@@ -171,7 +279,12 @@ export function createTetrisGame(canvas, { onScoreChange, onGameOver }) {
     board = Array.from({ length: ROWS }, () => Array(COLS).fill(null));
     bag = [];
     score = 0;
+    heldType = null;
+    canHold = true;
+    colors = readThemeColors();
+    nextType = nextFromBag();
     piece = spawnPiece();
+    drawPreview(holdCanvas, heldType);
     draw();
     onScoreChange && onScoreChange(score);
     running = true;

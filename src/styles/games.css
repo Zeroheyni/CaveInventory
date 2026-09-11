@@ -19,8 +19,6 @@
 .easter-egg-close:hover{ color: var(--danger); border-color: var(--danger); }
 
 .ee-title{ font-family: var(--font-display); font-size:14px; letter-spacing:0.08em; color: var(--ink); text-align:center; }
-.ee-score-live{ font-family: var(--font-mono); font-size:12px; color: var(--ink-dim); margin-left:10px; }
-.ee-score-live b{ color: var(--accent); }
 
 .ee-game-tabs{ display:flex; gap:8px; }
 .ee-game-tab{
@@ -30,8 +28,28 @@
 .ee-game-tab:hover{ color: var(--ink); }
 .ee-game-tab.active{ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); }
 
-#ee-canvas{ border:1px solid var(--stone-line); border-radius:6px; image-rendering: pixelated; background:#0a1114; }
+.ee-play-area{ display:flex; gap:14px; align-items:flex-start; }
+.ee-canvas-col{ display:flex; flex-direction:column; align-items:center; gap:8px; }
+#ee-canvas{
+  border:3px solid var(--accent-core); border-radius:8px; image-rendering: pixelated;
+  background: var(--stone-900); box-shadow: 0 0 0 1px var(--accent-faint), 0 0 22px var(--accent-faint);
+}
 .ee-hint{ font-size:10.5px; color: var(--ink-faint); text-align:center; }
+
+.ee-side-col{ display:flex; flex-direction:column; gap:12px; padding-top:2px; }
+.ee-preview-block{ display:flex; flex-direction:column; align-items:center; gap:5px; }
+.ee-preview-block span{ font-family: var(--font-mono); font-size:9.5px; letter-spacing:0.06em; color: var(--ink-faint); text-transform:uppercase; }
+.ee-preview-block canvas{ border:2px solid var(--stone-line); border-radius:6px; background: var(--stone-900); }
+
+.ee-scoreboard{ display:flex; gap:8px; width:100%; }
+.ee-score-item{
+  flex:1; display:flex; flex-direction:column; align-items:center; gap:2px; padding:8px 6px;
+  border-radius:8px; background: var(--stone-900); border:1px solid var(--stone-line); transition: all 0.2s ease;
+}
+.ee-score-item span{ font-family: var(--font-mono); font-size:9px; letter-spacing:0.05em; color: var(--ink-faint); text-transform:uppercase; }
+.ee-score-item b{ font-family: var(--font-display); font-size:16px; color: var(--ink); }
+.ee-score-item.ee-beat{ border-color: var(--accent-core); background: var(--accent-faint); }
+.ee-score-item.ee-beat b{ color: var(--accent); }
 
 .ee-final-score{ font-family: var(--font-display); font-size:26px; color: var(--accent); }
 .ee-new-record{ font-family: var(--font-mono); font-size:12.5px; color:#4ade80; animation: fade-in 0.3s ease; }
