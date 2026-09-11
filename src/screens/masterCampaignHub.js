@@ -55,6 +55,8 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
   let mode = initialMode || 'ficha';
   let theme = profile.theme || 'caverna-azul';
   const mounted = Object.fromEntries(MODES.map((m) => [m, false]));
+  let easterEggClicks = 0; // fica fora do render() -- não pode zerar toda vez que a tela é reconstruída
+  let easterEggResetTimer = null;
 
   function render() {
     // render() sempre reconstrói o DOM inteiro (chamado de novo depois que o
@@ -114,6 +116,29 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
 
   function wireChrome() {
     document.getElementById('hub-back-btn').addEventListener('click', () => onBack && onBack());
+
+    // easter egg -- ver src/screens/easterEggGames.js. Clicar 5x no
+    // pontinho decorativo do título em menos de 2s destrava o overlay
+    // dos minijogos escondidos (Cobrinha/Tetris). Contador fica em
+    // estado FORA do render() (easterEggClicks lá em cima) porque
+    // wireChrome() reata o listener a cada render() -- se o contador
+    // também vivesse aqui dentro, zerava toda vez que o mestre trocava
+    // de aba no meio da contagem.
+    const dot = document.querySelector('.title .dot');
+    if (dot) {
+      dot.addEventListener('click', async () => {
+        easterEggClicks += 1;
+        clearTimeout(easterEggResetTimer);
+        easterEggResetTimer = setTimeout(() => {
+          easterEggClicks = 0;
+        }, 2000);
+        if (easterEggClicks >= 5) {
+          easterEggClicks = 0;
+          const { renderEasterEggOverlay } = await import('./easterEggGames.js');
+          renderEasterEggOverlay({ campaign, profile });
+        }
+      });
+    }
 
     const sideNav = document.getElementById('side-nav');
     document.getElementById('side-nav-toggle').addEventListener('click', () => {

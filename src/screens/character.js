@@ -2788,6 +2788,31 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   }
   document.getElementById('copy-fab').addEventListener('click', copyInventoryToClipboard);
 
+  // easter egg -- ver src/screens/easterEggGames.js. Clicar 5x no
+  // pontinho decorativo do título em menos de 2s destrava o overlay
+  // dos minijogos escondidos (Cobrinha/Tetris) com ranking da
+  // campanha. Sem cursor:pointer nem hover -- ninguém percebe que é
+  // clicável, de propósito. import() dinâmico: o código dos jogos só
+  // baixa se alguém realmente achar o easter egg.
+  (function wireEasterEgg() {
+    let clicks = 0;
+    let resetTimer = null;
+    const dot = document.querySelector('.title .dot');
+    if (!dot) return;
+    dot.addEventListener('click', async () => {
+      clicks += 1;
+      clearTimeout(resetTimer);
+      resetTimer = setTimeout(() => {
+        clicks = 0;
+      }, 2000);
+      if (clicks >= 5) {
+        clicks = 0;
+        const { renderEasterEggOverlay } = await import('./easterEggGames.js');
+        renderEasterEggOverlay({ campaign, profile });
+      }
+    });
+  })();
+
   // ---- desfazer: captura o estado antes de qualquer clique/drop e compara depois ----
   document.addEventListener('click', (e)=>{
     if(e.target.closest('#undo-trigger')) return; // não grava o próprio clique de "desfazer" como uma ação anulável
