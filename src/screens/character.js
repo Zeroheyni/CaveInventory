@@ -762,7 +762,13 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     });
     renderAll();
     renderCampaignStrip();
-    flashStatus('ATUALIZADO POR OUTRO DISPOSITIVO');
+    // NÃO usa flashStatus: ele agenda um saveState() 1,8s depois, e aqui
+    // essa aba só RECEBEU dados -- regravar o que tem na memória por
+    // cima do servidor foi o que transformou "uma aba recebeu uma
+    // atualização estranha" em "o inventário foi sobrescrito" (sessão
+    // do mestre regravando a linha da Frida e do Craig em 28/08 sem
+    // ninguém editar nada). Receber não escreve.
+    showStatusOnly('ATUALIZADO POR OUTRO DISPOSITIVO');
   }
 
   // encadeia todo save nessa promise -- sem isso, duas gravações desta
@@ -848,6 +854,16 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     el.textContent = 'TERMINAL DE CAMPO // ' + msg;
     clearTimeout(saveTimer);
     saveTimer = setTimeout(()=>{ el.textContent = 'TERMINAL DE CAMPO // sincronizado'; saveState(); }, 1800);
+  }
+  // igual ao flashStatus, mas SEM gravar nada -- pra avisos de quando essa
+  // aba só recebeu dados de fora (ver applyRemoteRow).
+  let statusOnlyTimer = null;
+  function showStatusOnly(msg){
+    const el = document.getElementById('save-status');
+    if(!el) return;
+    el.textContent = 'TERMINAL DE CAMPO // ' + msg;
+    clearTimeout(statusOnlyTimer);
+    statusOnlyTimer = setTimeout(()=>{ el.textContent = 'TERMINAL DE CAMPO // sincronizado'; }, 1800);
   }
   function uid(){ return 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2,7); }
   function round(n){ return Math.round(n * 100) / 100; }
