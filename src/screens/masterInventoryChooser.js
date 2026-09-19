@@ -7,6 +7,11 @@
 import { escapeHtml } from '../shared/gameData.js';
 import { supabase } from '../supabaseClient.js';
 import { renderCharacterScreen } from './character.js';
+import { listBackups, restoreBackup, createBackup, BACKUP_REASON_LABELS } from '../inventoryBackups.js';
+
+function formatBackupDate(iso) {
+  return new Date(iso).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
+}
 
 export function renderMasterInventoryChooser(app, { session, profile, campaign, topApp, escapeBack }) {
   const campaignId = campaign.id;
@@ -14,6 +19,31 @@ export function renderMasterInventoryChooser(app, { session, profile, campaign, 
   let list = [];
   let loaded = false;
   let activeTab = 'jogadores'; // 'jogadores' | 'npcs' -- mesma ideia de abas do painel de combate, pra não misturar player com NPC no mesmo grid
+
+  // painel de backups (db/047) -- o banco grava as fotos sozinho, aqui o
+  // mestre escolhe um personagem, vê o histórico e restaura uma versão.
+  let backupCharId = '';
+  let backups = [];
+  let backupsLoading = false;
+  let backupMsg = '';
+
+  async function loadBackups() {
+    if (!backupCharId) {
+      backups = [];
+      render();
+      return;
+    }
+    backupsLoading = true;
+    render();
+    try {
+      backups = await listBackups(backupCharId);
+    } catch (err) {
+      backups = [];
+      backupMsg = 'erro ao carregar backups: ' + err.message;
+    }
+    backupsLoading = false;
+    render();
+  }
 
   async function load() {
     const { data, error } = await supabase
@@ -53,10 +83,46 @@ export function renderMasterInventoryChooser(app, { session, profile, campaign, 
             ? `<p class="admin-empty">${activeTab === 'jogadores' ? 'nenhum jogador nessa campanha ainda.' : 'nenhum NPC completo criado ainda.'}</p>`
             : `<div class="ficha-dash-grid">${shown.map(chooserCard).join('')}</div>`
         }
+        ${backupPanel()}
       `
       }
     `;
     wireEvents();
+  }
+
+  function backupPanel() {
+    return `
+      <div class="inv-backup-panel">
+        <div class="ficha-xp-panel-head">🛟 BACKUPS DOS INVENTÁRIOS</div>
+        <p class="section-hint">O sistema guarda uma cópia sozinho antes de qualquer gravação que zere ou corte pela metade um inventário, e uma a cada 15 min durante o uso. Restaurar nunca perde nada: o estado de agora também vira um backup.</p>
+        <div class="inv-backup-controls">
+          <select id="inv-backup-char" class="slot-select">
+            <option value="">escolha um personagem…</option>
+            ${list.map((c) => `<option value="${c.id}" ${backupCharId === c.id ? 'selected' : ''}>${escapeHtml(c.name)}${c.is_npc ? ' (NPC)' : ''}</option>`).join('')}
+          </select>
+          <button type="button" class="btn btn-ghost" id="inv-backup-now" ${backupCharId ? '' : 'disabled'}>salvar backup agora</button>
+        </div>
+        ${backupMsg ? `<p class="${backupMsg.endsWith('✓') ? 'section-hint' : 'admin-error'}" style="display:block;">${escapeHtml(backupMsg)}</p>` : ''}
+        ${
+          !backupCharId
+            ? ''
+            : backupsLoading
+              ? '<p class="admin-empty">carregando...</p>'
+              : backups.length === 0
+                ? '<p class="admin-empty">nenhum backup desse personagem ainda (só é criado quando ele tem algo no inventário).</p>'
+                : `<div class="inv-backup-list">${backups
+                    .map(
+                      (b) => `
+            <div class="inv-backup-row">
+              <span class="inv-backup-date">${formatBackupDate(b.created_at)}</span>
+              <span class="inv-backup-info">${b.items_count} ${b.items_count === 1 ? 'item' : 'itens'} · ${b.containers_count} ${b.containers_count === 1 ? 'recipiente' : 'recipientes'}</span>
+              <span class="inv-backup-reason inv-backup-reason-${b.reason}">${BACKUP_REASON_LABELS[b.reason] || b.reason}</span>
+              <button type="button" class="btn btn-ghost" data-restore-backup="${b.id}" data-restore-label="${escapeHtml(formatBackupDate(b.created_at) + ' (' + b.items_count + ' itens)')}">restaurar</button>
+            </div>`
+                    )
+                    .join('')}</div>`
+        }
+      </div>`;
   }
 
   function chooserCard(c) {
@@ -74,11 +140,49 @@ export function renderMasterInventoryChooser(app, { session, profile, campaign, 
   function wireEvents() {
     if (wired) return;
     wired = true;
-    app.addEventListener('click', (e) => {
+    app.addEventListener('change', (e) => {
+      const sel = e.target.closest('#inv-backup-char');
+      if (!sel) return;
+      backupCharId = sel.value;
+      backupMsg = '';
+      loadBackups();
+    });
+
+    app.addEventListener('click', async (e) => {
       const tabBtn = e.target.closest('button[data-inv-tab]');
       if (tabBtn) {
         activeTab = tabBtn.dataset.invTab;
         render();
+        return;
+      }
+
+      const nowBtn = e.target.closest('#inv-backup-now');
+      if (nowBtn) {
+        if (!backupCharId) return;
+        try {
+          await createBackup(backupCharId);
+          backupMsg = '';
+        } catch (err) {
+          backupMsg = 'erro ao criar backup: ' + err.message;
+        }
+        await loadBackups();
+        return;
+      }
+
+      const restoreBtn = e.target.closest('button[data-restore-backup]');
+      if (restoreBtn) {
+        const c = list.find((x) => x.id === backupCharId);
+        const ok = window.confirm(
+          `Restaurar o inventário de ${c ? c.name : 'esse personagem'} para a versão de ${restoreBtn.dataset.restoreLabel}?\n\nO inventário de AGORA também é guardado como backup ("antes de restaurar"), então dá pra desfazer.`
+        );
+        if (!ok) return;
+        try {
+          await restoreBackup(restoreBtn.dataset.restoreBackup);
+          backupMsg = 'inventário restaurado ✓';
+        } catch (err) {
+          backupMsg = 'erro ao restaurar: ' + err.message;
+        }
+        await loadBackups();
         return;
       }
       const btn = e.target.closest('button[data-open-inv]');

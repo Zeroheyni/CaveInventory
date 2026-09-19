@@ -128,3 +128,21 @@
   .ficha-header-card{ flex-direction:column; text-align:center; }
   .ficha-bars{ grid-template-columns: 1fr; }
 }
+
+/* ---- backups dos inventários (painel do mestre, db/047) ---- */
+.inv-backup-panel{ margin-top:18px; background: var(--stone-800); border:1px solid var(--stone-line); border-radius:10px; padding:16px; }
+.inv-backup-controls{ display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:10px; }
+.inv-backup-controls select{ flex:1; min-width:180px; }
+.inv-backup-list{ display:flex; flex-direction:column; gap:4px; max-height:280px; overflow-y:auto; }
+.inv-backup-row{
+  display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:7px;
+  background: var(--stone-900); border:1px solid var(--stone-line); font-family: var(--font-mono); font-size:11.5px;
+}
+.inv-backup-date{ color: var(--ink); flex-shrink:0; }
+.inv-backup-info{ color: var(--ink-dim); flex:1; }
+.inv-backup-reason{ font-size:10px; color: var(--ink-faint); white-space:nowrap; }
+.inv-backup-reason-zerado, .inv-backup-reason-reducao{ color: var(--danger); }
+.inv-backup-row .btn{ padding:4px 10px; font-size:11px; }
+@media (max-width: 640px){
+  .inv-backup-row{ flex-wrap:wrap; }
+}
