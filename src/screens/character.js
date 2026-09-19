@@ -669,6 +669,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   }
 
   let lastWrittenUpdatedAt = null;
+  // versão do save que está VOO agora (já foi enviada, resposta ainda
+  // não voltou) -- o evento de Realtime dessa própria gravação costuma
+  // chegar ANTES da resposta HTTP, quando lastWrittenUpdatedAt ainda
+  // não foi atualizado; sem isso ele parecia uma mudança de outra sessão.
+  let pendingUpdatedAt = null;
   // inventory_updated_at que essa aba sabe ser o real -- gravação só é
   // aceita se ainda bater com esse valor no servidor (ver saveState).
   // Sem isso, uma aba que ficou muito tempo em segundo plano (perde o
@@ -679,18 +684,62 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   // verdade pro inventário.
   let knownUpdatedAt = null;
 
+  // Trata um UPDATE que chegou pelo tempo real. Duas regras, aprendidas
+  // do jeito difícil (alerta de "conflito" aparecendo sem ninguém ter
+  // editado o mesmo inventário):
+  //
+  // 1) NÃO confia no conteúdo do inventário (`row.data`) que vem no
+  //    payload. `characters` não tem REPLICA IDENTITY FULL, então o
+  //    Realtime omite colunas grandes que não mudaram (TOAST) -- um
+  //    UPDATE qualquer (HP no combate, XP dado pelo mestre...) chegava
+  //    sem `data` e o `row.data || {}` esvaziava o inventário na tela.
+  //    Quando o inventário mudou de verdade, busca a linha inteira.
+  // 2) Só reage a versão de inventário MAIS NOVA que a que essa aba já
+  //    conhece. Antes só ignorava o eco EXATAMENTE igual à última
+  //    gravação -- um eco atrasado de um save ANTERIOR (chegando depois
+  //    de um save mais novo já concluído) passava, voltava o
+  //    knownUpdatedAt pra versão velha e o próximo save era recusado
+  //    como conflito falso. Comparação por instante, não por string (o
+  //    Postgres devolve o timestamp em formato diferente do que o JS
+  //    mandou, +00:00 vs Z).
+  function onRemoteCharacterUpdate(payload){
+    const row = payload.new;
+    if(!row) return;
+    applyRemoteScalars(row);
+    if(!row.inventory_updated_at) return;
+    const remoteTs = new Date(row.inventory_updated_at).getTime();
+    const sameInstant = (v) => v && new Date(v).getTime() === remoteTs;
+    if(sameInstant(lastWrittenUpdatedAt) || sameInstant(pendingUpdatedAt)) return; // eco da nossa própria gravação
+    if(knownUpdatedAt && remoteTs <= new Date(knownUpdatedAt).getTime()) return; // nada novo no inventário (ou eco velho)
+    supabase.from('characters').select('*').eq('id', characterId).maybeSingle().then(({ data: fresh }) => {
+      if(fresh) applyRemoteRow(fresh);
+    });
+  }
+
+  // campos que NÃO fazem parte da versão do inventário (status e
+  // adicional de carga, mexidos pelo mestre/ficha) -- aplica direto
+  // do payload, são colunas pequenas e sempre presentes.
+  function applyRemoteScalars(row){
+    let changed = false;
+    if(typeof row.max_carga_bonus === 'number' && row.max_carga_bonus !== state.maxCargaBonus){
+      state.maxCargaBonus = row.max_carga_bonus;
+      changed = true;
+    }
+    ['vitalidade','forca','agilidade','destreza','inteligencia','estamina','observacao'].forEach(k => {
+      if(typeof row[k] === 'number' && state.status[k] !== row[k]){
+        state.status[k] = row[k];
+        changed = true;
+      }
+    });
+    if(!changed) return;
+    state.maxCarga = 3 * (typeof state.status.forca === 'number' ? state.status.forca : 10) + state.maxCargaBonus;
+    renderAll();
+  }
+
   function subscribeRealtime(){
     activeChannel = supabase
       .channel('character-' + characterId)
-      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'characters', filter: `id=eq.${characterId}` }, (payload) => {
-        const row = payload.new;
-        // compara por instante, não por string -- o Postgres devolve o
-        // timestamp em formato diferente do que o JS mandou (+00:00 vs
-        // Z), então uma comparação de string nunca bate com a própria
-        // gravação e todo save próprio parecia "vindo de outro dispositivo".
-        if(!row || (row.inventory_updated_at && lastWrittenUpdatedAt && new Date(row.inventory_updated_at).getTime() === new Date(lastWrittenUpdatedAt).getTime())) return; // eco da nossa própria gravação
-        applyRemoteRow(row);
-      })
+      .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'characters', filter: `id=eq.${characterId}` }, onRemoteCharacterUpdate)
       .subscribe();
   }
 
@@ -764,12 +813,24 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       // dados velhos.
       let query = supabase.from('characters').update(payload).eq('id', characterId);
       if(knownUpdatedAt) query = query.eq('inventory_updated_at', knownUpdatedAt);
+      pendingUpdatedAt = updatedAt;
       const { data: rows, error } = await query.select('inventory_updated_at');
       if(error) throw error;
       if(!rows || rows.length === 0){
-        // conflito -- descarta essa gravação (não sobrescreve) e
-        // recarrega o estado real do servidor.
+        pendingUpdatedAt = null;
         const { data: fresh } = await supabase.from('characters').select('*').eq('id', characterId).maybeSingle();
+        // 0 linhas nem sempre é conflito: se a versão no servidor é a
+        // MESMA que essa aba já conhece, ninguém mexeu antes -- o
+        // update foi barrado por outro motivo (ex: falta de permissão
+        // pra gravar nesse personagem). Alertar "outra sessão salvou"
+        // aí é mentira e se repetia a cada clique.
+        if(fresh && knownUpdatedAt && new Date(fresh.inventory_updated_at).getTime() === new Date(knownUpdatedAt).getTime()){
+          console.error('gravação do inventário não aplicada, mas ninguém mais mexeu -- provável falta de permissão', characterId);
+          if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // sem permissão pra gravar';
+          return;
+        }
+        // conflito de verdade -- descarta essa gravação (não
+        // sobrescreve) e recarrega o estado real do servidor.
         if(fresh) applyRemoteRow(fresh);
         if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // conflito -- recarregado';
         window.alert('Outra sessão salvou uma mudança antes da sua. Pra não perder nada, os dados mais recentes foram recarregados -- se você fez alguma alteração agora, refaça ela.');
@@ -777,8 +838,9 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       }
       lastWrittenUpdatedAt = updatedAt;
       knownUpdatedAt = updatedAt;
+      pendingUpdatedAt = null;
       if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // sincronizado';
-    }catch(e){ console.error('falha ao salvar', e); if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // erro ao gravar'; }
+    }catch(e){ pendingUpdatedAt = null; console.error('falha ao salvar', e); if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // erro ao gravar'; }
   }
   function flashStatus(msg){
     const el = document.getElementById('save-status');
