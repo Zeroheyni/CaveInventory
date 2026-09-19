@@ -3,7 +3,7 @@
 // completa de qualquer um, e o menu de dar XP em massa (todos
 // marcados por padrão — o mestre só desmarca quem não deve ganhar).
 import { escapeHtml } from '../shared/gameData.js';
-import { listCampaignCharacterSheets, subscribeCampaignSheets, hpMax, estaminaMax, grantXp, hpBarClass } from '../characterSheet.js';
+import { listCampaignCharacterSheets, listCampaignNpcs, subscribeCampaignSheets, hpMax, estaminaMax, grantXp, hpBarClass } from '../characterSheet.js';
 import { renderFichaScreen } from './ficha.js';
 
 export function renderMasterFichaScreen(app, { session, profile, campaign, onBack }) {
@@ -11,6 +11,11 @@ export function renderMasterFichaScreen(app, { session, profile, campaign, onBac
   const $ = (id) => app.querySelector('#' + id);
 
   let characters = [];
+  // NPCs do banco com ficha COMPLETA (são os únicos com nível/XP -- o
+  // NPC de ficha simples é só Vida/Estamina/Dano). Ficam num grupo à
+  // parte no painel de dar XP, desmarcados por padrão: XP "da mesa"
+  // costuma ser só dos jogadores, o mestre marca o NPC quando quer.
+  let npcs = [];
   let selected = new Set();
   let firstLoad = true;
   let xpFeedback = '';
@@ -19,18 +24,20 @@ export function renderMasterFichaScreen(app, { session, profile, campaign, onBac
   let realtimeReloadTimer = null;
 
   async function load() {
-    const fresh = await listCampaignCharacterSheets(campaignId);
+    const [fresh, allNpcs] = await Promise.all([listCampaignCharacterSheets(campaignId), listCampaignNpcs(campaignId)]);
+    const freshNpcs = allNpcs.filter((n) => n.npc_sheet_type === 'completa');
     if (firstLoad) {
       firstLoad = false;
       selected = new Set(fresh.map((c) => c.id));
     } else {
-      const freshIds = new Set(fresh.map((c) => c.id));
+      const freshIds = new Set([...fresh, ...freshNpcs].map((c) => c.id));
       selected = new Set([...selected].filter((id) => freshIds.has(id)));
       fresh.forEach((c) => {
-        if (!characters.some((old) => old.id === c.id)) selected.add(c.id); // personagem novo entra marcado
+        if (!characters.some((old) => old.id === c.id)) selected.add(c.id); // jogador novo entra marcado (NPC novo não)
       });
     }
     characters = fresh;
+    npcs = freshNpcs;
     render();
     if (!channel) {
       // debounce -- evita remontar a ficha aberta (perdendo edição em
@@ -84,23 +91,32 @@ export function renderMasterFichaScreen(app, { session, profile, campaign, onBac
       </button>`;
   }
 
-  function xpPanel() {
+  function xpRow(c) {
     return `
-      <div class="ficha-xp-panel">
-        <div class="ficha-xp-panel-head">🎖 DAR XP</div>
-        ${
-          characters.length === 0
-            ? '<p class="admin-empty">nenhum personagem pra dar XP ainda.</p>'
-            : characters
-                .map(
-                  (c) => `
           <label class="ficha-xp-player-row">
             <input type="checkbox" data-xp-check="${c.id}" ${selected.has(c.id) ? 'checked' : ''}>
             ${c.avatar_url ? `<img src="${escapeHtml(c.avatar_url)}" alt="">` : '<img alt="">'}
             <span>${escapeHtml(c.name)} <span style="color:var(--ink-faint);">(Nv.${c.level})</span></span>
-          </label>`
-                )
-                .join('')
+          </label>`;
+  }
+
+  function xpPanel() {
+    const empty = characters.length === 0 && npcs.length === 0;
+    return `
+      <div class="ficha-xp-panel">
+        <div class="ficha-xp-panel-head">🎖 DAR XP</div>
+        ${
+          empty
+            ? '<p class="admin-empty">nenhum personagem pra dar XP ainda.</p>'
+            : `
+          ${npcs.length > 0 ? '<div class="ficha-xp-group-label">JOGADORES</div>' : ''}
+          ${characters.length === 0 ? '<p class="admin-empty">nenhum jogador ainda.</p>' : characters.map(xpRow).join('')}
+          ${
+            npcs.length > 0
+              ? `<div class="ficha-xp-group-label" title="só NPCs de ficha completa têm nível e XP">NPCS DO BANCO</div>
+                 ${npcs.map(xpRow).join('')}`
+              : ''
+          }`
         }
         <div class="ficha-xp-input-row">
           <input type="number" id="ficha-xp-amount" min="1" placeholder="quantidade de XP">
@@ -139,13 +155,13 @@ export function renderMasterFichaScreen(app, { session, profile, campaign, onBac
           return;
         }
         if (ids.length === 0) {
-          xpFeedback = 'marque pelo menos um jogador.';
+          xpFeedback = 'marque pelo menos um personagem.';
           render();
           return;
         }
         try {
           await grantXp(ids, amount);
-          xpFeedback = `+${amount} XP dado pra ${ids.length} jogador(es) ✓`;
+          xpFeedback = `+${amount} XP dado pra ${ids.length} personagem(ns) ✓`;
           await load();
         } catch (err) {
           xpFeedback = 'erro: ' + err.message;

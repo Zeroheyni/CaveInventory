@@ -152,7 +152,7 @@ export function renderNpcBankScreen(app, { session, profile, campaign, topApp, o
         <div class="npc-bank-card-head">
           ${npc.avatar_url ? `<img class="ficha-dash-avatar" src="${escapeHtml(npc.avatar_url)}" alt="">` : `<div class="ficha-dash-avatar"></div>`}
           <div class="npc-bank-card-info">
-            <div class="ficha-dash-name">${escapeHtml(npc.name)}</div>
+            <div class="ficha-dash-name">${escapeHtml(npc.name)}${isCompleta ? ` <span style="color:var(--ink-faint); font-weight:400;" title="${npc.xp} XP no nível atual">Nv.${npc.level}</span>` : ''}</div>
             <span class="npc-type-badge ${isCompleta ? 'completa' : 'simples'}">${isCompleta ? 'completa' : 'simples'}</span>
           </div>
         </div>
