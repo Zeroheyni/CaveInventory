@@ -606,6 +606,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     characterName = row.name || 'Personagem';
     knownUpdatedAt = row.inventory_updated_at;
     const d = row.data || {};
+    knownServerItems = Array.isArray(d.items) ? d.items.length : 0;
+    knownServerContainers = Array.isArray(d.containers) ? d.containers.length : 0;
 
     state.items = Array.isArray(d.items) ? d.items : [];
     state.containers = Array.isArray(d.containers) ? d.containers : [];
@@ -683,6 +685,9 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   // combate e status/avatar da ficha -- nada disso é conflito de
   // verdade pro inventário.
   let knownUpdatedAt = null;
+  // quantos itens/recipientes a ÚLTIMA versão conhecida do servidor tinha --
+  // base da trava anti-zeramento em doSaveState (ver db/048).
+  let knownServerItems = 0, knownServerContainers = 0;
 
   // Trata um UPDATE que chegou pelo tempo real. Duas regras, aprendidas
   // do jeito difícil (alerta de "conflito" aparecendo sem ninguém ter
@@ -747,6 +752,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     characterName = row.name || 'Personagem';
     knownUpdatedAt = row.inventory_updated_at;
     const d = row.data || {};
+    knownServerItems = Array.isArray(d.items) ? d.items.length : 0;
+    knownServerContainers = Array.isArray(d.containers) ? d.containers.length : 0;
     state.items = Array.isArray(d.items) ? d.items : [];
     state.containers = Array.isArray(d.containers) ? d.containers : [];
     state.order = Array.isArray(d.order) ? d.order : [];
@@ -812,6 +819,26 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         updated_at: updatedAt,
         inventory_updated_at: updatedAt,
       };
+      // TRAVA ANTI-ZERAMENTO (db/048): se essa gravação deixaria o inventário
+      // sem NENHUM item mas a versão que essa aba conhece do servidor tinha
+      // algo, pede confirmação explícita -- nunca zera em silêncio. Sem o
+      // wipeConfirmed o próprio banco recusa a gravação. Se o usuário
+      // cancelar, recarrega o servidor pra memória não ficar diferente
+      // da realidade.
+      const wouldWipe = (state.items.length === 0 && knownServerItems > 0) ||
+        (state.items.length + state.containers.length === 0 && knownServerItems + knownServerContainers > 0);
+      if(wouldWipe){
+        const had = knownServerItems + knownServerContainers;
+        const ok = window.confirm('ATENÇÃO: essa alteração deixa o inventário de ' + characterName + ' COMPLETAMENTE VAZIO (ele tinha ' + had + ' item(ns)/recipiente(s)).\n\nSe foi de propósito, confirme. Se não foi, cancele -- nada será apagado. (Uma cópia de segurança do inventário atual também é guardada.)');
+        if(!ok){
+          pendingUpdatedAt = null;
+          const { data: fresh } = await supabase.from('characters').select('*').eq('id', characterId).maybeSingle();
+          if(fresh) applyRemoteRow(fresh);
+          if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // gravação vazia cancelada -- inventário mantido';
+          return;
+        }
+        payload.data.wipeConfirmed = true;
+      }
       // grava só se ninguém mudou a linha desde a última vez que essa
       // aba a leu -- sem isso, uma aba que ficou muito tempo em
       // segundo plano (perde o tempo real) pode sobrescrever
@@ -821,7 +848,20 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       if(knownUpdatedAt) query = query.eq('inventory_updated_at', knownUpdatedAt);
       pendingUpdatedAt = updatedAt;
       const { data: rows, error } = await query.select('inventory_updated_at');
-      if(error) throw error;
+      if(error){
+        if(String(error.message || '').includes('inventario_zerado_bloqueado')){
+          // o banco barrou: essa aba achava que o inventário já estava
+          // vazio, mas o servidor tem itens. Recarrega em vez de insistir.
+          pendingUpdatedAt = null;
+          console.error('gravação barrada pelo banco (zeraria o inventário)', error.message);
+          const { data: fresh } = await supabase.from('characters').select('*').eq('id', characterId).maybeSingle();
+          if(fresh) applyRemoteRow(fresh);
+          if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // gravação barrada -- inventário mantido';
+          window.alert('O sistema barrou uma gravação que apagaria o inventário. Os dados do servidor foram recarregados e nada foi perdido.');
+          return;
+        }
+        throw error;
+      }
       if(!rows || rows.length === 0){
         pendingUpdatedAt = null;
         const { data: fresh } = await supabase.from('characters').select('*').eq('id', characterId).maybeSingle();
@@ -844,6 +884,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       }
       lastWrittenUpdatedAt = updatedAt;
       knownUpdatedAt = updatedAt;
+      knownServerItems = state.items.length;
+      knownServerContainers = state.containers.length;
       pendingUpdatedAt = null;
       if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // sincronizado';
     }catch(e){ pendingUpdatedAt = null; console.error('falha ao salvar', e); if(statusEl) statusEl.textContent = 'TERMINAL DE CAMPO // erro ao gravar'; }

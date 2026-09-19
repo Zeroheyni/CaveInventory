@@ -152,11 +152,12 @@ export async function getMyCharacter(campaignId, userId) {
   if (error) throw error;
   return data;
 }
-export async function updateCharacterData(characterId, data) {
-  const { error } = await supabase
-    .from('characters')
-    .update({ data, updated_at: new Date().toISOString() })
-    .eq('id', characterId);
+// acrescenta UMA entrada (item ou recipiente) ao inventário pessoal, direto
+// na linha atual do banco (db/048). Antes o app regravava o `data` inteiro
+// a partir de uma cópia lida antes -- se o inventário mudasse nesse meio
+// tempo, a cópia velha sobrescrevia tudo.
+export async function appendPersonalEntry(kind, entry) {
+  const { error } = await supabase.rpc('append_personal_inventory_entry', { p_kind: kind, p_entry: entry });
   if (error) throw error;
 }
 

@@ -146,3 +146,6 @@
 @media (max-width: 640px){
   .inv-backup-row{ flex-wrap:wrap; }
 }
+.inv-backup-file{ margin-bottom:14px; padding-bottom:12px; border-bottom:1px dashed var(--stone-line); }
+.inv-backup-file-title{ font-family: var(--font-mono); font-size:10px; letter-spacing:0.1em; color: var(--ink-faint); margin-bottom:8px; }
+.inv-import-label{ cursor:pointer; display:inline-flex; align-items:center; }

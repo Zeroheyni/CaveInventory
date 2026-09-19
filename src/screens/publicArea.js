@@ -18,7 +18,7 @@ import {
   revokeCompartmentPermission,
   setTransportAdmin,
   getMyCharacter,
-  updateCharacterData,
+  appendPersonalEntry,
 } from '../publicArea.js';
 
 let activeChannel = null;
@@ -225,19 +225,13 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     }
     if (type === 'item') {
       const it = itemsById().get(id);
-      const data = myCharacter.data || {};
       const newItem = {
         id: 'pub' + it.id, name: it.name, weight: it.weight, qty: it.qty, tag: it.tag,
         maxUses: it.max_uses, uses: it.uses, durability: it.durability, maxDurability: it.max_durability,
         description: it.description, ammoLinked: false, ammoItemId: null, damage: it.damage, range: it.range,
         pinned: false,
       };
-      const newData = {
-        ...data,
-        items: [...(data.items || []), newItem],
-        transportPersonal: [...(data.transportPersonal || []), { type: 'item', id: newItem.id }],
-      };
-      await updateCharacterData(myCharacter.id, newData);
+      await appendPersonalEntry('item', newItem);
       await deletePublicItem(id);
     } else {
       // recipientes com filhos não são movidos pro pessoal por enquanto (evita mesclar duas árvores)
@@ -251,13 +245,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
         id: 'pub' + c.id, name: c.name, ownWeight: c.own_weight, maxSlots: c.max_slots,
         collapsed: false, tag: c.tag, contents: [],
       };
-      const data = myCharacter.data || {};
-      const newData = {
-        ...data,
-        containers: [...(data.containers || []), newContainer],
-        transportPersonal: [...(data.transportPersonal || []), { type: 'container', id: newContainer.id }],
-      };
-      await updateCharacterData(myCharacter.id, newData);
+      await appendPersonalEntry('container', newContainer);
       await deletePublicContainer(id);
     }
     await load();
