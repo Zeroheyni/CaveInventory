@@ -88,6 +88,8 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3a9 9 0 100 18c1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a4 4 0 004-4c0-4.4-3.6-8-8-8z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="9.5" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="10.5" r="1" fill="currentColor" stroke="none"/></svg>
               </button>
               <div class="theme-panel" id="theme-panel" style="display:none;">
+                <div class="theme-group-label">ESPECIAIS 🏆</div>
+                <div class="theme-swatch-row" data-group="especial"></div>
                 <div class="theme-group-label">ESCUROS</div>
                 <div class="theme-swatch-row" data-group="dark"></div>
                 <div class="theme-group-label">CLAROS</div>
@@ -183,7 +185,7 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
   }
 
   function renderThemePanel() {
-    ['dark', 'light', 'neutral'].forEach((group) => {
+    ['especial', 'dark', 'light', 'neutral'].forEach((group) => {
       const row = document.querySelector(`.theme-swatch-row[data-group="${group}"]`);
       if (!row) return;
       row.innerHTML = THEMES.filter((t) => t.group === group)

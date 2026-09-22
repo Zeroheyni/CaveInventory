@@ -81,10 +81,10 @@ export const THEMES = [
 
   // ---- desbloqueáveis: só depois de segurar o recorde da campanha
   // pelo menos 1x naquele minijogo escondido (db/049) ----
-  {id:'lcd-cobra', label:'Tela de LCD', group:'dark', accent:'#9bbc0f', void:'#0f380f', unlockGame:'snake'},
-  {id:'bloco-sovietico', label:'Bloco Soviético', group:'dark', accent:'#45e0ff', void:'#0a1128', unlockGame:'tetris'},
-  {id:'ceu-passarinho', label:'Céu do Passarinho', group:'light', accent:'#ff9f1c', void:'#cdf3fb', unlockGame:'flappy'},
-  {id:'2048-classico', label:'2048 Clássico', group:'light', accent:'#f2b179', void:'#faf8ef', unlockGame:'2048'}
+  {id:'lcd-cobra', label:'Tela de LCD', group:'especial', accent:'#9bbc0f', void:'#0f380f', unlockGame:'snake'},
+  {id:'bloco-sovietico', label:'Bloco Soviético', group:'especial', accent:'#45e0ff', void:'#0a1128', unlockGame:'tetris'},
+  {id:'ceu-passarinho', label:'Céu do Passarinho', group:'especial', accent:'#ff9f1c', void:'#cdf3fb', unlockGame:'flappy'},
+  {id:'2048-classico', label:'2048 Clássico', group:'especial', accent:'#f2b179', void:'#faf8ef', unlockGame:'2048'}
 ];
 
 export function renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, ownerName, onBack }) {
@@ -135,6 +135,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3a9 9 0 100 18c1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a4 4 0 004-4c0-4.4-3.6-8-8-8z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="9.5" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="10.5" r="1" fill="currentColor" stroke="none"/></svg>
         </button>
         <div class="theme-panel" id="theme-panel" style="display:none;">
+          <div class="theme-group-label">ESPECIAIS 🏆</div>
+          <div class="theme-swatch-row" data-group="especial"></div>
           <div class="theme-group-label">ESCUROS</div>
           <div class="theme-swatch-row" data-group="dark"></div>
           <div class="theme-group-label">CLAROS</div>
@@ -1687,7 +1689,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     renderThemePanel();
   }
   function renderThemePanel(){
-    ['dark','light','neutral'].forEach(group => {
+    ['especial','dark','light','neutral'].forEach(group => {
       const row = document.querySelector(`.theme-swatch-row[data-group="${group}"]`);
       row.innerHTML = THEMES.filter(t => t.group === group).map(t => themeSwatchHtml(t, state.theme, unlockedGames)).join('');
     });
