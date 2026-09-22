@@ -26,8 +26,9 @@ export const GAME_THEME_LABELS = { snake: 'Cobrinha', tetris: 'Tetris', flappy: 
 // (cadeado + tooltip explicando qual jogo destrava) nos dois lugares.
 export function themeSwatchHtml(t, activeId, unlockedGames) {
   const locked = !!t.unlockGame && !(unlockedGames && unlockedGames.has(t.unlockGame));
+  const special = t.group === 'especial'; // ganha brilho/selo próprio no seletor -- ver .theme-swatch.special em theme.css
   const title = locked ? `${t.label} — destrave batendo o recorde da campanha no ${GAME_THEME_LABELS[t.unlockGame] || t.unlockGame}` : t.label;
-  return `<button type="button" class="theme-swatch ${activeId === t.id ? 'active' : ''} ${locked ? 'locked' : ''}" data-theme-id="${t.id}" ${locked ? 'data-locked="1"' : ''} title="${title}" style="--swatch-accent:${t.accent}; --swatch-void:${t.void};">${locked ? '<span class="theme-swatch-lock">🔒</span>' : ''}</button>`;
+  return `<button type="button" class="theme-swatch ${special ? 'special' : ''} ${activeId === t.id ? 'active' : ''} ${locked ? 'locked' : ''}" data-theme-id="${t.id}" ${locked ? 'data-locked="1"' : ''} title="${title}" style="--swatch-accent:${t.accent}; --swatch-void:${t.void};">${locked ? '<span class="theme-swatch-lock">🔒</span>' : ''}</button>`;
 }
 
 export const THEMES = [

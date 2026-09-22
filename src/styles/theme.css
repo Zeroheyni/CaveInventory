@@ -422,9 +422,12 @@
      de reaproveitar o grão/scanline genérico do resto do site. ---------- */
 
   /* Cobrinha -- o scanline compartilhado já é literalmente uma tela de
-     LCD; só fica mais forte aqui, e ganha uma sombra nos cantos (vidro
-     curvo do aparelho de verdade). */
-  html[data-theme="lcd-cobra"] body::after{ opacity:0.85; }
+     LCD; ganha uma sombra nos cantos (vidro curvo do aparelho de
+     verdade), rola devagar pra baixo (tela de CRT/LCD de verdade nunca
+     fica 100% parada) e treme de brilho de leve (flicker). */
+  html[data-theme="lcd-cobra"] body::after{ animation: lcd-scan-drift 5s linear infinite, lcd-flicker 3.2s ease-in-out infinite; }
+  @keyframes lcd-scan-drift{ from{ background-position-y:0; } to{ background-position-y:-4px; } }
+  @keyframes lcd-flicker{ 0%,100%{ opacity:0.85; } 45%{ opacity:0.76; } 55%{ opacity:0.93; } }
   html[data-theme="lcd-cobra"] body{
     background:
       radial-gradient(ellipse 120% 90% at 50% 45%, transparent 55%, rgba(0,0,0,0.4) 100%),
@@ -432,17 +435,25 @@
   }
 
   /* Tetris -- grid de tabuleiro (as mesmas linhas de célula que aparecem
-     dentro do jogo) por trás da página inteira, no lugar do grão. */
+     dentro do jogo) por trás da página inteira, no lugar do grão, com um
+     brilho diagonal passando devagar por cima -- luz batendo nos blocos. */
   html[data-theme="bloco-sovietico"] body::before{
-    opacity:0.1; mix-blend-mode:normal;
+    opacity:0.13; mix-blend-mode:normal;
     background-image:
+      linear-gradient(115deg, transparent 30%, var(--accent-faint) 45%, transparent 60%),
       linear-gradient(var(--stone-line) 1px, transparent 1px),
       linear-gradient(90deg, var(--stone-line) 1px, transparent 1px);
-    background-size: 26px 26px;
+    background-size: 220% 220%, 26px 26px, 26px 26px;
+    animation: block-shine 7s ease-in-out infinite;
+  }
+  @keyframes block-shine{
+    0%,100%{ background-position: -40% -40%, 0 0, 0 0; }
+    50%{ background-position: 140% 140%, 0 0, 0 0; }
   }
 
   /* Flappy Bird -- nuvens soltas no céu, sem grão nem scanline (é um
-     jogo fofo e diurno, não um terminal). */
+     jogo fofo e diurno, não um terminal), boiando devagar de um lado
+     pro outro igual nuvem de verdade. */
   html[data-theme="ceu-passarinho"] body::before{ opacity:0; }
   html[data-theme="ceu-passarinho"] body::after{ opacity:0; }
   html[data-theme="ceu-passarinho"] body{
@@ -452,11 +463,23 @@
       radial-gradient(ellipse 110px 40px at 55% 16%, rgba(255,255,255,0.6), transparent 72%),
       radial-gradient(ellipse 900px 500px at 50% 115%, var(--accent-faint), transparent 60%),
       var(--void);
+    animation: cloud-drift 22s ease-in-out infinite;
+  }
+  @keyframes cloud-drift{
+    0%,100%{ background-position: 12% 9%, 82% 6%, 55% 16%, 50% 115%; }
+    50%{ background-position: 17% 9%, 77% 6%, 51% 16%, 50% 115%; }
   }
 
-  /* 2048 -- sem grão nem scanline, o jogo original é liso e minimalista. */
+  /* 2048 -- sem grão nem scanline (o jogo original é liso e
+     minimalista), só o mesmo brilho suave que o resto do site já tem,
+     respirando bem devagar -- vida sem virar textura/ruído. */
   html[data-theme="2048-classico"] body::before{ opacity:0; }
   html[data-theme="2048-classico"] body::after{ opacity:0; }
+  html[data-theme="2048-classico"] body{ animation: tile-glow-drift 11s ease-in-out infinite; }
+  @keyframes tile-glow-drift{
+    0%,100%{ background-position: 50% -10%, 100% 100%; }
+    50%{ background-position: 47% -6%, 97% 96%; }
+  }
 
   .wrap{ max-width: 780px; margin: 0 auto; position:relative; z-index:1; }
 
@@ -466,6 +489,16 @@
   .title{ font-family: var(--font-display); font-weight:900; font-size:22px; letter-spacing:0.08em; color: var(--ink); text-shadow: 0 0 18px var(--accent-faint); display:flex; align-items:center; gap:10px; }
   .title .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); box-shadow: 0 0 10px 2px var(--accent); animation: pulse-dot 2.4s ease-in-out infinite; }
   @keyframes pulse-dot{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
+
+  /* o pontinho do cabeçalho é O GATILHO do easter egg (5 cliques --
+     ver wireEasterEgg em character.js/masterCampaignHub.js) -- pra
+     quem já destravou um tema especial, ele também ganha a forma/jeito
+     daquele jogo, um mimo extra só pra quem já achou o segredo. */
+  html[data-theme="lcd-cobra"] .title .dot{ animation: pulse-dot 1s steps(2, jump-none) infinite; } /* pisca "digital", sem suavização -- indicador de LCD de verdade */
+  html[data-theme="bloco-sovietico"] .title .dot{ border-radius:2px; } /* vira um quadradinho -- um bloco caindo, não um pontinho */
+  html[data-theme="ceu-passarinho"] .title .dot{ animation: pulse-dot 2.4s ease-in-out infinite, dot-flap 1.4s ease-in-out infinite; }
+  @keyframes dot-flap{ 0%,100%{ transform: translateY(0); } 45%{ transform: translateY(-3px); } }
+  html[data-theme="2048-classico"] .title .dot{ border-radius:3px; } /* vira uma mini peça de tabuleiro */
 
   /* ---------- SELETOR DE TEMA ---------- */
   .theme-picker-wrap{ position:relative; flex-shrink:0; }
@@ -496,6 +529,29 @@
   .theme-swatch.locked{ opacity:0.4; filter:grayscale(0.6); cursor:default; }
   .theme-swatch.locked:hover{ transform:none; }
   .theme-swatch-lock{ position:absolute; inset:0; z-index:1; display:flex; align-items:center; justify-content:center; font-size:13px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7)); }
+
+  /* ---------- temas ESPECIAIS (db/049) se destacando já no seletor --
+     maiores, com selo de estrela e brilho pulsando na própria cor do
+     jogo (--swatch-accent, já definida inline por tema); trancado
+     ganha só uma sugestão sutil (o cadeado "respirando") pra dar
+     curiosidade sem estragar a surpresa. ---------- */
+  .theme-swatch.special{ width:37px; height:37px; border-width:2px; }
+  .theme-swatch.special:not(.locked){ animation: special-glow 2.6s ease-in-out infinite; }
+  .theme-swatch.special:not(.locked)::before{
+    content:"★"; position:absolute; top:-7px; right:-7px; z-index:2; pointer-events:none;
+    font-size:10px; line-height:1; color: var(--swatch-accent, gold); text-shadow: 0 0 5px var(--swatch-accent, gold);
+  }
+  @keyframes special-glow{
+    0%,100%{ box-shadow: 0 0 6px 1px var(--swatch-accent, gold); }
+    50%{ box-shadow: 0 0 17px 5px var(--swatch-accent, gold), 0 0 0 2px var(--swatch-accent, gold); }
+  }
+  .theme-swatch.special.active:not(.locked){ animation: special-glow-active 2.6s ease-in-out infinite; }
+  @keyframes special-glow-active{
+    0%,100%{ box-shadow: 0 0 0 2px var(--stone-800), 0 0 0 4px var(--accent), 0 0 6px 1px var(--swatch-accent, gold); }
+    50%{ box-shadow: 0 0 0 2px var(--stone-800), 0 0 0 4px var(--accent), 0 0 17px 5px var(--swatch-accent, gold); }
+  }
+  .theme-swatch.special.locked .theme-swatch-lock{ animation: special-lock-tease 2.6s ease-in-out infinite; }
+  @keyframes special-lock-tease{ 0%,100%{ transform:scale(1); opacity:0.8; } 50%{ transform:scale(1.18); opacity:1; } }
 
   /* ---------- DESFAZER E LOG ---------- */
   .undo-trigger-btn{
