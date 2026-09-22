@@ -335,39 +335,59 @@
      escondido, destravados ao segurar o recorde da campanha em cada um.
      Ver THEMES em src/screens/character.js. ---------- */
   html[data-theme="lcd-cobra"]{
-    /* Cobrinha -- verde de tela de LCD monocromática (Game Boy/Nokia
-       velho, a tela onde Snake nasceu). */
-    --void:#0f380f; --stone-900:#163d16; --stone-800:#1d4a1d; --stone-700:#245524; --stone-line:#306230;
-    --ink:#9bbc0f; --ink-dim:#7fa30c; --ink-faint:#4d7942;
-    --accent:#9bbc0f; --accent-core:#6b8f0a; --accent-deep:#1d4a1d; --accent-faint:rgba(155,188,15,0.1); --accent-rgb:155,188,15;
+    /* Cobrinha -- as 4 cores EXATAS da tela de LCD monocromática do
+       Game Boy original (a tela onde jogos tipo Snake viveram décadas):
+       #0f380f/#306230/#8bac0f/#9bbc0f, do escuro pro claro. Fonte troca
+       pra VT323 (pixelada, feita pra imitar exatamente esse tipo de
+       tela) em vez de Orbitron/JetBrains -- é o que faz parecer um
+       aparelho de verdade, não só "tema verde". */
+    --void:#0f380f; --stone-900:#153515; --stone-800:#1d4a1d; --stone-700:#245524; --stone-line:#306230;
+    --ink:#9bbc0f; --ink-dim:#8bac0f; --ink-faint:#4d7942;
+    --accent:#9bbc0f; --accent-core:#8bac0f; --accent-deep:#306230; --accent-faint:rgba(155,188,15,0.12); --accent-rgb:155,188,15;
     --warn:#c8d84f; --warn-rgb:200,216,79;
     --danger:#d84f4f; --danger-rgb:216,79,79;
+    --font-display:'VT323', monospace; --font-mono:'VT323', monospace;
   }
   html[data-theme="bloco-sovietico"]{
     /* Tetris -- ciano da peça I sobre azul-marinho profundo, vermelho
-       de estrela soviética no aviso (Tetris nasceu em Moscou, 1984). */
+       de estrela soviética no aviso (Tetris nasceu em Moscou, 1984).
+       Fonte mono troca pra Space Mono (mais quadrada/geométrica, "peça
+       de bloco" mesmo na tipografia); um grid de tabuleiro por cima da
+       página inteira reforça a ideia (ver overlay logo abaixo). */
     --void:#0a1128; --stone-900:#0f1a38; --stone-800:#162447; --stone-700:#1e2f5c; --stone-line:#2a3d73;
     --ink:#dcecff; --ink-dim:#94b3dd; --ink-faint:#5a76a3;
     --accent:#45e0ff; --accent-core:#1fb8d9; --accent-deep:#123a52; --accent-faint:rgba(69,224,255,0.1); --accent-rgb:69,224,255;
     --warn:#ffcc4d; --warn-rgb:255,204,77;
     --danger:#ff4444; --danger-rgb:255,68,68;
+    --font-mono:'Space Mono', monospace;
   }
   html[data-theme="ceu-passarinho"]{
-    /* Flappy Bird -- céu azul-claro e o laranja do passarinho. */
-    --void:#cdf3fb; --stone-900:#c2ecf7; --stone-800:#b3e6f4; --stone-700:#9edaee; --stone-line:#7ec3dc;
+    /* Flappy Bird -- céu azul-claro, laranja do passarinho e verde dos
+       canos (--stone-line -- some nas bordas dos cartões, um aceno
+       discreto). Fonte mono troca pra Share Tech Mono (HUD digital de
+       fliperama); nuvens no fundo em vez do grão/scanline do resto do
+       site (ver overlay abaixo) -- Flappy é fofo e diurno, não terminal. */
+    --void:#cdf3fb; --stone-900:#c2ecf7; --stone-800:#b3e6f4; --stone-700:#9edaee; --stone-line:#6fbd5a;
     --ink:#16324a; --ink-dim:#3c6786; --ink-faint:#6a93ad;
     --accent:#ff9f1c; --accent-core:#e8850a; --accent-deep:#fde1b8; --accent-faint:rgba(232,133,10,0.13); --accent-rgb:232,133,10;
     --warn:#d9720a; --warn-rgb:217,114,10;
     --danger:#d8383a; --danger-rgb:216,56,58;
+    --font-mono:'Share Tech Mono', monospace;
   }
   html[data-theme="2048-classico"]{
     /* 2048 -- bege do tabuleiro e laranja/dourado dos blocos, cores
-       tiradas direto do jogo original. */
+       tiradas direto do jogo original (o cinza das células vazias
+       #eee4da e a linha de grade #cdc1b4 são literais). Fonte troca
+       pra Inter -- sans geométrica limpa, bem mais perto da fonte real
+       do 2048 do que o Orbitron/JetBrains "terminal" do resto do site;
+       é o que mais diferencia esse tema dos outros (2048 é um joguinho
+       de navegador limpo, não um terminal retrô). */
     --void:#faf8ef; --stone-900:#f5f1e4; --stone-800:#eee4da; --stone-700:#e4d9c5; --stone-line:#cdc1b4;
     --ink:#776e65; --ink-dim:#9c9186; --ink-faint:#b8ada0;
     --accent:#f2b179; --accent-core:#f59563; --accent-deep:#fce8d6; --accent-faint:rgba(245,149,99,0.15); --accent-rgb:245,149,99;
     --warn:#edc22e; --warn-rgb:237,194,46;
     --danger:#f65e3b; --danger-rgb:246,94,59;
+    --font-display:'Inter', sans-serif; --font-mono:'Inter', sans-serif;
   }
 
   *{box-sizing:border-box; margin:0; padding:0;}
@@ -396,6 +416,47 @@
     content:""; position:fixed; inset:0; pointer-events:none; opacity:0.5;
     background: repeating-linear-gradient(to bottom, var(--accent-faint) 0px, var(--accent-faint) 1px, transparent 2px, transparent 4px);
   }
+
+  /* ---------- ambientação de fundo dos temas desbloqueáveis (db/049) --
+     cada um reforça a cor+fonte do jogo com uma textura própria, em vez
+     de reaproveitar o grão/scanline genérico do resto do site. ---------- */
+
+  /* Cobrinha -- o scanline compartilhado já é literalmente uma tela de
+     LCD; só fica mais forte aqui, e ganha uma sombra nos cantos (vidro
+     curvo do aparelho de verdade). */
+  html[data-theme="lcd-cobra"] body::after{ opacity:0.85; }
+  html[data-theme="lcd-cobra"] body{
+    background:
+      radial-gradient(ellipse 120% 90% at 50% 45%, transparent 55%, rgba(0,0,0,0.4) 100%),
+      var(--void);
+  }
+
+  /* Tetris -- grid de tabuleiro (as mesmas linhas de célula que aparecem
+     dentro do jogo) por trás da página inteira, no lugar do grão. */
+  html[data-theme="bloco-sovietico"] body::before{
+    opacity:0.1; mix-blend-mode:normal;
+    background-image:
+      linear-gradient(var(--stone-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--stone-line) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+
+  /* Flappy Bird -- nuvens soltas no céu, sem grão nem scanline (é um
+     jogo fofo e diurno, não um terminal). */
+  html[data-theme="ceu-passarinho"] body::before{ opacity:0; }
+  html[data-theme="ceu-passarinho"] body::after{ opacity:0; }
+  html[data-theme="ceu-passarinho"] body{
+    background:
+      radial-gradient(ellipse 130px 46px at 12% 9%, rgba(255,255,255,0.85), transparent 72%),
+      radial-gradient(ellipse 150px 50px at 82% 6%, rgba(255,255,255,0.75), transparent 72%),
+      radial-gradient(ellipse 110px 40px at 55% 16%, rgba(255,255,255,0.6), transparent 72%),
+      radial-gradient(ellipse 900px 500px at 50% 115%, var(--accent-faint), transparent 60%),
+      var(--void);
+  }
+
+  /* 2048 -- sem grão nem scanline, o jogo original é liso e minimalista. */
+  html[data-theme="2048-classico"] body::before{ opacity:0; }
+  html[data-theme="2048-classico"] body::after{ opacity:0; }
 
   .wrap{ max-width: 780px; margin: 0 auto; position:relative; z-index:1; }
 
