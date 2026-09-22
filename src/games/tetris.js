@@ -217,16 +217,20 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     });
 
     if (piece) {
-      // peça fantasma -- prévia translúcida de onde a peça cai se
-      // continuar descendo reto a partir da posição atual.
+      // peça fantasma -- prévia de onde a peça cai se continuar descendo
+      // reto a partir da posição atual. Um preenchimento fraco sozinho
+      // sumia contra o fundo/grade; agora é um contorno bem marcado na
+      // cor da peça (como em Tetris de verdade) + um preenchimento leve,
+      // e só desenha se a peça ainda não chegou lá (senão pisca em cima
+      // da peça de verdade).
       const gy = ghostY();
-      ctx.globalAlpha = 0.22;
-      piece.matrix.forEach((row, y) =>
-        row.forEach((cell, x) => {
-          if (cell && gy + y >= 0) drawCell(piece.x + x, gy + y, piece.color);
-        })
-      );
-      ctx.globalAlpha = 1;
+      if (gy !== piece.y) {
+        piece.matrix.forEach((row, y) =>
+          row.forEach((cell, x) => {
+            if (cell && gy + y >= 0) drawGhostCell(piece.x + x, gy + y, piece.color);
+          })
+        );
+      }
 
       piece.matrix.forEach((row, y) =>
         row.forEach((cell, x) => {
@@ -240,6 +244,15 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
   function drawCell(x, y, color) {
     ctx.fillStyle = color;
     ctx.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
+  }
+  function drawGhostCell(x, y, color) {
+    ctx.globalAlpha = 0.28;
+    ctx.fillStyle = color;
+    ctx.fillRect(x * CELL + 1, y * CELL + 1, CELL - 2, CELL - 2);
+    ctx.globalAlpha = 1;
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x * CELL + 2, y * CELL + 2, CELL - 4, CELL - 4);
   }
   function drawPausedOverlay() {
     ctx.fillStyle = 'rgba(0,0,0,0.55)';
