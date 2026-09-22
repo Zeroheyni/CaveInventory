@@ -7,7 +7,8 @@
 // tem em character.js, só que reaproveitando as telas já prontas.
 import { escapeHtml } from '../shared/gameData.js';
 import { applyGlobalTheme, updateProfileTheme } from '../campaign.js';
-import { THEMES } from './character.js';
+import { THEMES, themeSwatchHtml } from './character.js';
+import { listUnlockedGameThemes } from '../games.js';
 import { renderCombatScreen } from './combat.js';
 import { renderMasterFichaScreen } from './masterFicha.js';
 import { renderNpcBankScreen } from './npcBank.js';
@@ -57,6 +58,15 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
   const mounted = Object.fromEntries(MODES.map((m) => [m, false]));
   let easterEggClicks = 0; // fica fora do render() -- não pode zerar toda vez que a tela é reconstruída
   let easterEggResetTimer = null;
+  // quais jogos escondidos essa conta já destravou (ver character.js/
+  // THEMES + db/049) -- carregado uma vez e de novo quando o overlay
+  // dos jogos fecha, pra um tema recém-destravado aparecer sem recarregar.
+  let unlockedGames = new Set();
+  async function loadUnlockedGames(){
+    try{ unlockedGames = new Set(await listUnlockedGameThemes(session.user.id)); }
+    catch(err){ /* painel só continua mostrando os temas trancados */ }
+    renderThemePanel();
+  }
 
   function render() {
     // render() sempre reconstrói o DOM inteiro (chamado de novo depois que o
@@ -135,7 +145,7 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
         if (easterEggClicks >= 5) {
           easterEggClicks = 0;
           const { renderEasterEggOverlay } = await import('./easterEggGames.js');
-          renderEasterEggOverlay({ campaign, profile });
+          renderEasterEggOverlay({ campaign, profile, onClose: loadUnlockedGames });
         }
       });
     }
@@ -157,7 +167,7 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
     });
     document.getElementById('theme-panel').addEventListener('click', (e) => {
       const btn = e.target.closest('button[data-theme-id]');
-      if (!btn) return;
+      if (!btn || btn.dataset.locked === '1') return; // trancado -- precisa destravar jogando
       theme = btn.dataset.themeId;
       applyGlobalTheme(theme);
       renderThemePanel();
@@ -177,10 +187,7 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
       const row = document.querySelector(`.theme-swatch-row[data-group="${group}"]`);
       if (!row) return;
       row.innerHTML = THEMES.filter((t) => t.group === group)
-        .map(
-          (t) =>
-            `<button type="button" class="theme-swatch ${theme === t.id ? 'active' : ''}" data-theme-id="${t.id}" title="${t.label}" style="--swatch-accent:${t.accent}; --swatch-void:${t.void};"></button>`
-        )
+        .map((t) => themeSwatchHtml(t, theme, unlockedGames))
         .join('');
     });
   }
@@ -219,4 +226,5 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
   }
 
   render();
+  loadUnlockedGames();
 }

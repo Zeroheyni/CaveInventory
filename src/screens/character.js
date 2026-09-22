@@ -13,8 +13,22 @@ import { renderMasterInventoryChooser } from './masterInventoryChooser.js';
 import { createPublicItem, createPublicContainer, listCampaignPlayers, transferCurrencyRpc } from '../publicArea.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 import { updateProfileTheme } from '../campaign.js';
+import { listUnlockedGameThemes } from '../games.js';
 
 let activeChannel = null;
+
+// nomes exibidos no cadeado/tooltip dos temas desbloqueáveis (ver
+// unlockGame em THEMES abaixo e db/049_patch_2048_and_theme_unlocks.sql).
+export const GAME_THEME_LABELS = { snake: 'Cobrinha', tetris: 'Tetris', flappy: 'Flappy Bird', '2048': '2048' };
+
+// html de UM swatch do seletor de tema -- compartilhado com
+// masterCampaignHub.js pra não duplicar a lógica de "tema trancado"
+// (cadeado + tooltip explicando qual jogo destrava) nos dois lugares.
+export function themeSwatchHtml(t, activeId, unlockedGames) {
+  const locked = !!t.unlockGame && !(unlockedGames && unlockedGames.has(t.unlockGame));
+  const title = locked ? `${t.label} — destrave batendo o recorde da campanha no ${GAME_THEME_LABELS[t.unlockGame] || t.unlockGame}` : t.label;
+  return `<button type="button" class="theme-swatch ${activeId === t.id ? 'active' : ''} ${locked ? 'locked' : ''}" data-theme-id="${t.id}" ${locked ? 'data-locked="1"' : ''} title="${title}" style="--swatch-accent:${t.accent}; --swatch-void:${t.void};">${locked ? '<span class="theme-swatch-lock">🔒</span>' : ''}</button>`;
+}
 
 export const THEMES = [
   {id:'caverna-azul', label:'Caverna Azul', group:'dark', accent:'#5ad4ff', void:'#050708'},
@@ -63,7 +77,14 @@ export const THEMES = [
   {id:'oceano-neutro', label:'Oceano Neutro', group:'neutral', accent:'#6b9aa3', void:'#1f2628'},
   {id:'amendoa-neutra', label:'Amêndoa Neutra', group:'neutral', accent:'#c9a374', void:'#2a251e'},
   {id:'pinha-neutra', label:'Pinha Neutra', group:'neutral', accent:'#7fa88a', void:'#212824'},
-  {id:'cobre-neutro', label:'Cobre Neutro', group:'neutral', accent:'#b8805a', void:'#251f1a'}
+  {id:'cobre-neutro', label:'Cobre Neutro', group:'neutral', accent:'#b8805a', void:'#251f1a'},
+
+  // ---- desbloqueáveis: só depois de segurar o recorde da campanha
+  // pelo menos 1x naquele minijogo escondido (db/049) ----
+  {id:'lcd-cobra', label:'Tela de LCD', group:'dark', accent:'#9bbc0f', void:'#0f380f', unlockGame:'snake'},
+  {id:'bloco-sovietico', label:'Bloco Soviético', group:'dark', accent:'#45e0ff', void:'#0a1128', unlockGame:'tetris'},
+  {id:'ceu-passarinho', label:'Céu do Passarinho', group:'light', accent:'#ff9f1c', void:'#cdf3fb', unlockGame:'flappy'},
+  {id:'2048-classico', label:'2048 Clássico', group:'light', accent:'#f2b179', void:'#faf8ef', unlockGame:'2048'}
 ];
 
 export function renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, ownerName, onBack }) {
@@ -1655,12 +1676,20 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   }
 
   // ---- tema ----
+  // quais jogos escondidos essa CONTA já segurou o recorde da campanha
+  // (destrava o tema daquele jogo pra sempre -- ver THEMES/unlockGame
+  // acima e db/049). Recarregado toda vez que o overlay de jogos fecha,
+  // pra um tema recém-destravado aparecer sem precisar recarregar a página.
+  let unlockedGames = new Set();
+  async function loadUnlockedGames(){
+    try{ unlockedGames = new Set(await listUnlockedGameThemes(session.user.id)); }
+    catch(err){ /* sem isso o painel só continua mostrando os temas trancados -- sem quebrar nada */ }
+    renderThemePanel();
+  }
   function renderThemePanel(){
     ['dark','light','neutral'].forEach(group => {
       const row = document.querySelector(`.theme-swatch-row[data-group="${group}"]`);
-      row.innerHTML = THEMES.filter(t => t.group === group).map(t =>
-        `<button type="button" class="theme-swatch ${state.theme === t.id ? 'active' : ''}" data-theme-id="${t.id}" title="${t.label}" style="--swatch-accent:${t.accent}; --swatch-void:${t.void};"></button>`
-      ).join('');
+      row.innerHTML = THEMES.filter(t => t.group === group).map(t => themeSwatchHtml(t, state.theme, unlockedGames)).join('');
     });
   }
   function applyTheme(id, persist){
@@ -1671,6 +1700,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     if(persist) updateProfileTheme(session.user.id, id).catch(err => flashStatus('erro ao salvar tema: ' + err.message));
   }
   renderThemePanel();
+  loadUnlockedGames();
 
   // ---- menu retrátil à esquerda (navegação secundária, ex: combate) ----
   const sideNav = document.getElementById('side-nav');
@@ -1714,7 +1744,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   });
   document.getElementById('theme-panel').addEventListener('click', (e)=>{
     const btn = e.target.closest('button[data-theme-id]');
-    if(!btn) return;
+    if(!btn || btn.dataset.locked === '1') return; // trancado -- precisa destravar jogando (ver renderThemePanel)
     applyTheme(btn.dataset.themeId, true);
     document.getElementById('theme-panel').style.display = 'none';
   });
@@ -2928,7 +2958,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       if (clicks >= 5) {
         clicks = 0;
         const { renderEasterEggOverlay } = await import('./easterEggGames.js');
-        renderEasterEggOverlay({ campaign, profile });
+        renderEasterEggOverlay({ campaign, profile, onClose: loadUnlockedGames });
       }
     });
   })();

@@ -8,14 +8,19 @@ import { submitGameScore, listHighScores } from '../games.js';
 import { createSnakeGame } from '../games/snake.js';
 import { createTetrisGame } from '../games/tetris.js';
 import { createFlappyGame } from '../games/flappy.js';
+import { createGame2048, BOARD_PIXEL_SIZE as SIZE_2048 } from '../games/2048.js';
 
 const GAMES = {
   snake: { label: 'Cobrinha', icon: '🐍', factory: createSnakeGame, width: 360, height: 360, hasPreview: false },
   tetris: { label: 'Tetris', icon: '🧱', factory: createTetrisGame, width: 200, height: 400, hasPreview: true },
   flappy: { label: 'Flappy Bird', icon: '🐤', factory: createFlappyGame, width: 300, height: 450, hasPreview: false },
+  '2048': { label: '2048', icon: '🔢', factory: createGame2048, width: SIZE_2048, height: SIZE_2048, hasPreview: false },
 };
 
-export function renderEasterEggOverlay({ campaign, profile }) {
+// chamado quando o overlay fecha -- pra tela de baixo (character.js/
+// masterCampaignHub.js) recarregar quais temas o jogador destravou
+// jogando essa sessão (ver db/049), sem precisar recarregar a página.
+export function renderEasterEggOverlay({ campaign, profile, onClose }) {
   const playerName = profile.username || 'jogador';
   let root = document.getElementById('easter-egg-root');
   if (root) return; // já tem um aberto -- não empilha dois
@@ -30,6 +35,7 @@ export function renderEasterEggOverlay({ campaign, profile }) {
   let campaignBest = 0;
   let currentScore = 0;
   let isNewRecord = false;
+  let justUnlockedTheme = false;
   let activeEngine = null;
   let keyHandler = null;
   let keyUpHandler = null;
@@ -57,6 +63,7 @@ export function renderEasterEggOverlay({ campaign, profile }) {
   function close() {
     stopActiveEngine();
     root.remove();
+    onClose && onClose();
   }
 
   async function openMenu(game) {
@@ -83,6 +90,7 @@ export function renderEasterEggOverlay({ campaign, profile }) {
     view = 'playing';
     currentScore = 0;
     isNewRecord = false;
+    justUnlockedTheme = false;
     myBest = (scores.find((s) => s.profile_id === profile.id) || {}).best_score || 0;
     campaignBest = scores.length > 0 ? scores[0].best_score : 0;
     render();
@@ -120,6 +128,12 @@ export function renderEasterEggOverlay({ campaign, profile }) {
       keyUpHandler = null;
     }
     isNewRecord = finalScore > 0 && finalScore > myBest;
+    // se o placar passou do recorde da CAMPANHA que essa partida começou
+    // vendo, essa jogada destravou o tema do jogo lá no banco (db/049,
+    // mesma condição usada na RPC) -- score nunca cai durante a partida
+    // nesses jogos, então "passou do que era o topo no início" já garante
+    // que em algum momento essa conta segurou o topo.
+    justUnlockedTheme = finalScore > 0 && finalScore > campaignBest;
     view = 'gameover';
     render();
     try {
@@ -200,6 +214,7 @@ export function renderEasterEggOverlay({ campaign, profile }) {
                   ${selectedGame === 'tetris' ? '⌨ setas ou WASD · espaço derruba · ↑/X gira horário · Z gira anti-horário · C guarda' : ''}
                   ${selectedGame === 'snake' ? '⌨ setas ou WASD pra mover' : ''}
                   ${selectedGame === 'flappy' ? '⌨ espaço/↑ ou clique na tela pra bater asa' : ''}
+                  ${selectedGame === '2048' ? '⌨ setas ou WASD pra deslizar as peças' : ''}
                 </div>
               </div>
               ${
@@ -227,6 +242,7 @@ export function renderEasterEggOverlay({ campaign, profile }) {
           <div class="ee-title">${def.icon} fim de jogo</div>
           <div class="ee-final-score">${currentScore} ${currentScore === 1 ? 'ponto' : 'pontos'}</div>
           ${isNewRecord ? '<div class="ee-new-record">🎉 novo recorde seu!</div>' : ''}
+          ${justUnlockedTheme ? '<div class="ee-new-record">🎨 tema desbloqueado! confira no seletor de tema.</div>' : ''}
           <div class="ee-gameover-actions">
             <button type="button" class="btn" id="ee-retry-btn">▶ jogar de novo</button>
             <button type="button" class="btn btn-ghost" id="ee-menu-btn">voltar ao menu</button>

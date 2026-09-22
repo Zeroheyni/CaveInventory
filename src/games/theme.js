@@ -18,5 +18,6 @@ export function readThemeColors() {
     ink: v('--ink', '#cdeaf6'),
     inkDim: v('--ink-dim', '#8fadbe'),
     danger: v('--danger', '#ff5a5a'),
+    warn: v('--warn', '#ffcf7a'),
   };
 }

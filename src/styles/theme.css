@@ -331,6 +331,45 @@
     --danger:#ff5a5a; --danger-rgb:255,90,90;
   }
 
+  /* ---------- temas desbloqueáveis (db/049) -- cara de cada minijogo
+     escondido, destravados ao segurar o recorde da campanha em cada um.
+     Ver THEMES em src/screens/character.js. ---------- */
+  html[data-theme="lcd-cobra"]{
+    /* Cobrinha -- verde de tela de LCD monocromática (Game Boy/Nokia
+       velho, a tela onde Snake nasceu). */
+    --void:#0f380f; --stone-900:#163d16; --stone-800:#1d4a1d; --stone-700:#245524; --stone-line:#306230;
+    --ink:#9bbc0f; --ink-dim:#7fa30c; --ink-faint:#4d7942;
+    --accent:#9bbc0f; --accent-core:#6b8f0a; --accent-deep:#1d4a1d; --accent-faint:rgba(155,188,15,0.1); --accent-rgb:155,188,15;
+    --warn:#c8d84f; --warn-rgb:200,216,79;
+    --danger:#d84f4f; --danger-rgb:216,79,79;
+  }
+  html[data-theme="bloco-sovietico"]{
+    /* Tetris -- ciano da peça I sobre azul-marinho profundo, vermelho
+       de estrela soviética no aviso (Tetris nasceu em Moscou, 1984). */
+    --void:#0a1128; --stone-900:#0f1a38; --stone-800:#162447; --stone-700:#1e2f5c; --stone-line:#2a3d73;
+    --ink:#dcecff; --ink-dim:#94b3dd; --ink-faint:#5a76a3;
+    --accent:#45e0ff; --accent-core:#1fb8d9; --accent-deep:#123a52; --accent-faint:rgba(69,224,255,0.1); --accent-rgb:69,224,255;
+    --warn:#ffcc4d; --warn-rgb:255,204,77;
+    --danger:#ff4444; --danger-rgb:255,68,68;
+  }
+  html[data-theme="ceu-passarinho"]{
+    /* Flappy Bird -- céu azul-claro e o laranja do passarinho. */
+    --void:#cdf3fb; --stone-900:#c2ecf7; --stone-800:#b3e6f4; --stone-700:#9edaee; --stone-line:#7ec3dc;
+    --ink:#16324a; --ink-dim:#3c6786; --ink-faint:#6a93ad;
+    --accent:#ff9f1c; --accent-core:#e8850a; --accent-deep:#fde1b8; --accent-faint:rgba(232,133,10,0.13); --accent-rgb:232,133,10;
+    --warn:#d9720a; --warn-rgb:217,114,10;
+    --danger:#d8383a; --danger-rgb:216,56,58;
+  }
+  html[data-theme="2048-classico"]{
+    /* 2048 -- bege do tabuleiro e laranja/dourado dos blocos, cores
+       tiradas direto do jogo original. */
+    --void:#faf8ef; --stone-900:#f5f1e4; --stone-800:#eee4da; --stone-700:#e4d9c5; --stone-line:#cdc1b4;
+    --ink:#776e65; --ink-dim:#9c9186; --ink-faint:#b8ada0;
+    --accent:#f2b179; --accent-core:#f59563; --accent-deep:#fce8d6; --accent-faint:rgba(245,149,99,0.15); --accent-rgb:245,149,99;
+    --warn:#edc22e; --warn-rgb:237,194,46;
+    --danger:#f65e3b; --danger-rgb:246,94,59;
+  }
+
   *{box-sizing:border-box; margin:0; padding:0;}
 
   /* troca de tema suave -- só nas cores (background/border/texto/sombra),
@@ -393,6 +432,9 @@
   .theme-swatch:hover{ transform: translateY(-2px) scale(1.05); }
   .theme-swatch.active{ box-shadow: 0 0 0 2px var(--stone-800), 0 0 0 4px var(--accent); }
   .theme-swatch::after{ content:""; position:absolute; inset:5px; border-radius:4px; background: var(--swatch-accent, #888); }
+  .theme-swatch.locked{ opacity:0.4; filter:grayscale(0.6); cursor:default; }
+  .theme-swatch.locked:hover{ transform:none; }
+  .theme-swatch-lock{ position:absolute; inset:0; z-index:1; display:flex; align-items:center; justify-content:center; font-size:13px; filter: drop-shadow(0 1px 2px rgba(0,0,0,0.7)); }
 
   /* ---------- DESFAZER E LOG ---------- */
   .undo-trigger-btn{

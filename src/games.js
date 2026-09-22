@@ -18,3 +18,12 @@ export async function listHighScores(campaignId, game, limit = 10) {
   if (error) throw error;
   return data;
 }
+
+// temas desbloqueáveis (db/049) -- lista os jogos em que essa conta já
+// segurou o recorde da campanha pelo menos uma vez (mesmo que tenha
+// perdido o topo depois, o desbloqueio é pra sempre).
+export async function listUnlockedGameThemes(profileId) {
+  const { data, error } = await supabase.from('game_theme_unlocks').select('game').eq('profile_id', profileId);
+  if (error) throw error;
+  return (data || []).map((r) => r.game);
+}
