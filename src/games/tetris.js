@@ -46,6 +46,14 @@ const LINE_SCORE = [0, 100, 300, 500, 800];
 // combo. -1 = "sem combo ativo" (nem a peça anterior limpou linha).
 const COMBO_BONUS_PER_STEP = 50;
 const COMBO_FLASH_MS = 900;
+// back-to-back Tetris -- igual Tetris de verdade: dois "Tetris" (limpar
+// as 4 linhas de uma vez) SEGUIDOS um do outro valem mais que qualquer
+// outra sequência -- o 2º Tetris ganha metade do próprio valor de
+// bônus (400, virando 1200 no lugar de 800), empilhado por cima do
+// combo normal. É o pedido: "o combo que mais vale tem que ser 2
+// tetris seguidos" -- pra bater isso só emendando outro Tetris de
+// verdade, não dá pra chegar lá só empilhando limpezas de 1 linha.
+const BACK_TO_BACK_TETRIS_BONUS = Math.floor(LINE_SCORE[4] / 2);
 
 function rotateCW(m) {
   const n = m.length;
@@ -77,6 +85,7 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
   let colors = readThemeColors();
   let flashingRows = []; // linhas completas piscando antes de sumir de vez
   let combo = -1; // -1 = sem combo ativo; 0 = limpou uma vez (ainda sem bônus); 1+ = combo dando bônus
+  let lastClearLines = 0; // quantas linhas a ÚLTIMA peça que limpou algo limpou de uma vez (4 = Tetris) -- 0 = nenhuma ainda/quebrou
   let comboFlashText = '';
   let comboFlashUntil = 0;
   let comboFlashTimer = null;
@@ -168,6 +177,7 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
 
     if (fullRows.length === 0) {
       combo = -1; // peça travou sem limpar nada -- quebra o combo
+      lastClearLines = 0; // ...e quebra o back-to-back também
       sfx.drop();
       canHold = true;
       piece = spawnPiece();
@@ -175,6 +185,10 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     }
 
     combo += 1; // 0 na 1ª limpeza da sequência, 1+ a partir da 2ª seguida (é aí que começa o bônus)
+    // back-to-back Tetris: essa limpeza E a anterior foram as 4 linhas
+    // de uma vez -- só possível emendando um Tetris de verdade depois
+    // do outro, não dá pra "trapacear" empilhando limpezas menores.
+    const isBackToBackTetris = fullRows.length === 4 && lastClearLines === 4;
 
     // pisca a linha completa por um instante antes de sumir de vez --
     // sem "piece" nenhuma cai durante esse tempinho (spawnPiece só
@@ -188,14 +202,23 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
       board = board.filter((_, i) => !fullRows.includes(i));
       while (board.length < ROWS) board.unshift(Array(COLS).fill(null));
       let gained = LINE_SCORE[fullRows.length] || 0;
+      const flashParts = [];
+      if (isBackToBackTetris) {
+        gained += BACK_TO_BACK_TETRIS_BONUS;
+        flashParts.push(`🔥 B2B TETRIS +${BACK_TO_BACK_TETRIS_BONUS}`);
+      }
       if (combo > 0) {
         gained += combo * COMBO_BONUS_PER_STEP;
-        comboFlashText = `COMBO x${combo + 1}!`; // "x2" = 2ª limpeza seguida, mais intuitivo pra quem tá jogando que "combo 1"
+        flashParts.push(`COMBO x${combo + 1}!`); // "x2" = 2ª limpeza seguida, mais intuitivo pra quem tá jogando que "combo 1"
+      }
+      if (flashParts.length > 0) {
+        comboFlashText = flashParts.join(' ');
         comboFlashUntil = Date.now() + COMBO_FLASH_MS;
-        sfx.combo(combo);
+        sfx.combo(isBackToBackTetris ? Math.max(combo, 3) : combo);
         clearTimeout(comboFlashTimer);
         comboFlashTimer = setTimeout(() => { comboFlashUntil = 0; draw(); }, COMBO_FLASH_MS);
       }
+      lastClearLines = fullRows.length;
       score += gained;
       onScoreChange && onScoreChange(score);
       canHold = true;
@@ -268,9 +291,17 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     ctx.fillStyle = 'rgba(0,0,0,0.5)';
     ctx.fillRect(0, canvas.height / 2 - 32, canvas.width, 28);
     ctx.fillStyle = colors.warn;
-    ctx.font = 'bold 14px monospace';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    // a mensagem varia de tamanho (combo sozinho vs. "B2B TETRIS +400
+    // COMBO x2!" junto) -- encolhe a fonte até caber, em vez de vazar
+    // pra fora do tabuleiro (só 200px de largura).
+    let size = 14;
+    ctx.font = `bold ${size}px monospace`;
+    while (ctx.measureText(comboFlashText).width > canvas.width - 10 && size > 8) {
+      size -= 1;
+      ctx.font = `bold ${size}px monospace`;
+    }
     ctx.fillText(comboFlashText, canvas.width / 2, canvas.height / 2 - 18);
   }
   function drawCell(x, y, color) {
@@ -485,6 +516,7 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     paused = true;
     flashingRows = [];
     combo = -1;
+    lastClearLines = 0;
     comboFlashText = '';
     comboFlashUntil = 0;
     clearTimeout(comboFlashTimer);
