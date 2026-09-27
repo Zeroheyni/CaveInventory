@@ -47,6 +47,15 @@ export const sfx = {
       setTimeout(() => tone(base + i * 140, 0.09, 'square', 0.1), i * 55);
     }
   },
+  // combo do Tetris -- arpejo curtinho subindo, mais notas quanto maior
+  // o combo (até um teto pra não virar uma escala infinita ensurdecedora)
+  combo: (n) => {
+    const notes = [660, 830, 990, 1180, 1320];
+    const count = Math.min(n + 1, notes.length);
+    for (let i = 0; i < count; i++) {
+      setTimeout(() => tone(notes[i], 0.09, 'triangle', 0.12), i * 45);
+    }
+  },
   flap: () => tone(520, 0.05, 'sine', 0.1),
   score: () => tone(760, 0.08, 'triangle', 0.12),
   gameOver: () => {

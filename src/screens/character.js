@@ -82,10 +82,18 @@ export const THEMES = [
 
   // ---- desbloqueáveis: só depois de segurar o recorde da campanha
   // pelo menos 1x naquele minijogo escondido (db/049) ----
-  {id:'lcd-cobra', label:'Tela de LCD', group:'especial', accent:'#9bbc0f', void:'#0f380f', unlockGame:'snake'},
-  {id:'bloco-sovietico', label:'Bloco Soviético', group:'especial', accent:'#45e0ff', void:'#0a1128', unlockGame:'tetris'},
-  {id:'ceu-passarinho', label:'Céu do Passarinho', group:'especial', accent:'#ff9f1c', void:'#cdf3fb', unlockGame:'flappy'},
-  {id:'2048-classico', label:'2048 Clássico', group:'especial', accent:'#f2b179', void:'#faf8ef', unlockGame:'2048'}
+  // cada jogo tem uma variante ESCURA e uma CLARA -- as duas destravam
+  // juntas (o desbloqueio é por jogo, não por tema -- ver
+  // db/049_patch_2048_and_theme_unlocks.sql, `unlockGame` é o que liga
+  // um tema ao outro pro mesmo `game`).
+  {id:'snake-terrario', label:'Terrário Neon', group:'especial', accent:'#5cff8f', void:'#071009', unlockGame:'snake'},
+  {id:'snake-jardim', label:'Jardim de Manhã', group:'especial', accent:'#d94f3d', void:'#f3fbee', unlockGame:'snake'},
+  {id:'tetris-nebulosa', label:'Nebulosa de Blocos', group:'especial', accent:'#4fe1ff', void:'#070b1a', unlockGame:'tetris'},
+  {id:'tetris-vidro', label:'Vidro e Ouro', group:'especial', accent:'#d69a2b', void:'#f6f4ee', unlockGame:'tetris'},
+  {id:'flappy-noturno', label:'Voo Noturno', group:'especial', accent:'#ffb03e', void:'#0a0e24', unlockGame:'flappy'},
+  {id:'flappy-aurora', label:'Aurora Matinal', group:'especial', accent:'#ff8a5c', void:'#cdeaff', unlockGame:'flappy'},
+  {id:'2048-ambar', label:'Âmbar Noturno', group:'especial', accent:'#f2a65a', void:'#16130f', unlockGame:'2048'},
+  {id:'2048-marfim', label:'Tabuleiro de Marfim', group:'especial', accent:'#f2b179', void:'#faf8ef', unlockGame:'2048'}
 ];
 
 export function renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, ownerName, onBack }) {

@@ -40,6 +40,12 @@ const SHAPES = {
   L: { color: '#ff8a4c', matrix: [[0, 0, 1], [1, 1, 1], [0, 0, 0]] },
 };
 const LINE_SCORE = [0, 100, 300, 500, 800];
+// combo -- igual Tetris de verdade: cada peça que limpa linha LOGO
+// DEPOIS de outra que também limpou aumenta o combo e dá bônus (50 x
+// combo pontos); uma peça que trava sem limpar nenhuma linha zera o
+// combo. -1 = "sem combo ativo" (nem a peça anterior limpou linha).
+const COMBO_BONUS_PER_STEP = 50;
+const COMBO_FLASH_MS = 900;
 
 function rotateCW(m) {
   const n = m.length;
@@ -70,6 +76,10 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
   let paused = true; // começa parada até a 1ª tecla -- senão a peça já cai sozinha e nem dá tempo de reagir
   let colors = readThemeColors();
   let flashingRows = []; // linhas completas piscando antes de sumir de vez
+  let combo = -1; // -1 = sem combo ativo; 0 = limpou uma vez (ainda sem bônus); 1+ = combo dando bônus
+  let comboFlashText = '';
+  let comboFlashUntil = 0;
+  let comboFlashTimer = null;
 
   let heldDir = null; // 'left' | 'right' | null -- lado que está sendo segurado (DAS/ARR)
   let dasTimeout = null;
@@ -157,11 +167,14 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     });
 
     if (fullRows.length === 0) {
+      combo = -1; // peça travou sem limpar nada -- quebra o combo
       sfx.drop();
       canHold = true;
       piece = spawnPiece();
       return;
     }
+
+    combo += 1; // 0 na 1ª limpeza da sequência, 1+ a partir da 2ª seguida (é aí que começa o bônus)
 
     // pisca a linha completa por um instante antes de sumir de vez --
     // sem "piece" nenhuma cai durante esse tempinho (spawnPiece só
@@ -174,7 +187,16 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
       flashingRows = [];
       board = board.filter((_, i) => !fullRows.includes(i));
       while (board.length < ROWS) board.unshift(Array(COLS).fill(null));
-      score += LINE_SCORE[fullRows.length] || 0;
+      let gained = LINE_SCORE[fullRows.length] || 0;
+      if (combo > 0) {
+        gained += combo * COMBO_BONUS_PER_STEP;
+        comboFlashText = `COMBO x${combo + 1}!`; // "x2" = 2ª limpeza seguida, mais intuitivo pra quem tá jogando que "combo 1"
+        comboFlashUntil = Date.now() + COMBO_FLASH_MS;
+        sfx.combo(combo);
+        clearTimeout(comboFlashTimer);
+        comboFlashTimer = setTimeout(() => { comboFlashUntil = 0; draw(); }, COMBO_FLASH_MS);
+      }
+      score += gained;
       onScoreChange && onScoreChange(score);
       canHold = true;
       piece = spawnPiece();
@@ -240,6 +262,16 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     }
 
     if (paused) drawPausedOverlay();
+    else if (comboFlashUntil > Date.now()) drawComboFlash();
+  }
+  function drawComboFlash() {
+    ctx.fillStyle = 'rgba(0,0,0,0.5)';
+    ctx.fillRect(0, canvas.height / 2 - 32, canvas.width, 28);
+    ctx.fillStyle = colors.warn;
+    ctx.font = 'bold 14px monospace';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(comboFlashText, canvas.width / 2, canvas.height / 2 - 18);
   }
   function drawCell(x, y, color) {
     ctx.fillStyle = color;
@@ -452,6 +484,11 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     canHold = true;
     paused = true;
     flashingRows = [];
+    combo = -1;
+    comboFlashText = '';
+    comboFlashUntil = 0;
+    clearTimeout(comboFlashTimer);
+    comboFlashTimer = null;
     clearLockTimer();
     stopHorizontalHold();
     stopSoftDropHold();
@@ -470,6 +507,8 @@ export function createTetrisGame(canvas, { nextCanvas, holdCanvas, onScoreChange
     clearLockTimer();
     stopHorizontalHold();
     stopSoftDropHold();
+    clearTimeout(comboFlashTimer);
+    comboFlashTimer = null;
   }
 
   return { start, stop, handleKey, handleKeyUp, get running() { return running; } };

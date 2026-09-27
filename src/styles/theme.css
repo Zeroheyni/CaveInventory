@@ -331,63 +331,93 @@
     --danger:#ff5a5a; --danger-rgb:255,90,90;
   }
 
-  /* ---------- temas desbloqueáveis (db/049) -- cara de cada minijogo
-     escondido, destravados ao segurar o recorde da campanha em cada um.
-     Ver THEMES em src/screens/character.js. ---------- */
-  html[data-theme="lcd-cobra"]{
-    /* Cobrinha -- as 4 cores EXATAS da tela de LCD monocromática do
-       Game Boy original (a tela onde jogos tipo Snake viveram décadas):
-       #0f380f/#306230/#8bac0f/#9bbc0f, do escuro pro claro. Fonte troca
-       pra VT323 (pixelada, feita pra imitar exatamente esse tipo de
-       tela) em vez de Orbitron/JetBrains -- é o que faz parecer um
-       aparelho de verdade, não só "tema verde". */
-    --void:#0f380f; --stone-900:#153515; --stone-800:#1d4a1d; --stone-700:#245524; --stone-line:#306230;
-    --ink:#9bbc0f; --ink-dim:#8bac0f; --ink-faint:#4d7942;
-    --accent:#9bbc0f; --accent-core:#8bac0f; --accent-deep:#306230; --accent-faint:rgba(155,188,15,0.12); --accent-rgb:155,188,15;
-    --warn:#c8d84f; --warn-rgb:200,216,79;
-    --danger:#d84f4f; --danger-rgb:216,79,79;
-    --font-display:'VT323', monospace; --font-mono:'VT323', monospace;
+  /* ---------- temas desbloqueáveis (db/049), 2ª versão, refeita do
+     zero -- destravados ao segurar o recorde da campanha em cada
+     minijogo escondido. Cada jogo tem uma variante ESCURA e uma CLARA
+     (ver THEMES em src/screens/character.js). A 1ª versão trocava
+     --font-display/--font-mono por fontes sem o peso 900 que o .title
+     pede (VT323/Inter só têm peso 400/500/600 carregados) -- o
+     navegador "engordava" a fonte sinteticamente, o que borra/esfuma
+     fontes finas tipo VT323. Essa versão não mexe em fonte nenhuma:
+     só cor + o fundo animado próprio de cada tema (ver mais abaixo,
+     depois do body::before/::after compartilhado) fazem a diferença. */
+  html[data-theme="snake-terrario"]{
+    /* Cobrinha, variante escura -- terrário à noite: verde-floresta bem
+       escuro, verde-neon vivo de destaque, pontinhos de vaga-lume
+       dourados (ver o fundo animado). */
+    --void:#071009; --stone-900:#0c1810; --stone-800:#122117; --stone-700:#182c1e; --stone-line:#234030;
+    --ink:#d7f7dd; --ink-dim:#8fc9a0; --ink-faint:#4f7d5c;
+    --accent:#5cff8f; --accent-core:#2fd66a; --accent-deep:#163f26; --accent-faint:rgba(92,255,143,0.12); --accent-rgb:92,255,143;
+    --warn:#ffd166; --warn-rgb:255,209,102;
+    --danger:#ff6b6b; --danger-rgb:255,107,107;
   }
-  html[data-theme="bloco-sovietico"]{
-    /* Tetris -- ciano da peça I sobre azul-marinho profundo, vermelho
-       de estrela soviética no aviso (Tetris nasceu em Moscou, 1984).
-       Fonte mono troca pra Space Mono (mais quadrada/geométrica, "peça
-       de bloco" mesmo na tipografia); um grid de tabuleiro por cima da
-       página inteira reforça a ideia (ver overlay logo abaixo). */
-    --void:#0a1128; --stone-900:#0f1a38; --stone-800:#162447; --stone-700:#1e2f5c; --stone-line:#2a3d73;
-    --ink:#dcecff; --ink-dim:#94b3dd; --ink-faint:#5a76a3;
-    --accent:#45e0ff; --accent-core:#1fb8d9; --accent-deep:#123a52; --accent-faint:rgba(69,224,255,0.1); --accent-rgb:69,224,255;
-    --warn:#ffcc4d; --warn-rgb:255,204,77;
-    --danger:#ff4444; --danger-rgb:255,68,68;
-    --font-mono:'Space Mono', monospace;
+  html[data-theme="snake-jardim"]{
+    /* Cobrinha, variante clara -- jardim de manhã com orvalho: verde
+       fresco e vermelho de maçã como destaque (a própria comida do
+       jogo). */
+    --void:#f3fbee; --stone-900:#eaf6e2; --stone-800:#dff0d3; --stone-700:#d0e6bf; --stone-line:#b7d69f;
+    --ink:#1f3a1a; --ink-dim:#4a6b3f; --ink-faint:#7a9968;
+    --accent:#d94f3d; --accent-core:#b83a2a; --accent-deep:#fbdcd5; --accent-faint:rgba(184,58,42,0.12); --accent-rgb:184,58,42;
+    --warn:#e0a72e; --warn-rgb:224,167,46;
+    --danger:#c62828; --danger-rgb:198,40,40;
   }
-  html[data-theme="ceu-passarinho"]{
-    /* Flappy Bird -- céu azul-claro, laranja do passarinho e verde dos
-       canos (--stone-line -- some nas bordas dos cartões, um aceno
-       discreto). Fonte mono troca pra Share Tech Mono (HUD digital de
-       fliperama); nuvens no fundo em vez do grão/scanline do resto do
-       site (ver overlay abaixo) -- Flappy é fofo e diurno, não terminal. */
-    --void:#cdf3fb; --stone-900:#c2ecf7; --stone-800:#b3e6f4; --stone-700:#9edaee; --stone-line:#6fbd5a;
-    --ink:#16324a; --ink-dim:#3c6786; --ink-faint:#6a93ad;
-    --accent:#ff9f1c; --accent-core:#e8850a; --accent-deep:#fde1b8; --accent-faint:rgba(232,133,10,0.13); --accent-rgb:232,133,10;
-    --warn:#d9720a; --warn-rgb:217,114,10;
-    --danger:#d8383a; --danger-rgb:216,56,58;
-    --font-mono:'Share Tech Mono', monospace;
+  html[data-theme="tetris-nebulosa"]{
+    /* Tetris, variante escura -- nebulosa de blocos: espaço profundo
+       com o ciano da peça I e o amarelo da peça O como acentos. */
+    --void:#070b1a; --stone-900:#0c1226; --stone-800:#121a35; --stone-700:#1a2547; --stone-line:#263563;
+    --ink:#e4ecff; --ink-dim:#9fb0e0; --ink-faint:#5f6fa0;
+    --accent:#4fe1ff; --accent-core:#2bb8e0; --accent-deep:#16314f; --accent-faint:rgba(79,225,255,0.1); --accent-rgb:79,225,255;
+    --warn:#ffd94f; --warn-rgb:255,217,79;
+    --danger:#ff5c7a; --danger-rgb:255,92,122;
   }
-  html[data-theme="2048-classico"]{
-    /* 2048 -- bege do tabuleiro e laranja/dourado dos blocos, cores
-       tiradas direto do jogo original (o cinza das células vazias
-       #eee4da e a linha de grade #cdc1b4 são literais). Fonte troca
-       pra Inter -- sans geométrica limpa, bem mais perto da fonte real
-       do 2048 do que o Orbitron/JetBrains "terminal" do resto do site;
-       é o que mais diferencia esse tema dos outros (2048 é um joguinho
-       de navegador limpo, não um terminal retrô). */
+  html[data-theme="tetris-vidro"]{
+    /* Tetris, variante clara -- vidro e ouro: papel claro elegante com
+       o dourado da peça O como acento (o ciano vira cor secundária,
+       --warn, um aceno à variante escura). */
+    --void:#f6f4ee; --stone-900:#efece2; --stone-800:#e7e2d3; --stone-700:#dcd5c0; --stone-line:#c7bc9e;
+    --ink:#2c2a1f; --ink-dim:#5c5744; --ink-faint:#8a836a;
+    --accent:#d69a2b; --accent-core:#b37e1c; --accent-deep:#f5e3bd; --accent-faint:rgba(179,126,28,0.14); --accent-rgb:179,126,28;
+    --warn:#4fb8d6; --warn-rgb:79,184,214;
+    --danger:#c65a4a; --danger-rgb:198,90,74;
+  }
+  html[data-theme="flappy-noturno"]{
+    /* Flappy Bird, variante escura -- voo noturno: céu de madrugada,
+       lua e estrelas piscando (ver fundo animado), laranja do pássaro
+       brilhando contra o escuro. */
+    --void:#0a0e24; --stone-900:#0f1530; --stone-800:#161d3d; --stone-700:#1e274d; --stone-line:#2c3768;
+    --ink:#eef1ff; --ink-dim:#a6aee0; --ink-faint:#626ca0;
+    --accent:#ffb03e; --accent-core:#e8901c; --accent-deep:#3a2a10; --accent-faint:rgba(255,176,62,0.12); --accent-rgb:255,176,62;
+    --warn:#ffe27a; --warn-rgb:255,226,122;
+    --danger:#ff5d6c; --danger-rgb:255,93,108;
+  }
+  html[data-theme="flappy-aurora"]{
+    /* Flappy Bird, variante clara -- amanhecer, céu em degradê rosa/
+       laranja virando azul, verde de cano como acento secundário. */
+    --void:#cdeaff; --stone-900:#c2e3f7; --stone-800:#b6daf2; --stone-700:#a3cce9; --stone-line:#82b8dd;
+    --ink:#1c3552; --ink-dim:#3f6084; --ink-faint:#6f93b3;
+    --accent:#ff8a5c; --accent-core:#e56a3c; --accent-deep:#ffe3d2; --accent-faint:rgba(229,106,60,0.14); --accent-rgb:229,106,60;
+    --warn:#5cb85c; --warn-rgb:92,184,92;
+    --danger:#d8506a; --danger-rgb:216,80,106;
+  }
+  html[data-theme="2048-ambar"]{
+    /* 2048, variante escura -- tabuleiro à noite: carvão quente e os
+       blocos brilhando em âmbar/dourado por cima, como se tivessem luz
+       própria. */
+    --void:#16130f; --stone-900:#1c1811; --stone-800:#241f16; --stone-700:#2d271b; --stone-line:#453b28;
+    --ink:#f3e9da; --ink-dim:#c2b39c; --ink-faint:#8a7c66;
+    --accent:#f2a65a; --accent-core:#e8823a; --accent-deep:#3d2a15; --accent-faint:rgba(242,166,90,0.14); --accent-rgb:242,166,90;
+    --warn:#f2ce5a; --warn-rgb:242,206,90;
+    --danger:#e8603a; --danger-rgb:232,96,58;
+  }
+  html[data-theme="2048-marfim"]{
+    /* 2048, variante clara -- as cores EXATAS do jogo original: bege
+       do tabuleiro, cinza das células vazias (#eee4da) e linha de
+       grade (#cdc1b4) são literais. */
     --void:#faf8ef; --stone-900:#f5f1e4; --stone-800:#eee4da; --stone-700:#e4d9c5; --stone-line:#cdc1b4;
     --ink:#776e65; --ink-dim:#9c9186; --ink-faint:#b8ada0;
     --accent:#f2b179; --accent-core:#f59563; --accent-deep:#fce8d6; --accent-faint:rgba(245,149,99,0.15); --accent-rgb:245,149,99;
     --warn:#edc22e; --warn-rgb:237,194,46;
     --danger:#f65e3b; --danger-rgb:246,94,59;
-    --font-display:'Inter', sans-serif; --font-mono:'Inter', sans-serif;
   }
 
   *{box-sizing:border-box; margin:0; padding:0;}
@@ -417,66 +447,183 @@
     background: repeating-linear-gradient(to bottom, var(--accent-faint) 0px, var(--accent-faint) 1px, transparent 2px, transparent 4px);
   }
 
-  /* ---------- ambientação de fundo dos temas desbloqueáveis (db/049) --
-     cada um reforça a cor+fonte do jogo com uma textura própria, em vez
-     de reaproveitar o grão/scanline genérico do resto do site. ---------- */
+  /* ---------- ambientação de fundo dos 8 temas desbloqueáveis --
+     refeita do zero pra ser discreta e elegante: nada de scanline
+     "glitch" nem texto tremendo. Grão/scanline compartilhados (body::
+     before/::after) ficam DESLIGADOS nos 8 -- cada um define sua
+     própria cena, sempre um `body` com 2-4 degradês respirando bem
+     devagar (24-40s), quase imperceptível olhando direto, só dá vida
+     com o rabo do olho. ---------- */
 
-  /* Cobrinha -- o scanline compartilhado já é literalmente uma tela de
-     LCD; ganha uma sombra nos cantos (vidro curvo do aparelho de
-     verdade), rola devagar pra baixo (tela de CRT/LCD de verdade nunca
-     fica 100% parada) e treme de brilho de leve (flicker). */
-  html[data-theme="lcd-cobra"] body::after{ animation: lcd-scan-drift 5s linear infinite, lcd-flicker 3.2s ease-in-out infinite; }
-  @keyframes lcd-scan-drift{ from{ background-position-y:0; } to{ background-position-y:-4px; } }
-  @keyframes lcd-flicker{ 0%,100%{ opacity:0.85; } 45%{ opacity:0.76; } 55%{ opacity:0.93; } }
-  html[data-theme="lcd-cobra"] body{
+  html[data-theme="snake-terrario"] body::before,
+  html[data-theme="snake-jardim"] body::before,
+  html[data-theme="tetris-vidro"] body::before,
+  html[data-theme="flappy-noturno"] body::before,
+  html[data-theme="flappy-aurora"] body::before,
+  html[data-theme="2048-ambar"] body::before,
+  html[data-theme="2048-marfim"] body::before{ opacity:0; }
+  html[data-theme="snake-terrario"] body::after,
+  html[data-theme="snake-jardim"] body::after,
+  html[data-theme="tetris-nebulosa"] body::after,
+  html[data-theme="tetris-vidro"] body::after,
+  html[data-theme="flappy-aurora"] body::after,
+  html[data-theme="2048-ambar"] body::after,
+  html[data-theme="2048-marfim"] body::after{ opacity:0; }
+
+  /* Cobrinha, escuro -- terrário à noite: vaga-lumes (pontinhos
+     dourados) e um brilho verde saindo do centro, vinheta suave nos
+     cantos (vidro do terrário). */
+  html[data-theme="snake-terrario"] body{
     background:
-      radial-gradient(ellipse 120% 90% at 50% 45%, transparent 55%, rgba(0,0,0,0.4) 100%),
+      radial-gradient(3px 3px at 20% 24%, var(--warn), transparent 70%),
+      radial-gradient(2.5px 2.5px at 68% 15%, var(--warn), transparent 70%),
+      radial-gradient(2.5px 2.5px at 42% 40%, var(--accent), transparent 70%),
+      radial-gradient(3px 3px at 85% 55%, var(--warn), transparent 70%),
+      radial-gradient(2px 2px at 30% 70%, var(--accent), transparent 70%),
+      radial-gradient(ellipse 900px 600px at 50% -10%, var(--accent-faint), transparent 60%),
+      radial-gradient(ellipse 130% 100% at 50% 50%, transparent 55%, rgba(0,0,0,0.32) 100%),
       var(--void);
+    animation: firefly-drift 32s ease-in-out infinite;
+  }
+  @keyframes firefly-drift{
+    0%,100%{ background-position: 20% 24%, 68% 15%, 42% 40%, 85% 55%, 30% 70%, 50% -10%, 50% 50%; }
+    50%{ background-position: 23% 21%, 65% 18%, 45% 37%, 82% 58%, 33% 67%, 50% -10%, 50% 50%; }
   }
 
-  /* Tetris -- grid de tabuleiro (as mesmas linhas de célula que aparecem
-     dentro do jogo) por trás da página inteira, no lugar do grão, com um
-     brilho diagonal passando devagar por cima -- luz batendo nos blocos. */
-  html[data-theme="bloco-sovietico"] body::before{
-    opacity:0.13; mix-blend-mode:normal;
+  /* Cobrinha, claro -- jardim com gotas de orvalho brilhando ao sol. */
+  html[data-theme="snake-jardim"] body{
+    background:
+      radial-gradient(2.5px 2.5px at 15% 20%, #fff, transparent 70%),
+      radial-gradient(2px 2px at 38% 12%, #fff, transparent 70%),
+      radial-gradient(2.5px 2.5px at 72% 28%, #fff, transparent 70%),
+      radial-gradient(2px 2px at 58% 45%, #fff, transparent 70%),
+      radial-gradient(ellipse 900px 500px at 50% -10%, rgba(122,163,74,0.16), transparent 60%),
+      radial-gradient(ellipse 700px 400px at 100% 100%, var(--accent-faint), transparent 60%),
+      var(--void);
+    animation: dew-drift 28s ease-in-out infinite;
+  }
+  @keyframes dew-drift{
+    0%,100%{ background-position: 15% 20%, 38% 12%, 72% 28%, 58% 45%, 50% -10%, 100% 100%; }
+    50%{ background-position: 17% 18%, 36% 14%, 70% 30%, 56% 47%, 50% -10%, 100% 100%; }
+  }
+
+  /* Tetris, escuro -- nebulosa: manchas de luz ciano/roxo/rosa (as
+     cores das peças) bem grandes e suaves, tipo poeira estelar, com um
+     grid de tabuleiro quase invisível por baixo. */
+  html[data-theme="tetris-nebulosa"] body::before{
+    opacity:0.06; mix-blend-mode:normal;
+    background-image: linear-gradient(var(--stone-line) 1px, transparent 1px), linear-gradient(90deg, var(--stone-line) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+  html[data-theme="tetris-nebulosa"] body{
+    background:
+      radial-gradient(ellipse 520px 380px at 20% 10%, rgba(79,225,255,0.16), transparent 65%),
+      radial-gradient(ellipse 480px 360px at 85% 30%, rgba(160,120,255,0.14), transparent 65%),
+      radial-gradient(ellipse 420px 320px at 45% 90%, rgba(255,92,122,0.1), transparent 65%),
+      var(--void);
+    animation: nebula-drift 36s ease-in-out infinite;
+  }
+  @keyframes nebula-drift{
+    0%,100%{ background-position: 20% 10%, 85% 30%, 45% 90%; }
+    50%{ background-position: 26% 14%, 79% 26%, 51% 86%; }
+  }
+
+  /* Tetris, claro -- vidro e ouro: mesmo grid quase invisível, com
+     dois glints dourados sutis (luz batendo no vidro). */
+  html[data-theme="tetris-vidro"] body::before{
+    opacity:0.07; mix-blend-mode:normal;
+    background-image: linear-gradient(var(--stone-line) 1px, transparent 1px), linear-gradient(90deg, var(--stone-line) 1px, transparent 1px);
+    background-size: 26px 26px;
+  }
+  html[data-theme="tetris-vidro"] body{
+    background:
+      radial-gradient(2.5px 2.5px at 22% 18%, var(--accent), transparent 70%),
+      radial-gradient(2px 2px at 60% 10%, var(--accent), transparent 70%),
+      radial-gradient(ellipse 800px 500px at 50% -10%, var(--accent-faint), transparent 60%),
+      radial-gradient(ellipse 600px 400px at 100% 100%, rgba(79,184,214,0.12), transparent 60%),
+      var(--void);
+    animation: glint-drift 26s ease-in-out infinite;
+  }
+  @keyframes glint-drift{
+    0%,100%{ background-position: 22% 18%, 60% 10%, 50% -10%, 100% 100%; }
+    50%{ background-position: 25% 15%, 57% 13%, 50% -10%, 100% 100%; }
+  }
+
+  /* Flappy Bird, escuro -- voo noturno: duas camadas de estrela
+     piscando fora de sincronia (parece mais natural que todas piscarem
+     juntas) + brilho de lua no canto. */
+  html[data-theme="flappy-noturno"] body::before{
+    opacity:0.6; mix-blend-mode:normal; background-repeat:no-repeat;
     background-image:
-      linear-gradient(115deg, transparent 30%, var(--accent-faint) 45%, transparent 60%),
-      linear-gradient(var(--stone-line) 1px, transparent 1px),
-      linear-gradient(90deg, var(--stone-line) 1px, transparent 1px);
-    background-size: 220% 220%, 26px 26px, 26px 26px;
-    animation: block-shine 7s ease-in-out infinite;
+      radial-gradient(1.4px 1.4px at 10% 15%, #fff, transparent 100%),
+      radial-gradient(1px 1px at 25% 8%, #fff, transparent 100%),
+      radial-gradient(1.4px 1.4px at 40% 22%, #fff, transparent 100%),
+      radial-gradient(1px 1px at 55% 6%, #fff, transparent 100%),
+      radial-gradient(1.4px 1.4px at 70% 18%, #fff, transparent 100%),
+      radial-gradient(1px 1px at 88% 12%, #fff, transparent 100%);
+    animation: stars-twinkle-a 3.6s ease-in-out infinite;
   }
-  @keyframes block-shine{
-    0%,100%{ background-position: -40% -40%, 0 0, 0 0; }
-    50%{ background-position: 140% 140%, 0 0, 0 0; }
+  html[data-theme="flappy-noturno"] body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:0.45; background-repeat:no-repeat;
+    background-image:
+      radial-gradient(1px 1px at 18% 30%, #fff, transparent 100%),
+      radial-gradient(1.4px 1.4px at 33% 12%, #fff, transparent 100%),
+      radial-gradient(1px 1px at 48% 28%, #fff, transparent 100%),
+      radial-gradient(1.4px 1.4px at 63% 15%, #fff, transparent 100%),
+      radial-gradient(1px 1px at 80% 26%, #fff, transparent 100%);
+    animation: stars-twinkle-b 2.8s ease-in-out infinite 0.9s;
   }
-
-  /* Flappy Bird -- nuvens soltas no céu, sem grão nem scanline (é um
-     jogo fofo e diurno, não um terminal), boiando devagar de um lado
-     pro outro igual nuvem de verdade. */
-  html[data-theme="ceu-passarinho"] body::before{ opacity:0; }
-  html[data-theme="ceu-passarinho"] body::after{ opacity:0; }
-  html[data-theme="ceu-passarinho"] body{
+  @keyframes stars-twinkle-a{ 0%,100%{ opacity:0.5; } 50%{ opacity:1; } }
+  @keyframes stars-twinkle-b{ 0%,100%{ opacity:0.3; } 50%{ opacity:0.85; } }
+  html[data-theme="flappy-noturno"] body{
     background:
-      radial-gradient(ellipse 130px 46px at 12% 9%, rgba(255,255,255,0.85), transparent 72%),
-      radial-gradient(ellipse 150px 50px at 82% 6%, rgba(255,255,255,0.75), transparent 72%),
-      radial-gradient(ellipse 110px 40px at 55% 16%, rgba(255,255,255,0.6), transparent 72%),
-      radial-gradient(ellipse 900px 500px at 50% 115%, var(--accent-faint), transparent 60%),
+      radial-gradient(ellipse 160px 160px at 82% 12%, rgba(255,226,122,0.35), transparent 70%),
+      radial-gradient(ellipse 900px 500px at 50% -10%, var(--accent-faint), transparent 60%),
+      radial-gradient(ellipse 700px 400px at 50% 115%, rgba(232,144,28,0.12), transparent 60%),
       var(--void);
-    animation: cloud-drift 22s ease-in-out infinite;
-  }
-  @keyframes cloud-drift{
-    0%,100%{ background-position: 12% 9%, 82% 6%, 55% 16%, 50% 115%; }
-    50%{ background-position: 17% 9%, 77% 6%, 51% 16%, 50% 115%; }
   }
 
-  /* 2048 -- sem grão nem scanline (o jogo original é liso e
-     minimalista), só o mesmo brilho suave que o resto do site já tem,
-     respirando bem devagar -- vida sem virar textura/ruído. */
-  html[data-theme="2048-classico"] body::before{ opacity:0; }
-  html[data-theme="2048-classico"] body::after{ opacity:0; }
-  html[data-theme="2048-classico"] body{ animation: tile-glow-drift 11s ease-in-out infinite; }
-  @keyframes tile-glow-drift{
+  /* Flappy Bird, claro -- amanhecer: nuvens boiando devagar sobre um
+     degradê rosa/laranja de nascer do sol. */
+  html[data-theme="flappy-aurora"] body{
+    background:
+      radial-gradient(ellipse 130px 46px at 12% 9%, rgba(255,255,255,0.9), transparent 72%),
+      radial-gradient(ellipse 150px 50px at 82% 6%, rgba(255,255,255,0.8), transparent 72%),
+      radial-gradient(ellipse 110px 40px at 55% 16%, rgba(255,255,255,0.65), transparent 72%),
+      radial-gradient(ellipse 900px 500px at 50% -20%, rgba(255,138,92,0.22), transparent 60%),
+      radial-gradient(ellipse 900px 500px at 50% 120%, rgba(92,184,214,0.16), transparent 60%),
+      var(--void);
+    animation: cloud-drift-aurora 24s ease-in-out infinite;
+  }
+  @keyframes cloud-drift-aurora{
+    0%,100%{ background-position: 12% 9%, 82% 6%, 55% 16%, 50% -20%, 50% 120%; }
+    50%{ background-position: 17% 9%, 77% 6%, 51% 16%, 50% -20%, 50% 120%; }
+  }
+
+  /* 2048, escuro -- tabuleiro à noite: brilho âmbar quente respirando
+     bem devagar, com o seam do tabuleiro quase invisível por baixo. */
+  html[data-theme="2048-ambar"] body::before{
+    opacity:0.05; mix-blend-mode:normal;
+    background-image: linear-gradient(var(--stone-line) 1px, transparent 1px), linear-gradient(90deg, var(--stone-line) 1px, transparent 1px);
+    background-size: 34px 34px;
+  }
+  html[data-theme="2048-ambar"] body{
+    background:
+      radial-gradient(ellipse 500px 350px at 50% -10%, var(--accent-faint), transparent 60%),
+      radial-gradient(ellipse 400px 300px at 100% 100%, rgba(242,206,90,0.1), transparent 60%),
+      var(--void);
+    animation: amber-drift 12s ease-in-out infinite;
+  }
+  @keyframes amber-drift{
+    0%,100%{ background-position: 50% -10%, 100% 100%; }
+    50%{ background-position: 47% -6%, 97% 96%; }
+  }
+
+  /* 2048, claro -- o jogo original é liso/minimalista: só o mesmo
+     brilho suave do resto do site, respirando bem devagar -- vida sem
+     virar textura/ruído. */
+  html[data-theme="2048-marfim"] body{ animation: marfim-drift 11s ease-in-out infinite; }
+  @keyframes marfim-drift{
     0%,100%{ background-position: 50% -10%, 100% 100%; }
     50%{ background-position: 47% -6%, 97% 96%; }
   }
@@ -494,11 +641,19 @@
      ver wireEasterEgg em character.js/masterCampaignHub.js) -- pra
      quem já destravou um tema especial, ele também ganha a forma/jeito
      daquele jogo, um mimo extra só pra quem já achou o segredo. */
-  html[data-theme="lcd-cobra"] .title .dot{ animation: pulse-dot 1s steps(2, jump-none) infinite; } /* pisca "digital", sem suavização -- indicador de LCD de verdade */
-  html[data-theme="bloco-sovietico"] .title .dot{ border-radius:2px; } /* vira um quadradinho -- um bloco caindo, não um pontinho */
-  html[data-theme="ceu-passarinho"] .title .dot{ animation: pulse-dot 2.4s ease-in-out infinite, dot-flap 1.4s ease-in-out infinite; }
+  html[data-theme="snake-terrario"] .title .dot{ animation: dot-firefly 2.6s ease-in-out infinite; } /* pisca irregular, igual vaga-lume */
+  @keyframes dot-firefly{ 0%,100%{opacity:1;} 15%{opacity:0.3;} 30%{opacity:1;} 70%{opacity:0.5;} 85%{opacity:1;} }
+  html[data-theme="snake-jardim"] .title .dot{ animation: dot-dew 2.4s ease-in-out infinite; } /* pulsa suave, igual gota de orvalho */
+  @keyframes dot-dew{ 0%,100%{ transform:scale(1); opacity:1; } 50%{ transform:scale(1.25); opacity:0.75; } }
+  html[data-theme="tetris-nebulosa"] .title .dot{ border-radius:2px; } /* vira um quadradinho -- um bloco, não um pontinho */
+  html[data-theme="tetris-vidro"] .title .dot{ border-radius:2px; animation: dot-glint 2.2s ease-in-out infinite; }
+  @keyframes dot-glint{ 0%,100%{ transform:scale(1); opacity:1; } 50%{ transform:scale(1.3); opacity:0.7; } }
+  html[data-theme="flappy-noturno"] .title .dot{ animation: dot-star 1.3s ease-in-out infinite; } /* pisca rápido, igual estrela */
+  @keyframes dot-star{ 0%,100%{opacity:1;} 50%{opacity:0.25;} }
+  html[data-theme="flappy-aurora"] .title .dot{ animation: pulse-dot 2.4s ease-in-out infinite, dot-flap 1.4s ease-in-out infinite; }
   @keyframes dot-flap{ 0%,100%{ transform: translateY(0); } 45%{ transform: translateY(-3px); } }
-  html[data-theme="2048-classico"] .title .dot{ border-radius:3px; } /* vira uma mini peça de tabuleiro */
+  html[data-theme="2048-ambar"] .title .dot{ border-radius:3px; } /* vira uma mini peça de tabuleiro */
+  html[data-theme="2048-marfim"] .title .dot{ border-radius:3px; }
 
   /* ---------- SELETOR DE TEMA ---------- */
   .theme-picker-wrap{ position:relative; flex-shrink:0; }
@@ -536,22 +691,22 @@
      ganha só uma sugestão sutil (o cadeado "respirando") pra dar
      curiosidade sem estragar a surpresa. ---------- */
   .theme-swatch.special{ width:37px; height:37px; border-width:2px; }
-  .theme-swatch.special:not(.locked){ animation: special-glow 2.6s ease-in-out infinite; }
+  .theme-swatch.special:not(.locked){ animation: special-glow 3s ease-in-out infinite; }
   .theme-swatch.special:not(.locked)::before{
     content:"★"; position:absolute; top:-7px; right:-7px; z-index:2; pointer-events:none;
-    font-size:10px; line-height:1; color: var(--swatch-accent, gold); text-shadow: 0 0 5px var(--swatch-accent, gold);
+    font-size:10px; line-height:1; color: var(--swatch-accent, gold); text-shadow: 0 0 4px var(--swatch-accent, gold);
   }
   @keyframes special-glow{
-    0%,100%{ box-shadow: 0 0 6px 1px var(--swatch-accent, gold); }
-    50%{ box-shadow: 0 0 17px 5px var(--swatch-accent, gold), 0 0 0 2px var(--swatch-accent, gold); }
+    0%,100%{ box-shadow: 0 0 5px 0px var(--swatch-accent, gold); }
+    50%{ box-shadow: 0 0 13px 3px var(--swatch-accent, gold); }
   }
-  .theme-swatch.special.active:not(.locked){ animation: special-glow-active 2.6s ease-in-out infinite; }
+  .theme-swatch.special.active:not(.locked){ animation: special-glow-active 3s ease-in-out infinite; }
   @keyframes special-glow-active{
-    0%,100%{ box-shadow: 0 0 0 2px var(--stone-800), 0 0 0 4px var(--accent), 0 0 6px 1px var(--swatch-accent, gold); }
-    50%{ box-shadow: 0 0 0 2px var(--stone-800), 0 0 0 4px var(--accent), 0 0 17px 5px var(--swatch-accent, gold); }
+    0%,100%{ box-shadow: 0 0 0 2px var(--stone-800), 0 0 0 4px var(--accent), 0 0 5px 0px var(--swatch-accent, gold); }
+    50%{ box-shadow: 0 0 0 2px var(--stone-800), 0 0 0 4px var(--accent), 0 0 13px 3px var(--swatch-accent, gold); }
   }
   .theme-swatch.special.locked .theme-swatch-lock{ animation: special-lock-tease 2.6s ease-in-out infinite; }
-  @keyframes special-lock-tease{ 0%,100%{ transform:scale(1); opacity:0.8; } 50%{ transform:scale(1.18); opacity:1; } }
+  @keyframes special-lock-tease{ 0%,100%{ transform:scale(1); opacity:0.8; } 50%{ transform:scale(1.15); opacity:1; } }
 
   /* ---------- DESFAZER E LOG ---------- */
   .undo-trigger-btn{
