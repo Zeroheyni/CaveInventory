@@ -1,0 +1,17 @@
+/* ---------- editor de posição de avatar (src/avatarEditor.js) ---------- */
+.avatar-editor-panel{ width:min(92vw, 340px); }
+.avatar-editor-canvas-wrap{ position:relative; width:260px; height:260px; border-radius:10px; overflow:hidden; background:#000; }
+#avatar-editor-canvas{ display:block; width:260px; height:260px; touch-action:none; cursor:grab; }
+#avatar-editor-canvas:active{ cursor:grabbing; }
+/* guia circular só decorativa (mostra onde vira o avatar redondo de
+   verdade nas telas do site) -- não intercepta clique/arraste. */
+.avatar-editor-circle-guide{
+  position:absolute; inset:0; pointer-events:none; border-radius:50%;
+  box-shadow: 0 0 0 2000px rgba(0,0,0,0.55);
+  border:2px solid rgba(255,255,255,0.85);
+}
+.avatar-editor-zoom-row{ display:flex; align-items:center; gap:10px; width:100%; }
+.avatar-editor-zoom-row input[type="range"]{ flex:1; accent-color: var(--accent); }
+.avatar-editor-hint{ font-size:10.5px; color: var(--ink-faint); text-align:center; margin:0; }
+.avatar-editor-actions{ display:flex; gap:10px; width:100%; }
+.avatar-editor-actions .btn{ flex:1; }

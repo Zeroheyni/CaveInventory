@@ -42,10 +42,18 @@ export function renderMasterFichaScreen(app, { session, profile, campaign, onBac
     if (!channel) {
       // debounce -- evita remontar a ficha aberta (perdendo edição em
       // andamento) toda vez que QUALQUER personagem da campanha muda.
-      channel = subscribeCampaignSheets(campaignId, () => {
-        clearTimeout(realtimeReloadTimer);
-        realtimeReloadTimer = setTimeout(load, 700);
-      });
+      // tópico próprio ('sheets-master-ficha') -- npcBank.js assina o
+      // mesmo campaignId ao mesmo tempo (masterCampaignHub.js monta os
+      // dois embeds); mesmo tópico nos dois dava erro de canal já
+      // inscrito (ver comentário em subscribeCampaignSheets).
+      channel = subscribeCampaignSheets(
+        campaignId,
+        () => {
+          clearTimeout(realtimeReloadTimer);
+          realtimeReloadTimer = setTimeout(load, 700);
+        },
+        'sheets-master-ficha'
+      );
     }
   }
 

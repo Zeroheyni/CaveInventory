@@ -7,7 +7,7 @@
 // tem em character.js, só que reaproveitando as telas já prontas.
 import { escapeHtml } from '../shared/gameData.js';
 import { applyGlobalTheme, updateProfileTheme } from '../campaign.js';
-import { THEMES, themeSwatchHtml } from './character.js';
+import { THEMES, themeSwatchHtml } from '../themes.js';
 import { listUnlockedGameThemes } from '../games.js';
 import { renderCombatScreen } from './combat.js';
 import { renderMasterFichaScreen } from './masterFicha.js';

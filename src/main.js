@@ -10,6 +10,7 @@ import './styles/notebook.css';
 import './styles/dice.css';
 import './styles/sessionJournal.css';
 import './styles/games.css';
+import './styles/avatarEditor.css';
 import { supabase } from './supabaseClient.js';
 import { renderApp } from './router.js';
 import { isRerenderSuppressed } from './auth.js';

@@ -26,13 +26,19 @@ import {
   confirmStatusAllocation,
   addModuleToSheetData,
   removeModuleFromSheetData,
+  updateCharacterTheme,
 } from '../characterSheet.js';
 import { rollDice } from '../dice.js';
 import { listCharacterCustomBarsFor, updateCharacterCustomBarValue, customBarMax, createCustomBar, assignCustomBar } from '../customBars.js';
+import { applyGlobalTheme } from '../campaign.js';
+import { THEMES, themeSwatchHtml } from '../themes.js';
 
 let activeChannel = null;
 const HISTORIA_COLLAPSED_H = 90;
 const MODULE_COLLAPSED_H = 56;
+// picker de tema de NPC (db/050) nunca mostra cadeado -- não é
+// recompensa de recorde de jogo, é o mestre escolhendo livremente.
+const NPC_THEME_UNLOCKED = new Set(['snake', 'tetris', 'flappy', '2048']);
 
 export function renderFichaScreen(app, { session, profile, campaign, characterId, onBack }) {
   const isMaster = profile.role === 'master';
@@ -80,6 +86,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
   let customBarFormOp = 'mult';
   let customBarFormValue = '2';
   let customBarFormError = '';
+  let npcThemePanelOpen = false; // painel de "tema deste NPC" (só mestre + NPC)
 
   // debounce -- sem isso, edições rápidas em sequência (bio, história,
   // módulos) disparam vários eventos de realtime seguidos, cada um
@@ -93,6 +100,11 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
     if (sheet && sheet.status_points_unspent > 0 && !draftStats) {
       draftStats = Object.fromEntries(STATS.map((s) => [s.key, sheet[s.key]]));
     }
+    // NPC com tema próprio (db/050) -- aplica só enquanto essa ficha
+    // está aberta; volta pro tema da conta ao clicar em "voltar" (ver
+    // handleClick) ou automaticamente quando qualquer outra tela
+    // resolver o tema dela do zero no próprio mount.
+    if (sheet && sheet.is_npc && sheet.theme) applyGlobalTheme(sheet.theme);
     render();
     if (!activeChannel) {
       activeChannel = subscribeCharacterSheet(characterId, () => {
@@ -102,6 +114,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
           if (!fresh) return;
           sheet = fresh;
           customBars = await listCharacterCustomBarsFor(characterId);
+          if (sheet.is_npc && sheet.theme) applyGlobalTheme(sheet.theme);
           // não pisa num rascunho de alocação em andamento
           if (sheet.status_points_unspent <= 0) draftStats = null;
           render();
@@ -110,8 +123,18 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
     }
   }
 
+  // teto de status (soft cap): sempre 16 + nível, nível 1 -> 17, nível
+  // 2 -> 18 etc. (db/050 -- confirm_status_allocation valida o mesmo
+  // número no banco; antes disso a 1ª alocação tinha um teto plano de
+  // 16, sem somar o nível). Só vale pra alocação do JOGADOR -- edição
+  // livre do mestre continua sem teto, de propósito.
   function statusCap() {
-    return sheet.status_confirmed ? 16 + sheet.level : 16;
+    return 16 + sheet.level;
+  }
+  // soma de tudo que já foi distribuído ACIMA da base 10 em cada
+  // status (item pedido pelo usuário: "ignorando os 10 pontos base").
+  function totalStatusDistributed() {
+    return STATS.reduce((sum, s) => sum + (sheet[s.key] - 10), 0);
   }
   function draftSpent() {
     return STATS.reduce((sum, s) => sum + (draftStats[s.key] - sheet[s.key]), 0);
@@ -154,6 +177,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
             <span class="ficha-xp-text">${sheet.xp} / ${needed} XP</span>
           </div>
         </div>
+        ${isMaster && sheet.is_npc ? npcThemePickerHtml() : ''}
       </div>
 
       <div class="ficha-bars">
@@ -182,6 +206,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
       <div class="ficha-section">
         <div class="ficha-section-head">
           <span class="ficha-section-title">STATUS</span>
+          <span class="ficha-points-badge" title="soma de tudo que já foi distribuído acima da base 10 em cada status">total distribuído: ${totalStatusDistributed()}</span>
           ${editingStatus ? `<span class="ficha-points-badge">${draftRemaining()} ponto(s) pra distribuir</span>` : ''}
           ${isMaster ? '<span class="ficha-master-badge">edição livre (mestre)</span>' : ''}
         </div>
@@ -250,6 +275,44 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
       ta.style.height = (expanded ? natural : collapsedH) + 'px';
       btn.style.display = natural > collapsedH + 4 ? '' : 'none';
     });
+  }
+
+  // tema PRÓPRIO do NPC (db/050) -- só mestre, só NPC. Reaproveita as
+  // mesmas classes do seletor de tema principal (theme-picker-wrap/
+  // theme-trigger-btn/theme-panel/theme-swatch-row) com IDs diferentes
+  // (não colide com o seletor de tema do cabeçalho quando essa tela
+  // está embutida em character.js). Sempre mostra TODOS os temas
+  // destravados (NPC_THEME_UNLOCKED) -- não é recompensa de recorde,
+  // é o mestre escolhendo livremente a cara daquele NPC.
+  function npcThemePickerHtml() {
+    const activeId = sheet.theme || '';
+    const groups = ['especial', 'dark', 'light', 'neutral'];
+    const labels = { especial: 'ESPECIAIS 🏆', dark: 'ESCUROS', light: 'CLAROS', neutral: 'NEUTROS' };
+    return `
+      <div class="ficha-npc-theme">
+        <span class="ficha-npc-theme-label">🎨 tema deste NPC</span>
+        <div class="theme-picker-wrap" id="npc-theme-picker-wrap">
+          <button type="button" class="theme-trigger-btn" id="npc-theme-trigger" title="mudar o tema deste NPC">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3a9 9 0 100 18c1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a4 4 0 004-4c0-4.4-3.6-8-8-8z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="9.5" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="10.5" r="1" fill="currentColor" stroke="none"/></svg>
+          </button>
+          <div class="theme-panel" id="npc-theme-panel" style="display:${npcThemePanelOpen ? 'block' : 'none'};">
+            ${
+              sheet.theme
+                ? `<button type="button" class="btn btn-ghost" id="npc-theme-clear" style="width:100%; margin-bottom:10px;">✕ voltar pro tema padrão</button>`
+                : ''
+            }
+            ${groups
+              .map(
+                (g) => `
+              <div class="theme-group-label">${labels[g]}</div>
+              <div class="theme-swatch-row">${THEMES.filter((t) => t.group === g)
+                .map((t) => themeSwatchHtml(t, activeId, NPC_THEME_UNLOCKED))
+                .join('')}</div>`
+              )
+              .join('')}
+          </div>
+        </div>
+      </div>`;
   }
 
   // barra customizada (Fase 8) -- igual HP/Estamina visualmente, mas o
@@ -397,7 +460,39 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
 
   async function handleClick(e) {
     const backBtn = e.target.closest('#ficha-back-btn');
-    if (backBtn) return onBack && onBack();
+    if (backBtn) {
+      // restaura o tema da CONTA (não o do NPC) ao sair -- sem isso o
+      // tema ficava "grudado" no do NPC pro resto da navegação, já que
+      // masterFicha.js/npcBank.js não mexem em tema nenhum sozinhos.
+      if (sheet && sheet.is_npc && sheet.theme) applyGlobalTheme(profile.theme);
+      return onBack && onBack();
+    }
+
+    const npcThemeTriggerBtn = e.target.closest('#npc-theme-trigger');
+    if (npcThemeTriggerBtn) {
+      npcThemePanelOpen = !npcThemePanelOpen;
+      render();
+      return;
+    }
+    const npcThemeClearBtn = e.target.closest('#npc-theme-clear');
+    if (npcThemeClearBtn) {
+      sheet.theme = null;
+      npcThemePanelOpen = false;
+      applyGlobalTheme(profile.theme);
+      render();
+      await updateCharacterTheme(characterId, null);
+      return;
+    }
+    const npcThemeSwatchBtn = e.target.closest('#npc-theme-panel button[data-theme-id]');
+    if (npcThemeSwatchBtn) {
+      const themeId = npcThemeSwatchBtn.dataset.themeId;
+      sheet.theme = themeId;
+      npcThemePanelOpen = false;
+      applyGlobalTheme(themeId);
+      render();
+      await updateCharacterTheme(characterId, themeId);
+      return;
+    }
 
     const rollStatButton = e.target.closest('button[data-roll-stat]');
     if (rollStatButton) {
@@ -616,10 +711,15 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
 
     const avatarInput = e.target.closest('#ficha-avatar-input');
     if (avatarInput && avatarInput.files[0]) {
+      const file = avatarInput.files[0];
+      avatarInput.value = ''; // permite escolher o mesmo arquivo de novo depois (change não dispara duas vezes pro mesmo valor)
+      const { openAvatarEditor } = await import('../avatarEditor.js');
+      const blob = await openAvatarEditor(file);
+      if (!blob) return; // cancelado no editor -- não sobe nada
       uploadingAvatar = true;
       render();
       try {
-        sheet.avatar_url = await uploadAvatar(characterId, avatarInput.files[0]);
+        sheet.avatar_url = await uploadAvatar(characterId, new File([blob], 'avatar.jpg', { type: 'image/jpeg' }));
       } catch (err) {
         window.alert('Erro ao enviar foto: ' + err.message);
       }

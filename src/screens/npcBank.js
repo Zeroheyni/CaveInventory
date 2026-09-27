@@ -36,10 +36,16 @@ export function renderNpcBankScreen(app, { session, profile, campaign, topApp, o
     npcs = await listCampaignNpcs(campaignId);
     render();
     if (!channel) {
-      channel = subscribeCampaignSheets(campaignId, () => {
-        clearTimeout(realtimeReloadTimer);
-        realtimeReloadTimer = setTimeout(load, 700);
-      });
+      // tópico próprio ('sheets-npc-bank') -- ver comentário em
+      // subscribeCampaignSheets (colisão de canal com masterFicha.js).
+      channel = subscribeCampaignSheets(
+        campaignId,
+        () => {
+          clearTimeout(realtimeReloadTimer);
+          realtimeReloadTimer = setTimeout(load, 700);
+        },
+        'sheets-npc-bank'
+      );
     }
   }
 

@@ -7,7 +7,7 @@ import { supabase } from './supabaseClient.js';
 export const SHEET_FIELDS =
   'id, campaign_id, owner_id, name, avatar_url, level, xp, status_points_unspent, status_confirmed, ' +
   'vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, hp_current, estamina_current, sheet_data, ' +
-  'is_npc, npc_sheet_type, npc_has_status, hp_max_override, estamina_max_override, npc_damage';
+  'is_npc, npc_sheet_type, npc_has_status, hp_max_override, estamina_max_override, npc_damage, theme';
 
 // os 7 atributos de status com ícone/cor -- usado por ficha.js (cards
 // de status) e combat.js (resumo de status do mestre no combate).
@@ -72,9 +72,16 @@ export function subscribeCharacterSheet(characterId, onChange) {
     .subscribe();
 }
 
-export function subscribeCampaignSheets(campaignId, onChange) {
+// `topic` distingue quem tá assinando -- masterFicha.js e npcBank.js
+// podem estar montados ao mesmo tempo (masterCampaignHub.js monta os
+// dois embeds, só esconde um) e os dois chamavam essa função com o
+// MESMO tópico ('sheets-'+campaignId): o 2º `.channel()` reusava o
+// canal já inscrito do 1º, e grudar um `.on(...)` NELE dava "cannot
+// add postgres_changes callbacks ... after subscribe()" (mesmo
+// problema já visto com o canal de dados, ver dice.js).
+export function subscribeCampaignSheets(campaignId, onChange, topic) {
   return supabase
-    .channel('sheets-' + campaignId)
+    .channel((topic || 'sheets') + '-' + campaignId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'characters', filter: `campaign_id=eq.${campaignId}` }, onChange)
     .subscribe();
 }
@@ -92,6 +99,14 @@ export async function updateHpCurrent(characterId, hpCurrent) {
 
 export async function updateEstaminaCurrent(characterId, estaminaCurrent) {
   const { error } = await supabase.from('characters').update({ estamina_current: estaminaCurrent }).eq('id', characterId);
+  if (error) throw error;
+}
+
+// tema PRÓPRIO de um personagem (hoje só usado em NPCs, ver ficha.js) --
+// diferente de profiles.theme (preferência da conta): só vale enquanto
+// a ficha/inventário DAQUELE personagem está aberta.
+export async function updateCharacterTheme(characterId, theme) {
+  const { error } = await supabase.from('characters').update({ theme }).eq('id', characterId);
   if (error) throw error;
 }
 
