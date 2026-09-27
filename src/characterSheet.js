@@ -165,6 +165,17 @@ export async function grantXp(characterIds, amount) {
   if (error) throw error;
 }
 
+// tira XP (desce de nível sozinho se precisar) e diminuir nível direto
+// (reseta XP pro começo do nível novo) -- db/051.
+export async function revokeXp(characterIds, amount) {
+  const { error } = await supabase.rpc('revoke_xp', { p_character_ids: characterIds, p_amount: amount });
+  if (error) throw error;
+}
+export async function demoteLevel(characterIds, levels) {
+  const { error } = await supabase.rpc('demote_level', { p_character_ids: characterIds, p_levels: levels });
+  if (error) throw error;
+}
+
 // ---- módulos (blocos de texto livre com título) ----
 export function addModuleToSheetData(sheetData, title, content) {
   const modulos = [...(sheetData.modulos || []), { id: 'm' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7), title, content }];

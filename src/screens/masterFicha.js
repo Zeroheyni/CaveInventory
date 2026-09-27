@@ -3,7 +3,7 @@
 // completa de qualquer um, e o menu de dar XP em massa (todos
 // marcados por padrão — o mestre só desmarca quem não deve ganhar).
 import { escapeHtml } from '../shared/gameData.js';
-import { listCampaignCharacterSheets, listCampaignNpcs, subscribeCampaignSheets, hpMax, estaminaMax, grantXp, hpBarClass } from '../characterSheet.js';
+import { listCampaignCharacterSheets, listCampaignNpcs, subscribeCampaignSheets, hpMax, estaminaMax, grantXp, revokeXp, demoteLevel, hpBarClass } from '../characterSheet.js';
 import { renderFichaScreen } from './ficha.js';
 
 export function renderMasterFichaScreen(app, { session, profile, campaign, onBack }) {
@@ -128,7 +128,12 @@ export function renderMasterFichaScreen(app, { session, profile, campaign, onBac
         }
         <div class="ficha-xp-input-row">
           <input type="number" id="ficha-xp-amount" min="1" placeholder="quantidade de XP">
-          <button type="button" class="btn" id="ficha-xp-give-btn">dar XP</button>
+          <button type="button" class="btn" id="ficha-xp-give-btn">+ dar XP</button>
+          <button type="button" class="btn btn-ghost" id="ficha-xp-revoke-btn">− tirar XP</button>
+        </div>
+        <div class="ficha-xp-input-row">
+          <input type="number" id="ficha-level-amount" min="1" value="1" placeholder="nível(is)">
+          <button type="button" class="btn btn-ghost" id="ficha-level-demote-btn">↓ diminuir nível</button>
         </div>
         ${xpFeedback ? `<p class="admin-error" style="display:block;">${escapeHtml(xpFeedback)}</p>` : ''}
       </div>
@@ -170,6 +175,62 @@ export function renderMasterFichaScreen(app, { session, profile, campaign, onBac
         try {
           await grantXp(ids, amount);
           xpFeedback = `+${amount} XP dado pra ${ids.length} personagem(ns) ✓`;
+          await load();
+        } catch (err) {
+          xpFeedback = 'erro: ' + err.message;
+          render();
+        }
+        return;
+      }
+
+      const revokeBtn = e.target.closest('#ficha-xp-revoke-btn');
+      if (revokeBtn) {
+        xpFeedback = '';
+        const amountInput = $('ficha-xp-amount');
+        const amount = parseInt(amountInput.value);
+        const ids = [...selected];
+        if (!amount || amount <= 0) {
+          xpFeedback = 'informe uma quantidade de XP válida.';
+          render();
+          return;
+        }
+        if (ids.length === 0) {
+          xpFeedback = 'marque pelo menos um personagem.';
+          render();
+          return;
+        }
+        if (!window.confirm(`Tirar ${amount} XP de ${ids.length} personagem(ns)? Se passar do que eles têm, o nível desce sozinho.`)) return;
+        try {
+          await revokeXp(ids, amount);
+          xpFeedback = `−${amount} XP tirado de ${ids.length} personagem(ns) ✓`;
+          await load();
+        } catch (err) {
+          xpFeedback = 'erro: ' + err.message;
+          render();
+        }
+        return;
+      }
+
+      const demoteBtn = e.target.closest('#ficha-level-demote-btn');
+      if (demoteBtn) {
+        xpFeedback = '';
+        const levelsInput = $('ficha-level-amount');
+        const levels = parseInt(levelsInput.value);
+        const ids = [...selected];
+        if (!levels || levels <= 0) {
+          xpFeedback = 'informe uma quantidade de nível válida.';
+          render();
+          return;
+        }
+        if (ids.length === 0) {
+          xpFeedback = 'marque pelo menos um personagem.';
+          render();
+          return;
+        }
+        if (!window.confirm(`Diminuir ${levels} nível(is) de ${ids.length} personagem(ns)? O XP deles reseta pro começo do nível novo (nunca passa do nível 1).`)) return;
+        try {
+          await demoteLevel(ids, levels);
+          xpFeedback = `−${levels} nível(is) tirado(s) de ${ids.length} personagem(ns) ✓`;
           await load();
         } catch (err) {
           xpFeedback = 'erro: ' + err.message;
