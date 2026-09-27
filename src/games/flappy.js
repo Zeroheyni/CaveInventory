@@ -13,6 +13,14 @@ const PIPE_WIDTH = 48;
 const PIPE_SPACING = 210; // distância horizontal entre um cano e o próximo
 const BIRD_RADIUS = 11;
 const BIRD_X_RATIO = 0.28;
+// as constantes acima foram ajustadas "olhando" pra ~60 quadros por
+// segundo -- REF_FRAME_MS é 1 quadro nessa taxa de referência.
+const REF_FRAME_MS = 1000 / 60;
+// teto no "pulo" de tempo entre um quadro e outro -- sem isso, se a
+// aba ficasse presa/trocada de foco por um instante, o próximo quadro
+// vinha com um dt gigante e o passaro "teleportava" (atravessava cano
+// que nem bala, ou simplesmente sumia da tela).
+const MAX_DT_FRAMES = 4;
 
 export function createFlappyGame(canvas, { onScoreChange, onGameOver }) {
   const ctx = canvas.getContext('2d');
@@ -24,6 +32,21 @@ export function createFlappyGame(canvas, { onScoreChange, onGameOver }) {
   let score;
   let raf = null;
   let running = false;
+  // Diferente de Cobrinha/Tetris (setInterval, ritmo fixo em
+  // milissegundos reais), o Flappy usa requestAnimationFrame direto --
+  // e cada tick() assumia "1 quadro = 1 unidade de tempo fixa", sem
+  // olhar quanto tempo realmente passou entre um quadro e outro. Isso
+  // deixava o jogo mais rápido ou mais lento dependendo de quantos
+  // quadros por segundo o navegador realmente entregava (variava por
+  // tema: os temas com uma animação de fundo contínua mantêm o
+  // navegador compondo a tela sem parar, enquanto um tema parado podia
+  // ser "otimizado"/desacelerado pelo navegador -- só o Flappy sofria,
+  // porque só ele não tem um ritmo fixo em milissegundos). Fix: guarda
+  // o instante do quadro anterior e escala gravidade/velocidade/
+  // velocidade dos canos pelo tempo de verdade que passou, sempre na
+  // MESMA velocidade real (em segundos), não importa o tema nem o
+  // monitor.
+  let lastTimestamp = null;
   let paused = true; // começa parado até o 1º flap -- senão o pássaro já cai sozinho e nem dá tempo de reagir
   let colors = readThemeColors();
 
@@ -32,6 +55,7 @@ export function createFlappyGame(canvas, { onScoreChange, onGameOver }) {
     velocity = 0;
     pipes = [{ x: canvas.width + 40, gapY: randomGapY() }];
     score = 0;
+    lastTimestamp = null;
   }
 
   function randomGapY() {
@@ -86,12 +110,17 @@ export function createFlappyGame(canvas, { onScoreChange, onGameOver }) {
     ctx.fillText('espaço/clique pra começar', canvas.width / 2, canvas.height / 2);
   }
 
-  function tick() {
+  function tick(timestamp) {
     if (!running) return;
-    velocity += GRAVITY;
-    birdY += velocity;
+    // 1ª chamada da sessão (logo após o 1º flap): sem quadro anterior
+    // pra comparar, assume um quadro de referência normal (dt=1).
+    const dtFrames = lastTimestamp === null ? 1 : Math.min((timestamp - lastTimestamp) / REF_FRAME_MS, MAX_DT_FRAMES);
+    lastTimestamp = timestamp;
 
-    pipes.forEach((p) => (p.x -= PIPE_SPEED));
+    velocity += GRAVITY * dtFrames;
+    birdY += velocity * dtFrames;
+
+    pipes.forEach((p) => (p.x -= PIPE_SPEED * dtFrames));
     if (pipes[pipes.length - 1].x < canvas.width - PIPE_SPACING) {
       pipes.push({ x: canvas.width, gapY: randomGapY() });
     }
