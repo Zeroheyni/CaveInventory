@@ -42,6 +42,22 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
     supabase.removeChannel(activeChannel);
     activeChannel = null;
   }
+  // BUG (reportado pelo usuário: "editar uma ficha mexe na outra"): o
+  // mestre abre a ficha de um personagem, depois a de outro, no MESMO
+  // `app` (masterFicha.js e npcBank.js reusam o container ao trocar de
+  // `viewingCharacterId`/`viewingFichaId` -- só chamam essa função de
+  // novo, nunca recriam o elemento). `wireEvents()` grudava um listener
+  // NOVO no `app` a cada chamada e nunca tirava o antigo -- ai um clique
+  // disparava TODOS os listeners acumulados, cada um com o `characterId`
+  // da ficha que estava aberta NAQUELA hora, gravando os valores digitados
+  // na ficha atual por cima do personagem errado (e via realtime, os
+  // outros mestres/jogadores viam as fichas "convergindo" pra parecer
+  // uma só). Se esse `app` já tinha uma ficha de outro personagem montada
+  // antes, tira os listeners dela primeiro.
+  if (app._fichaCleanup) {
+    app._fichaCleanup();
+    app._fichaCleanup = null;
+  }
 
   let sheet = null;
   let draftStats = null; // enquanto distribuindo pontos, rascunho local até confirmar
@@ -367,294 +383,304 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
   function wireEvents() {
     if (wired) return;
     wired = true;
+    app.addEventListener('click', handleClick);
+    app.addEventListener('change', handleChange);
+    // guardado no próprio nó (não numa variável do módulo) -- é o que
+    // deixa a PRÓXIMA chamada de renderFichaScreen nesse mesmo `app`
+    // (outro personagem) achar e remover exatamente esses dois
+    // listeners antes de grudar os dela.
+    app._fichaCleanup = () => {
+      app.removeEventListener('click', handleClick);
+      app.removeEventListener('change', handleChange);
+    };
+  }
 
-    app.addEventListener('click', async (e) => {
-      const backBtn = e.target.closest('#ficha-back-btn');
-      if (backBtn) return onBack && onBack();
+  async function handleClick(e) {
+    const backBtn = e.target.closest('#ficha-back-btn');
+    if (backBtn) return onBack && onBack();
 
-      const rollStatButton = e.target.closest('button[data-roll-stat]');
-      if (rollStatButton) {
-        const label = rollStatButton.dataset.rollLabel;
-        const mod = parseInt(rollStatButton.dataset.rollMod, 10) || 0;
-        rollStatButton.disabled = true;
-        try {
-          await rollDice(campaign.id, session.user.id, sheet.name, 'd20', 1, mod, label);
-        } catch (err) {
-          window.alert('Erro ao rolar: ' + err.message);
-        }
-        rollStatButton.disabled = false;
-        return;
+    const rollStatButton = e.target.closest('button[data-roll-stat]');
+    if (rollStatButton) {
+      const label = rollStatButton.dataset.rollLabel;
+      const mod = parseInt(rollStatButton.dataset.rollMod, 10) || 0;
+      rollStatButton.disabled = true;
+      try {
+        await rollDice(campaign.id, session.user.id, sheet.name, 'd20', 1, mod, label);
+      } catch (err) {
+        window.alert('Erro ao rolar: ' + err.message);
       }
+      rollStatButton.disabled = false;
+      return;
+    }
 
-      const uploadBtn = e.target.closest('#ficha-avatar-upload-btn');
-      if (uploadBtn) return $('ficha-avatar-input').click();
+    const uploadBtn = e.target.closest('#ficha-avatar-upload-btn');
+    if (uploadBtn) return $('ficha-avatar-input').click();
 
-      const hpDelta = e.target.closest('button[data-hp-delta]');
-      if (hpDelta) {
-        const next = Math.max(0, Math.min(hpMax(sheet), sheet.hp_current + Number(hpDelta.dataset.hpDelta)));
-        sheet.hp_current = next;
+    const hpDelta = e.target.closest('button[data-hp-delta]');
+    if (hpDelta) {
+      const next = Math.max(0, Math.min(hpMax(sheet), sheet.hp_current + Number(hpDelta.dataset.hpDelta)));
+      sheet.hp_current = next;
+      render();
+      await updateHpCurrent(characterId, next);
+      return;
+    }
+    const estDelta = e.target.closest('button[data-est-delta]');
+    if (estDelta) {
+      const next = Math.max(0, Math.min(estaminaMax(sheet), sheet.estamina_current + Number(estDelta.dataset.estDelta)));
+      sheet.estamina_current = next;
+      render();
+      await updateEstaminaCurrent(characterId, next);
+      return;
+    }
+
+    const customBarDelta = e.target.closest('button[data-custom-bar-delta]');
+    if (customBarDelta) {
+      const cb = customBars.find((c) => c.id === customBarDelta.dataset.customBarId);
+      if (!cb) return;
+      const max = customBarMax(cb.bar, sheet);
+      const next = Math.max(0, Math.min(max, cb.current_value + Number(customBarDelta.dataset.customBarDelta)));
+      cb.current_value = next;
+      render();
+      await updateCharacterCustomBarValue(cb.id, next);
+      return;
+    }
+
+    const customBarOpenFormBtn = e.target.closest('#ficha-custom-bar-open-form');
+    if (customBarOpenFormBtn) {
+      customBarFormOpen = true;
+      customBarFormMode = 'manual';
+      customBarFormName = '';
+      customBarFormColor = '#5ad4ff';
+      customBarFormManualMax = '';
+      customBarFormStat = 'vitalidade';
+      customBarFormOp = 'mult';
+      customBarFormValue = '2';
+      customBarFormError = '';
+      render();
+      return;
+    }
+    const customBarCancelBtn = e.target.closest('#ficha-custom-bar-cancel');
+    if (customBarCancelBtn) {
+      customBarFormOpen = false;
+      customBarFormError = '';
+      render();
+      return;
+    }
+    const customBarSaveBtn = e.target.closest('#ficha-custom-bar-save');
+    if (customBarSaveBtn) {
+      const name = customBarFormName.trim();
+      const color = customBarFormColor || '#5ad4ff';
+      const mode = customBarFormMode;
+      const manualMax = mode === 'manual' ? parseInt(customBarFormManualMax, 10) : null;
+      const formulaStat = mode === 'formula' ? customBarFormStat : null;
+      const formulaOp = mode === 'formula' ? customBarFormOp : null;
+      const formulaValue = mode === 'formula' ? parseFloat(customBarFormValue) : null;
+      if (!name) {
+        customBarFormError = 'dê um nome pra barra.';
         render();
-        await updateHpCurrent(characterId, next);
         return;
       }
-      const estDelta = e.target.closest('button[data-est-delta]');
-      if (estDelta) {
-        const next = Math.max(0, Math.min(estaminaMax(sheet), sheet.estamina_current + Number(estDelta.dataset.estDelta)));
-        sheet.estamina_current = next;
-        render();
-        await updateEstaminaCurrent(characterId, next);
-        return;
-      }
-
-      const customBarDelta = e.target.closest('button[data-custom-bar-delta]');
-      if (customBarDelta) {
-        const cb = customBars.find((c) => c.id === customBarDelta.dataset.customBarId);
-        if (!cb) return;
-        const max = customBarMax(cb.bar, sheet);
-        const next = Math.max(0, Math.min(max, cb.current_value + Number(customBarDelta.dataset.customBarDelta)));
-        cb.current_value = next;
-        render();
-        await updateCharacterCustomBarValue(cb.id, next);
-        return;
-      }
-
-      const customBarOpenFormBtn = e.target.closest('#ficha-custom-bar-open-form');
-      if (customBarOpenFormBtn) {
-        customBarFormOpen = true;
-        customBarFormMode = 'manual';
-        customBarFormName = '';
-        customBarFormColor = '#5ad4ff';
-        customBarFormManualMax = '';
-        customBarFormStat = 'vitalidade';
-        customBarFormOp = 'mult';
-        customBarFormValue = '2';
-        customBarFormError = '';
+      if (mode === 'manual' && (!manualMax || manualMax < 1)) {
+        customBarFormError = 'defina um máximo válido (1 ou mais).';
         render();
         return;
       }
-      const customBarCancelBtn = e.target.closest('#ficha-custom-bar-cancel');
-      if (customBarCancelBtn) {
+      if (mode === 'formula' && (!formulaValue || formulaValue <= 0)) {
+        customBarFormError = 'defina um valor de fórmula válido (maior que 0).';
+        render();
+        return;
+      }
+      try {
+        const newBar = await createCustomBar(campaign.id, { name, color, mode, manualMax, formulaStat, formulaOp, formulaValue });
+        await assignCustomBar(campaign.id, newBar.id, characterId, customBarMax(newBar, sheet));
+        customBars = await listCharacterCustomBarsFor(characterId);
         customBarFormOpen = false;
         customBarFormError = '';
         render();
-        return;
-      }
-      const customBarSaveBtn = e.target.closest('#ficha-custom-bar-save');
-      if (customBarSaveBtn) {
-        const name = customBarFormName.trim();
-        const color = customBarFormColor || '#5ad4ff';
-        const mode = customBarFormMode;
-        const manualMax = mode === 'manual' ? parseInt(customBarFormManualMax, 10) : null;
-        const formulaStat = mode === 'formula' ? customBarFormStat : null;
-        const formulaOp = mode === 'formula' ? customBarFormOp : null;
-        const formulaValue = mode === 'formula' ? parseFloat(customBarFormValue) : null;
-        if (!name) {
-          customBarFormError = 'dê um nome pra barra.';
-          render();
-          return;
-        }
-        if (mode === 'manual' && (!manualMax || manualMax < 1)) {
-          customBarFormError = 'defina um máximo válido (1 ou mais).';
-          render();
-          return;
-        }
-        if (mode === 'formula' && (!formulaValue || formulaValue <= 0)) {
-          customBarFormError = 'defina um valor de fórmula válido (maior que 0).';
-          render();
-          return;
-        }
-        try {
-          const newBar = await createCustomBar(campaign.id, { name, color, mode, manualMax, formulaStat, formulaOp, formulaValue });
-          await assignCustomBar(campaign.id, newBar.id, characterId, customBarMax(newBar, sheet));
-          customBars = await listCharacterCustomBarsFor(characterId);
-          customBarFormOpen = false;
-          customBarFormError = '';
-          render();
-        } catch (err) {
-          customBarFormError = err.message;
-          render();
-        }
-        return;
-      }
-
-      const draftBtn = e.target.closest('button[data-draft-stat-delta]');
-      if (draftBtn) {
-        const key = draftBtn.dataset.stat;
-        const delta = Number(draftBtn.dataset.draftStatDelta);
-        const next = draftStats[key] + delta;
-        if (next < sheet[key] || next > statusCap()) return;
-        if (delta > 0 && draftRemaining() <= 0) return;
-        draftStats[key] = next;
+      } catch (err) {
+        customBarFormError = err.message;
         render();
-        return;
       }
+      return;
+    }
 
-      const masterBtn = e.target.closest('button[data-master-stat-delta]');
-      if (masterBtn) {
-        const key = masterBtn.dataset.stat;
-        const delta = Number(masterBtn.dataset.masterStatDelta);
-        const next = Math.max(1, sheet[key] + delta);
-        sheet[key] = next;
+    const draftBtn = e.target.closest('button[data-draft-stat-delta]');
+    if (draftBtn) {
+      const key = draftBtn.dataset.stat;
+      const delta = Number(draftBtn.dataset.draftStatDelta);
+      const next = draftStats[key] + delta;
+      if (next < sheet[key] || next > statusCap()) return;
+      if (delta > 0 && draftRemaining() <= 0) return;
+      draftStats[key] = next;
+      render();
+      return;
+    }
+
+    const masterBtn = e.target.closest('button[data-master-stat-delta]');
+    if (masterBtn) {
+      const key = masterBtn.dataset.stat;
+      const delta = Number(masterBtn.dataset.masterStatDelta);
+      const next = Math.max(1, sheet[key] + delta);
+      sheet[key] = next;
+      render();
+      await masterUpdateStats(characterId, { [key]: next });
+      return;
+    }
+
+    const confirmBtn = e.target.closest('#ficha-confirm-status');
+    if (confirmBtn) {
+      statusError = '';
+      try {
+        await confirmStatusAllocation(characterId, draftStats);
+        draftStats = null;
+        await load();
+      } catch (err) {
+        statusError = err.message;
         render();
-        await masterUpdateStats(characterId, { [key]: next });
-        return;
       }
+      return;
+    }
+    const resetBtn = e.target.closest('#ficha-reset-status');
+    if (resetBtn) {
+      draftStats = Object.fromEntries(STATS.map((s) => [s.key, sheet[s.key]]));
+      statusError = '';
+      render();
+      return;
+    }
 
-      const confirmBtn = e.target.closest('#ficha-confirm-status');
-      if (confirmBtn) {
-        statusError = '';
-        try {
-          await confirmStatusAllocation(characterId, draftStats);
-          draftStats = null;
-          await load();
-        } catch (err) {
-          statusError = err.message;
-          render();
-        }
-        return;
-      }
-      const resetBtn = e.target.closest('#ficha-reset-status');
-      if (resetBtn) {
-        draftStats = Object.fromEntries(STATS.map((s) => [s.key, sheet[s.key]]));
-        statusError = '';
-        render();
-        return;
-      }
+    const addModuleBtn = e.target.closest('#ficha-add-module');
+    if (addModuleBtn) {
+      await saveSheetDataField((data) => addModuleToSheetData(data, 'Novo módulo', ''));
+      render();
+      return;
+    }
+    const removeModuleBtn = e.target.closest('button[data-remove-module]');
+    if (removeModuleBtn) {
+      await saveSheetDataField((data) => removeModuleFromSheetData(data, removeModuleBtn.dataset.removeModule));
+      render();
+      return;
+    }
 
-      const addModuleBtn = e.target.closest('#ficha-add-module');
-      if (addModuleBtn) {
-        await saveSheetDataField((data) => addModuleToSheetData(data, 'Novo módulo', ''));
-        render();
-        return;
+    const expandBtn = e.target.closest('button[data-expand-toggle]');
+    if (expandBtn) {
+      const key = expandBtn.dataset.expandToggle;
+      if (key === 'historia') {
+        historiaExpanded = !historiaExpanded;
+      } else if (key.startsWith('module:')) {
+        const id = key.slice(7);
+        if (expandedModules.has(id)) expandedModules.delete(id);
+        else expandedModules.add(id);
       }
-      const removeModuleBtn = e.target.closest('button[data-remove-module]');
-      if (removeModuleBtn) {
-        await saveSheetDataField((data) => removeModuleFromSheetData(data, removeModuleBtn.dataset.removeModule));
-        render();
-        return;
-      }
+      render();
+      return;
+    }
+  }
 
-      const expandBtn = e.target.closest('button[data-expand-toggle]');
-      if (expandBtn) {
-        const key = expandBtn.dataset.expandToggle;
-        if (key === 'historia') {
-          historiaExpanded = !historiaExpanded;
-        } else if (key.startsWith('module:')) {
-          const id = key.slice(7);
-          if (expandedModules.has(id)) expandedModules.delete(id);
-          else expandedModules.add(id);
-        }
-        render();
-        return;
-      }
-    });
+  async function handleChange(e) {
+    const customBarModeRadio = e.target.closest('input[name="ficha-custom-bar-mode"]');
+    if (customBarModeRadio) {
+      customBarFormMode = customBarModeRadio.value;
+      render();
+      return;
+    }
+    const customBarNameInput = e.target.closest('#ficha-custom-bar-name');
+    if (customBarNameInput) {
+      customBarFormName = customBarNameInput.value;
+      return;
+    }
+    const customBarColorFormInput = e.target.closest('#ficha-custom-bar-color');
+    if (customBarColorFormInput) {
+      customBarFormColor = customBarColorFormInput.value;
+      return;
+    }
+    const customBarManualMaxInput = e.target.closest('#ficha-custom-bar-manual-max');
+    if (customBarManualMaxInput) {
+      customBarFormManualMax = customBarManualMaxInput.value;
+      return;
+    }
+    const customBarStatSelect = e.target.closest('#ficha-custom-bar-formula-stat');
+    if (customBarStatSelect) {
+      customBarFormStat = customBarStatSelect.value;
+      return;
+    }
+    const customBarOpSelect = e.target.closest('#ficha-custom-bar-formula-op');
+    if (customBarOpSelect) {
+      customBarFormOp = customBarOpSelect.value;
+      return;
+    }
+    const customBarValueInput = e.target.closest('#ficha-custom-bar-formula-value');
+    if (customBarValueInput) {
+      customBarFormValue = customBarValueInput.value;
+      return;
+    }
 
-    app.addEventListener('change', async (e) => {
-      const customBarModeRadio = e.target.closest('input[name="ficha-custom-bar-mode"]');
-      if (customBarModeRadio) {
-        customBarFormMode = customBarModeRadio.value;
-        render();
-        return;
+    const avatarInput = e.target.closest('#ficha-avatar-input');
+    if (avatarInput && avatarInput.files[0]) {
+      uploadingAvatar = true;
+      render();
+      try {
+        sheet.avatar_url = await uploadAvatar(characterId, avatarInput.files[0]);
+      } catch (err) {
+        window.alert('Erro ao enviar foto: ' + err.message);
       }
-      const customBarNameInput = e.target.closest('#ficha-custom-bar-name');
-      if (customBarNameInput) {
-        customBarFormName = customBarNameInput.value;
-        return;
-      }
-      const customBarColorFormInput = e.target.closest('#ficha-custom-bar-color');
-      if (customBarColorFormInput) {
-        customBarFormColor = customBarColorFormInput.value;
-        return;
-      }
-      const customBarManualMaxInput = e.target.closest('#ficha-custom-bar-manual-max');
-      if (customBarManualMaxInput) {
-        customBarFormManualMax = customBarManualMaxInput.value;
-        return;
-      }
-      const customBarStatSelect = e.target.closest('#ficha-custom-bar-formula-stat');
-      if (customBarStatSelect) {
-        customBarFormStat = customBarStatSelect.value;
-        return;
-      }
-      const customBarOpSelect = e.target.closest('#ficha-custom-bar-formula-op');
-      if (customBarOpSelect) {
-        customBarFormOp = customBarOpSelect.value;
-        return;
-      }
-      const customBarValueInput = e.target.closest('#ficha-custom-bar-formula-value');
-      if (customBarValueInput) {
-        customBarFormValue = customBarValueInput.value;
-        return;
-      }
+      uploadingAvatar = false;
+      render();
+      return;
+    }
 
-      const avatarInput = e.target.closest('#ficha-avatar-input');
-      if (avatarInput && avatarInput.files[0]) {
-        uploadingAvatar = true;
-        render();
-        try {
-          sheet.avatar_url = await uploadAvatar(characterId, avatarInput.files[0]);
-        } catch (err) {
-          window.alert('Erro ao enviar foto: ' + err.message);
-        }
-        uploadingAvatar = false;
-        render();
-        return;
-      }
+    const hpInput = e.target.closest('#ficha-hp-input');
+    if (hpInput) {
+      const next = Math.max(0, Math.min(hpMax(sheet), parseInt(hpInput.value) || 0));
+      sheet.hp_current = next;
+      await updateHpCurrent(characterId, next);
+      return;
+    }
+    const estInput = e.target.closest('#ficha-est-input');
+    if (estInput) {
+      const next = Math.max(0, Math.min(estaminaMax(sheet), parseInt(estInput.value) || 0));
+      sheet.estamina_current = next;
+      await updateEstaminaCurrent(characterId, next);
+      return;
+    }
 
-      const hpInput = e.target.closest('#ficha-hp-input');
-      if (hpInput) {
-        const next = Math.max(0, Math.min(hpMax(sheet), parseInt(hpInput.value) || 0));
-        sheet.hp_current = next;
-        await updateHpCurrent(characterId, next);
-        return;
-      }
-      const estInput = e.target.closest('#ficha-est-input');
-      if (estInput) {
-        const next = Math.max(0, Math.min(estaminaMax(sheet), parseInt(estInput.value) || 0));
-        sheet.estamina_current = next;
-        await updateEstaminaCurrent(characterId, next);
-        return;
-      }
+    const customBarInput = e.target.closest('input[data-custom-bar-input]');
+    if (customBarInput) {
+      const cb = customBars.find((c) => c.id === customBarInput.dataset.customBarId);
+      if (!cb) return;
+      const max = customBarMax(cb.bar, sheet);
+      const next = Math.max(0, Math.min(max, parseInt(customBarInput.value) || 0));
+      cb.current_value = next;
+      await updateCharacterCustomBarValue(cb.id, next);
+      return;
+    }
 
-      const customBarInput = e.target.closest('input[data-custom-bar-input]');
-      if (customBarInput) {
-        const cb = customBars.find((c) => c.id === customBarInput.dataset.customBarId);
-        if (!cb) return;
-        const max = customBarMax(cb.bar, sheet);
-        const next = Math.max(0, Math.min(max, parseInt(customBarInput.value) || 0));
-        cb.current_value = next;
-        await updateCharacterCustomBarValue(cb.id, next);
-        return;
-      }
+    const idadeInput = e.target.closest('#ficha-idade');
+    if (idadeInput) return saveSheetDataField((data) => ({ ...data, idade: idadeInput.value }));
+    const generoInput = e.target.closest('#ficha-genero');
+    if (generoInput) return saveSheetDataField((data) => ({ ...data, genero: generoInput.value }));
+    const sexInput = e.target.closest('#ficha-sexualidade');
+    if (sexInput) return saveSheetDataField((data) => ({ ...data, sexualidade: sexInput.value }));
+    const racaInput = e.target.closest('#ficha-raca');
+    if (racaInput) return saveSheetDataField((data) => ({ ...data, raca: racaInput.value }));
+    const trabalhoInput = e.target.closest('#ficha-trabalho');
+    if (trabalhoInput) return saveSheetDataField((data) => ({ ...data, trabalho: trabalhoInput.value }));
+    const historiaInput = e.target.closest('#ficha-historia');
+    if (historiaInput) return saveSheetDataField((data) => ({ ...data, historia: historiaInput.value }));
 
-      const idadeInput = e.target.closest('#ficha-idade');
-      if (idadeInput) return saveSheetDataField((data) => ({ ...data, idade: idadeInput.value }));
-      const generoInput = e.target.closest('#ficha-genero');
-      if (generoInput) return saveSheetDataField((data) => ({ ...data, genero: generoInput.value }));
-      const sexInput = e.target.closest('#ficha-sexualidade');
-      if (sexInput) return saveSheetDataField((data) => ({ ...data, sexualidade: sexInput.value }));
-      const racaInput = e.target.closest('#ficha-raca');
-      if (racaInput) return saveSheetDataField((data) => ({ ...data, raca: racaInput.value }));
-      const trabalhoInput = e.target.closest('#ficha-trabalho');
-      if (trabalhoInput) return saveSheetDataField((data) => ({ ...data, trabalho: trabalhoInput.value }));
-      const historiaInput = e.target.closest('#ficha-historia');
-      if (historiaInput) return saveSheetDataField((data) => ({ ...data, historia: historiaInput.value }));
-
-      const moduleTitle = e.target.closest('input[data-module-title]');
-      if (moduleTitle) {
-        return saveSheetDataField((data) => ({
-          ...data,
-          modulos: data.modulos.map((m) => (m.id === moduleTitle.dataset.moduleTitle ? { ...m, title: moduleTitle.value } : m)),
-        }));
-      }
-      const moduleContent = e.target.closest('textarea[data-module-content]');
-      if (moduleContent) {
-        return saveSheetDataField((data) => ({
-          ...data,
-          modulos: data.modulos.map((m) => (m.id === moduleContent.dataset.moduleContent ? { ...m, content: moduleContent.value } : m)),
-        }));
-      }
-    });
+    const moduleTitle = e.target.closest('input[data-module-title]');
+    if (moduleTitle) {
+      return saveSheetDataField((data) => ({
+        ...data,
+        modulos: data.modulos.map((m) => (m.id === moduleTitle.dataset.moduleTitle ? { ...m, title: moduleTitle.value } : m)),
+      }));
+    }
+    const moduleContent = e.target.closest('textarea[data-module-content]');
+    if (moduleContent) {
+      return saveSheetDataField((data) => ({
+        ...data,
+        modulos: data.modulos.map((m) => (m.id === moduleContent.dataset.moduleContent ? { ...m, content: moduleContent.value } : m)),
+      }));
+    }
   }
 
   load();
