@@ -2,8 +2,18 @@
 // (Cobrinha/Tetris). Ver db/042_patch_game_scores.sql.
 import { supabase } from './supabaseClient.js';
 
-export async function submitGameScore(game, score, playerName) {
-  const { error } = await supabase.rpc('submit_game_score', { p_game: game, p_score: Math.round(score), p_player_name: playerName });
+// `campaignId` (db/052) -- sem isso a RPC só adivinhava a campanha por
+// profiles.campaign_id, que é NULO pro mestre (sobretudo quando também
+// é superadmin, que gerencia campanhas sem "pertencer" a nenhuma) --
+// o envio dele sempre falhava com "sem campanha" e nunca aparecia em
+// ranking nenhum.
+export async function submitGameScore(game, score, playerName, campaignId) {
+  const { error } = await supabase.rpc('submit_game_score', {
+    p_game: game,
+    p_score: Math.round(score),
+    p_player_name: playerName,
+    p_campaign_id: campaignId,
+  });
   if (error) throw error;
 }
 

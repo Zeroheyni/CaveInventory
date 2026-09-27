@@ -137,7 +137,7 @@ export function renderEasterEggOverlay({ campaign, profile, onClose }) {
     view = 'gameover';
     render();
     try {
-      if (finalScore > 0) await submitGameScore(selectedGame, finalScore, playerName);
+      if (finalScore > 0) await submitGameScore(selectedGame, finalScore, playerName, campaign.id);
       scores = await listHighScores(campaign.id, selectedGame);
     } catch (err) {
       // silencioso -- não vale travar o jogador numa tela de erro por
