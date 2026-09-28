@@ -96,6 +96,49 @@
 }
 .board-token-del:hover{ opacity:1; transform:scale(1.15); }
 
+/* botão de editar aparência (Fase 2, canto superior esquerdo -- oposto
+   ao × de remover, que fica no superior direito) */
+.board-token-edit-btn{
+  position:absolute; top:-4px; left:-4px; width:17px; height:17px; border-radius:50%; border:1px solid var(--void);
+  background: var(--stone-700); color: var(--ink); font-size:10px; line-height:1; cursor:pointer; display:flex;
+  align-items:center; justify-content:center; opacity:0.85; transition: all 0.15s ease; z-index:5;
+}
+.board-token-edit-btn:hover{ opacity:1; transform:scale(1.15); background: var(--accent-faint); color: var(--accent); }
+
+/* alça de redimensionar (Fase 2, canto inferior direito) */
+.board-token-resize{
+  position:absolute; bottom:-4px; right:-4px; width:12px; height:12px; border-radius:3px;
+  border:1px solid var(--void); background: var(--accent); cursor:nwse-resize; opacity:0.85; z-index:5;
+  transition: all 0.15s ease;
+}
+.board-token-resize:hover{ opacity:1; transform:scale(1.25); }
+
+/* popover de editar aparência (Fase 2) -- filho do próprio token, por
+   isso ancorado relativo a ele; se o token estiver perto da borda do
+   tabuleiro o popover pode extrapolar um pouco -- aceitável por ora. */
+.board-token-edit-popover{
+  position:absolute; top:calc(100% + 8px); left:50%; transform:translateX(-50%); width:200px;
+  background: var(--stone-900); border:1px solid var(--stone-line); border-radius:8px; padding:10px;
+  box-shadow:0 6px 20px rgba(0,0,0,0.5); z-index:20; cursor:default; display:flex; flex-direction:column; gap:8px;
+}
+.board-token-edit-row{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+.board-token-edit-row label{ font-size:10.5px; color: var(--ink-faint); }
+.board-token-edit-row input[type="color"]{
+  width:28px; height:24px; padding:0; border:1px solid var(--stone-line); border-radius:4px; background:none; cursor:pointer;
+}
+.board-token-edit-row .btn{ flex:1; font-size:10px; padding:6px 8px; text-align:center; }
+.board-token-shape-toggle{ display:flex; gap:4px; }
+.board-token-shape-toggle button{
+  width:24px; height:24px; border-radius:5px; border:1px solid var(--stone-line); background: var(--stone-800);
+  color: var(--ink-faint); cursor:pointer; font-size:13px; display:flex; align-items:center; justify-content:center;
+}
+.board-token-shape-toggle button.active{ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); }
+.board-token-edit-close{
+  background:none; border:1px solid var(--stone-line); color: var(--ink-faint); border-radius:5px; font-size:10.5px;
+  padding:5px; cursor:pointer;
+}
+.board-token-edit-close:hover{ color: var(--ink); border-color: var(--ink-faint); }
+
 .board-add-token-fab{
   position:absolute; bottom:18px; right:18px; z-index:10; font-family: var(--font-display); font-size:11px;
   letter-spacing:0.08em; padding:9px 14px; border-radius:20px; border:1px solid var(--accent-core);
@@ -109,10 +152,24 @@
   box-shadow:0 4px 18px rgba(0,0,0,0.5);
 }
 .board-add-token-head{
-  display:flex; align-items:center; justify-content:space-between; font-size:11px; color: var(--ink-faint);
+  display:flex; align-items:center; justify-content:space-between; gap:8px; font-size:11px; color: var(--ink-faint);
   padding:2px 4px 8px; letter-spacing:0.04em;
 }
+.board-add-token-tabs{ display:flex; gap:4px; }
+.board-add-token-tabs button{
+  background:none; border:1px solid var(--stone-line); color: var(--ink-faint); border-radius:5px;
+  font-size:10px; padding:5px 8px; cursor:pointer; transition: all 0.15s ease;
+}
+.board-add-token-tabs button.active{ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); }
 .board-add-token-close{ background:none; border:none; color: var(--ink-faint); font-size:14px; cursor:pointer; }
+
+.board-freeform-form{ display:flex; flex-direction:column; gap:8px; padding:4px; }
+.board-freeform-form input[type="text"]{
+  background: var(--stone-800); border:1px solid var(--stone-line); color: var(--ink); font-family: var(--font-mono);
+  font-size:12px; padding:7px 9px; border-radius:5px;
+}
+.board-freeform-form input[type="text"]:focus{ outline:none; border-color: var(--accent-core); box-shadow: 0 0 0 2px var(--accent-faint); }
+.board-freeform-image-label{ text-align:center; font-size:11px; padding:8px; }
 .board-add-token-option{
   display:flex; align-items:center; gap:8px; width:100%; background:none; border:none; color: var(--ink);
   font-size:12px; padding:6px 6px; border-radius:5px; cursor:pointer; text-align:left;

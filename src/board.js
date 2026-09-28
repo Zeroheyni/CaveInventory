@@ -1,7 +1,7 @@
-// Camada de dados do Tabuleiro (Fase 1) -- ver db/054_patch_board_tabuleiro.sql.
-// Só CRUD de tabuleiro + posicionar/mover token de personagem por
-// enquanto -- marcador solto, redimensionar e reordenar camada são
-// Fase 2; arrasto ao vivo com preview (Broadcast) é Fase 3.
+// Camada de dados do Tabuleiro -- ver db/054_patch_board_tabuleiro.sql
+// e db/055_patch_board_token_owner_delete.sql (Fase 1), mais Fase 2
+// abaixo (marcador solto, redimensionar, cor/formato, camada). Arrasto
+// ao vivo com preview (Broadcast) é Fase 3, ainda não implementado.
 import { supabase } from './supabaseClient.js';
 
 export async function listBoards(campaignId) {
@@ -93,6 +93,59 @@ export async function createTokenForCharacter(boardId, campaignId, characterId, 
 // enquanto, sem escrever no banco a cada frame).
 export async function updateTokenPosition(tokenId, x, y) {
   const { error } = await supabase.from('board_tokens').update({ x, y, updated_at: new Date().toISOString() }).eq('id', tokenId);
+  if (error) throw error;
+}
+
+// marcador solto (Fase 2) -- token sem ficha vinculada, nome+imagem
+// digitados na hora pelo mestre (ex: monstro avulso, objeto no
+// cenário). Ao contrário de createTokenForCharacter, não tem de onde
+// puxar label/image_url -- vem pronto de quem chama.
+export async function createFreeformToken(boardId, campaignId, { label, imageUrl, x, y } = {}) {
+  const { data, error } = await supabase
+    .from('board_tokens')
+    .insert({
+      board_id: boardId,
+      campaign_id: campaignId,
+      character_id: null,
+      label: label || 'Marcador',
+      image_url: imageUrl || null,
+      x: x ?? 50,
+      y: y ?? 50,
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+// imagem do marcador solto -- mesmo bucket/padrão de
+// uploadBoardBackground (nunca upsert/update em storage.objects
+// nesse projeto). O path só depende do board, não do token -- dá pra
+// subir a imagem ANTES de criar a linha do token (não precisa do id
+// dele pra montar o caminho).
+export async function uploadTokenImage(boardId, file) {
+  const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
+  const path = `boards/${boardId}/tokens/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+  const { error: uploadError } = await supabase.storage.from('avatars').upload(path, file, { upsert: false, cacheControl: '3600' });
+  if (uploadError) throw uploadError;
+  const { data } = supabase.storage.from('avatars').getPublicUrl(path);
+  return data.publicUrl;
+}
+
+// atualização genérica de aparência (Fase 2) -- tamanho (redimensionar
+// via alça de arrasto), formato, cor da borda, camada (z-index) e,
+// pro marcador solto, nome/imagem. Um update só serve pra todos esses
+// campos em vez de uma função por campo -- quem chama manda só o que
+// mudou.
+export async function updateTokenAppearance(tokenId, { size, shape, borderColor, zIndex, label, imageUrl } = {}) {
+  const payload = { updated_at: new Date().toISOString() };
+  if (size !== undefined) payload.size = size;
+  if (shape !== undefined) payload.shape = shape;
+  if (borderColor !== undefined) payload.border_color = borderColor;
+  if (zIndex !== undefined) payload.z_index = zIndex;
+  if (label !== undefined) payload.label = label;
+  if (imageUrl !== undefined) payload.image_url = imageUrl;
+  const { error } = await supabase.from('board_tokens').update(payload).eq('id', tokenId);
   if (error) throw error;
 }
 
