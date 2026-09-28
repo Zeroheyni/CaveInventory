@@ -319,11 +319,6 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     <footer>COMBATE — RASTREADOR DE HP E INICIATIVA</footer>
   </div>
 
-  <div id="board-mode-wrap" style="display:none;">
-    <div id="board-embed"></div>
-    <footer>TABULEIRO — POSIÇÃO DOS TOKENS EM TEMPO REAL</footer>
-  </div>
-
   <div id="ficha-mode-wrap" style="display:none;">
     <div id="ficha-embed"></div>
     <footer>FICHA — STATUS, HISTÓRIA E MÓDULOS DO PERSONAGEM</footer>
@@ -343,6 +338,13 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     <div id="journal-embed"></div>
     <footer>DIÁRIO — REGISTRO DE SESSÕES DA CAMPANHA</footer>
   </div>
+</div>
+
+<!-- fora do .wrap (max-width:780px) de propósito -- o tabuleiro
+     precisa ocupar a maior parte da largura da tela, não fica bom
+     espremido junto com o resto das telas (inventário, ficha etc). -->
+<div id="board-mode-wrap" class="board-mode-wrap" style="display:none;">
+  <div id="board-embed"></div>
 </div>
 
 <button class="vehicle-dropzone" id="vehicle-dropzone" title="arraste um item aqui para guardar no veículo, sem peso">

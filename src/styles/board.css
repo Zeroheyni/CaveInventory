@@ -1,6 +1,12 @@
 /* Tabuleiro (virtual tabletop) -- Fase 1. Ver src/screens/board.js. */
 
-.board-screen{ display:flex; flex-direction:column; gap:12px; padding:14px; height:100%; box-sizing:border-box; }
+/* board-mode-wrap/hub-mode-board vivem FORA do .wrap (max-width:780px)
+   de propósito -- ver comentário em character.js/masterCampaignHub.js.
+   O tabuleiro precisa de bem mais espaço horizontal que o resto das
+   telas (inventário, ficha etc), que ficam bem em 780px. */
+.board-mode-wrap{ width:96vw; max-width:1680px; margin:0 auto; padding:0 4px 40px; box-sizing:border-box; }
+
+.board-screen{ display:flex; flex-direction:column; gap:12px; padding:14px 0; box-sizing:border-box; }
 
 .board-error{
   background: rgba(var(--danger-rgb),0.1); border:1px solid var(--danger); color: var(--danger);
@@ -47,9 +53,12 @@
 
 /* ---------- área do tabuleiro ---------- */
 .board-area{
-  position:relative; flex:1; min-height:360px; border-radius:10px; overflow:hidden;
-  background-color: var(--stone-900); border:1px solid var(--stone-line);
+  position:relative; flex:1; height:calc(100vh - 220px); min-height:480px; max-height:1100px;
+  border-radius:10px; overflow:hidden; background-color: var(--stone-900); border:1px solid var(--stone-line);
   background-size:cover; background-position:center; touch-action:none;
+}
+@media (max-width:640px){
+  .board-area{ height:calc(100vh - 260px); min-height:340px; }
 }
 .board-empty-state{ padding:40px 0; text-align:center; }
 
@@ -67,11 +76,11 @@
   font-family: var(--font-display); font-size:1.1em; color: var(--ink-dim); pointer-events:none;
 }
 .board-token-del{
-  position:absolute; top:-3px; right:-3px; width:16px; height:16px; border-radius:50%; border:none;
+  position:absolute; top:-4px; right:-4px; width:17px; height:17px; border-radius:50%; border:1px solid var(--void);
   background: var(--danger); color:#fff; font-size:11px; line-height:1; cursor:pointer; display:flex;
-  align-items:center; justify-content:center; opacity:0; transition: opacity 0.15s ease;
+  align-items:center; justify-content:center; opacity:0.85; transition: all 0.15s ease; z-index:5;
 }
-.board-token:hover .board-token-del{ opacity:1; }
+.board-token-del:hover{ opacity:1; transform:scale(1.15); }
 
 .board-add-token-fab{
   position:absolute; bottom:14px; right:14px; z-index:50; font-family: var(--font-display); font-size:11px;

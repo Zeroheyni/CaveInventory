@@ -108,8 +108,14 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
           </div>
         </div>
 
-        ${MODES.map((m) => `<div id="hub-mode-${m}" style="display:none;"><div id="hub-embed-${m}"></div></div>`).join('')}
+        ${MODES.filter((m) => m !== 'board')
+          .map((m) => `<div id="hub-mode-${m}" style="display:none;"><div id="hub-embed-${m}"></div></div>`)
+          .join('')}
       </div>
+
+      <!-- fora do .wrap (max-width:780px) de propósito -- ver
+           mesmo comentário em character.js. -->
+      <div id="hub-mode-board" class="board-mode-wrap" style="display:none;"><div id="hub-embed-board"></div></div>
 
       <nav class="side-nav" id="side-nav">
         <button type="button" class="side-nav-handle" id="side-nav-toggle" title="menu">

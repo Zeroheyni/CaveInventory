@@ -293,6 +293,10 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   }
 
   function tokenHtml(t) {
+    // remover token segue a MESMA permissão de mover ele (dono do
+    // personagem vinculado ou mestre) -- ver db/055. Antes era só o
+    // mestre e o botão só aparecia no hover (pouco visível); agora
+    // fica sempre visível pra quem tem permissão.
     const movable = canMoveToken(t);
     const shapeClass = t.shape === 'square' ? 'square' : 'circle';
     return `
@@ -300,7 +304,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
         style="left:${t.x}%; top:${t.y}%; width:${t.size}%; border-color:${escapeHtml(t.border_color)}; z-index:${t.z_index};"
         title="${escapeHtml(t.label || '?')}">
         ${avatarOrLetter(t)}
-        ${isMaster ? `<button type="button" class="board-token-del" data-token-del="${t.id}" title="remover token">×</button>` : ''}
+        ${movable ? `<button type="button" class="board-token-del" data-token-del="${t.id}" title="tirar do tabuleiro">×</button>` : ''}
       </div>`;
   }
 
@@ -473,6 +477,11 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     });
 
     app.querySelectorAll('[data-token-del]').forEach((btn) => {
+      // impede o pointerdown de borbulhar até o listener de arrasto do
+      // token (pai) -- sem isso, clicar no × também disparava
+      // setPointerCapture/início de arrasto no token por baixo antes do
+      // clique de remover ser processado.
+      btn.addEventListener('pointerdown', (e) => e.stopPropagation());
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         handleDeleteToken(btn.dataset.tokenDel);
