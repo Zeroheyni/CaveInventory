@@ -1,7 +1,9 @@
 // Camada de dados do Tabuleiro -- ver db/054_patch_board_tabuleiro.sql
-// e db/055_patch_board_token_owner_delete.sql (Fase 1), mais Fase 2
-// abaixo (marcador solto, redimensionar, cor/formato, camada). Arrasto
-// ao vivo com preview (Broadcast) é Fase 3, ainda não implementado.
+// e db/055_patch_board_token_owner_delete.sql (Fase 1), Fase 2 (marcador
+// solto, redimensionar, cor/formato, camada) e Fase 3 abaixo (Realtime
+// Broadcast pro que é efêmero: preview de arrasto/redimensionar ao
+// vivo + cursor colorido de cada jogador -- NUNCA persistido no banco,
+// primeiro uso de Broadcast neste projeto).
 import { supabase } from './supabaseClient.js';
 
 export async function listBoards(campaignId) {
@@ -154,11 +156,39 @@ export async function deleteToken(tokenId) {
   if (error) throw error;
 }
 
-export function subscribeBoard(boardId, onChange) {
-  return supabase
-    .channel('board-tokens-' + boardId)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'board_tokens', filter: `board_id=eq.${boardId}` }, onChange)
-    .subscribe();
+// mesmo canal serve pra tudo do tabuleiro (persistido via
+// postgres_changes E efêmero via Broadcast, Fase 3) -- Supabase deixa
+// multiplexar os dois tipos de evento num canal só, não precisa de
+// uma segunda assinatura/topic por tabuleiro só pra cursor/arrasto.
+// onCursor/onDrag são opcionais -- quem só quer ouvir mudança
+// persistida (ex: nenhum caso hoje, mas deixa a função flexível)
+// simplesmente não passa.
+export function subscribeBoard(boardId, { onChange, onCursor, onDrag } = {}) {
+  const channel = supabase.channel('board-tokens-' + boardId);
+  if (onChange) {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'board_tokens', filter: `board_id=eq.${boardId}` }, onChange);
+  }
+  if (onCursor) channel.on('broadcast', { event: 'cursor' }, ({ payload }) => onCursor(payload));
+  if (onDrag) channel.on('broadcast', { event: 'drag' }, ({ payload }) => onDrag(payload));
+  channel.subscribe();
+  return channel;
+}
+
+// posição do mouse de quem tá olhando o tabuleiro agora (% do
+// tabuleiro, igual x/y de token) -- payload.leave=true quando o
+// ponteiro sai da área (pra sumir o cursor na tela dos outros em vez
+// de deixar ele "parado" pra sempre no último ponto).
+export function broadcastCursor(channel, payload) {
+  if (!channel) return;
+  channel.send({ type: 'broadcast', event: 'cursor', payload }).catch(() => {});
+}
+
+// posição/tamanho de um token EM ANDAMENTO de arrasto/redimensionar
+// (não a gravação final, que continua sendo updateTokenPosition/
+// updateTokenAppearance de sempre) -- x/y e/ou size, só o que mudou.
+export function broadcastDrag(channel, payload) {
+  if (!channel) return;
+  channel.send({ type: 'broadcast', event: 'drag', payload }).catch(() => {});
 }
 
 export function subscribeCampaignBoards(campaignId, onChange) {

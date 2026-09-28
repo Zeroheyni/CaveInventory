@@ -1,11 +1,14 @@
-// Tabuleiro (virtual tabletop) -- Fase 1 + Fase 2: CRUD de tabuleiro
-// pelo mestre, colocar/mover token de personagem OU marcador solto
-// (sem ficha), redimensionar via alça de arrasto no canto, cor da
-// borda/formato editáveis e camada (z-index, só frente/trás -- não é
-// uma lista de grupos nomeados, ver decisão original). Sem arrasto ao
-// vivo com preview/cursor colorido ainda (Fase 3, via Broadcast) --
-// por ora o arrasto só é local até soltar, e a posição/tamanho finais
-// gravam no banco (postgres_changes normal, igual combate).
+// Tabuleiro (virtual tabletop) -- Fases 1 a 3: CRUD de tabuleiro pelo
+// mestre, colocar/mover token de personagem OU marcador solto (sem
+// ficha), redimensionar via alça de arrasto no canto, cor da borda/
+// formato editáveis e camada (z-index, só frente/trás -- não é uma
+// lista de grupos nomeados, ver decisão original), MAIS (Fase 3) o
+// arrasto/redimensionar aparecem em tempo real pros outros enquanto
+// ainda tá em andamento (não só depois de soltar) e um cursor colorido
+// mostra onde o mouse de cada um está -- tudo via Realtime Broadcast,
+// efêmero, nunca gravado no banco (a posição/tamanho FINAIS continuam
+// gravando normal, uma vez, no soltar -- postgres_changes de sempre,
+// igual combate).
 //
 // UI em duas telas: a aba abre numa LISTA dos tabuleiros da campanha
 // (igual um menu); clicar num deles entra em modo tela cheia de
@@ -35,7 +38,19 @@ import {
   deleteToken,
   subscribeBoard,
   subscribeCampaignBoards,
+  broadcastCursor,
+  broadcastDrag,
 } from '../board.js';
+
+// throttle do que é mandado por Broadcast (Fase 3) -- cursor e preview
+// de arrasto/redimensionar não precisam (nem devem) mandar uma
+// mensagem por pointermove bruto (60-120Hz do navegador); um teto de
+// ~16/s já fica visualmente suave e não afoga o canal.
+const LIVE_THROTTLE_MS = 60;
+// quanto tempo sem notícia de um cursor remoto até considerar que a
+// pessoa saiu/fechou a aba sem mandar o "leave" (ex: queda de rede) --
+// não dá pra confiar só no evento de saída.
+const CURSOR_STALE_MS = 8000;
 
 let boardsChannel = null;
 let tokensChannel = null;
@@ -94,6 +109,13 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   let resizeBoardRect = null;
   let resizeEl = null;
 
+  // ---- Fase 3: cursor colorido de cada um + preview de arrasto ao
+  // vivo, via Realtime Broadcast (efêmero, nunca gravado no banco) ----
+  const remoteCursors = new Map(); // userId -> { x, y, color, name, lastSeen }
+  let lastCursorSendAt = 0;
+  let lastDragSendAt = 0;
+  let cursorPruneTimer = null;
+
   async function load() {
     loading = true;
     render();
@@ -129,6 +151,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     viewBoardId = boardId;
     addTokenOpen = false;
     tokens = [];
+    remoteCursors.clear();
     render();
     try {
       tokens = await listBoardTokens(boardId);
@@ -138,11 +161,14 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     }
     render();
     resubscribeTokens();
+    startCursorPruneTimer();
   }
 
   function closeBoard() {
     viewBoardId = null;
     tokens = [];
+    remoteCursors.clear();
+    stopCursorPruneTimer();
     if (tokensChannel) {
       supabase.removeChannel(tokensChannel);
       tokensChannel = null;
@@ -164,9 +190,13 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       tokensChannel = null;
     }
     if (!viewBoardId) return;
-    tokensChannel = subscribeBoard(viewBoardId, () => {
-      clearTimeout(tokensReloadTimer);
-      tokensReloadTimer = setTimeout(reloadTokens, 400);
+    tokensChannel = subscribeBoard(viewBoardId, {
+      onChange: () => {
+        clearTimeout(tokensReloadTimer);
+        tokensReloadTimer = setTimeout(reloadTokens, 400);
+      },
+      onCursor: handleRemoteCursor,
+      onDrag: handleRemoteDrag,
     });
   }
 
@@ -175,10 +205,11 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     if (!viewBoardId) return;
     try {
       const fresh = await listBoardTokens(viewBoardId);
-      // preserva a posição local otimista do token que ESTOU arrastando
-      // agora -- sem isso, um evento de realtime alheio (outro jogador
-      // mexendo em outro token) chegando no meio do meu arrasto faria a
-      // tela "puxar" meu token de volta pra posição antiga do banco.
+      // preserva a posição/tamanho local otimista do token que ESTOU
+      // arrastando/redimensionando agora -- sem isso, um evento de
+      // realtime alheio (outro jogador mexendo em outro token)
+      // chegando no meio do meu gesto faria a tela "puxar" meu token
+      // de volta pro valor antigo do banco.
       if (dragTokenId) {
         const mine = fresh.find((t) => t.id === dragTokenId);
         const prevLocal = tokens.find((t) => t.id === dragTokenId);
@@ -187,12 +218,172 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
           mine.y = prevLocal.y;
         }
       }
+      if (resizeTokenId) {
+        const mine = fresh.find((t) => t.id === resizeTokenId);
+        const prevLocal = tokens.find((t) => t.id === resizeTokenId);
+        if (mine && prevLocal) mine.size = prevLocal.size;
+      }
       tokens = fresh;
       render();
     } catch (err) {
       // realtime reload falhando não deveria travar a tela -- só ignora,
       // a próxima mudança tenta de novo.
     }
+  }
+
+  // ---- Fase 3: receber cursor/arrasto ao vivo de outros clientes ----
+  // Broadcast não passa pela RLS/CHECK que uma coluna de tabela teria
+  // -- qualquer membro autenticado da campanha pode mandar QUALQUER
+  // payload pro canal (ex: via devtools, sem passar pela UI). Valida
+  // o formato de `color` (só aceita hex, senão cai no padrão) e limita
+  // o tamanho de `name` antes de jogar no DOM -- mesmo com escapeHtml
+  // escapando `<`/`>`/`&`, um valor cru dentro de um atributo
+  // style="..." ainda podia tentar fechar a aspa com `"` e injetar
+  // outro atributo (escapeHtml não escapa aspas, só serve pra texto).
+  function handleRemoteCursor(payload) {
+    if (!payload || !payload.userId || payload.userId === session.user.id) return;
+    if (payload.leave) {
+      remoteCursors.delete(payload.userId);
+      renderCursors();
+      return;
+    }
+    const color = /^#[0-9a-fA-F]{3,8}$/.test(payload.color) ? payload.color : '#5ad4ff';
+    const name = String(payload.name || 'alguém').slice(0, 40);
+    remoteCursors.set(payload.userId, {
+      x: Math.max(0, Math.min(100, Number(payload.x) || 0)),
+      y: Math.max(0, Math.min(100, Number(payload.y) || 0)),
+      color,
+      name,
+      lastSeen: Date.now(),
+    });
+    renderCursors();
+  }
+
+  function handleRemoteDrag(payload) {
+    if (!payload || !payload.tokenId || payload.userId === session.user.id) return;
+    // se EU tô mexendo nesse mesmo token agora (não deveria acontecer
+    // com o modelo de permissão atual, mas é barato se proteger),
+    // ignora pra não brigar com o meu próprio arrasto local.
+    if (payload.tokenId === dragTokenId || payload.tokenId === resizeTokenId) return;
+    const token = tokens.find((t) => t.id === payload.tokenId);
+    // comparação por dataset em vez de montar um seletor CSS com
+    // tokenId interpolado -- payload vem de Broadcast (sem CHECK/RLS
+    // de coluna), um tokenId malicioso com aspas dentro de um
+    // `querySelector(\`...[data-token-id="${x}"]\`)` lançaria uma
+    // exceção não tratada ali dentro.
+    const el = Array.from(app.querySelectorAll('.board-token')).find((n) => n.dataset.tokenId === payload.tokenId);
+    // converte/limita ANTES de gravar em `token.x/y/size` -- esse valor
+    // fica no estado e pode acabar indo direto (sem escapeHtml, porque
+    // sempre foi numérico) pro atributo style="" de um render() futuro
+    // (tokenHtml). Broadcast não tem CHECK/RLS de coluna -- sem isso,
+    // um cliente malicioso da campanha podia mandar x/y como string
+    // arbitrária e injetar HTML na próxima renderização.
+    if (payload.x !== undefined && payload.y !== undefined) {
+      const x = Math.max(0, Math.min(100, Number(payload.x)));
+      const y = Math.max(0, Math.min(100, Number(payload.y)));
+      if (Number.isFinite(x) && Number.isFinite(y)) {
+        if (token) {
+          token.x = x;
+          token.y = y;
+        }
+        if (el) {
+          el.style.left = x + '%';
+          el.style.top = y + '%';
+        }
+      }
+    }
+    if (payload.size !== undefined) {
+      const size = Math.max(2, Math.min(40, Number(payload.size)));
+      if (Number.isFinite(size)) {
+        if (token) token.size = size;
+        if (el) el.style.width = size + '%';
+      }
+    }
+  }
+
+  function myDisplayName() {
+    return characterName || profile.username || 'alguém';
+  }
+
+  // reaproveita a cor de destaque do próprio tema do viewer -- em vez
+  // de inventar uma UI de escolher cor de cursor, cada um já "tem"
+  // uma cor (a do tema que escolheu em character.js/masterCampaignHub.js).
+  function myCursorColor() {
+    const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
+    return v || '#5ad4ff';
+  }
+
+  function maybeBroadcastCursor(x, y) {
+    const now = Date.now();
+    if (now - lastCursorSendAt < LIVE_THROTTLE_MS) return;
+    lastCursorSendAt = now;
+    broadcastCursor(tokensChannel, { userId: session.user.id, name: myDisplayName(), color: myCursorColor(), x, y });
+  }
+
+  function maybeBroadcastDrag(tokenId, { x, y, size } = {}) {
+    const now = Date.now();
+    if (now - lastDragSendAt < LIVE_THROTTLE_MS) return;
+    lastDragSendAt = now;
+    const payload = { tokenId, userId: session.user.id };
+    if (x !== undefined) payload.x = x;
+    if (y !== undefined) payload.y = y;
+    if (size !== undefined) payload.size = size;
+    broadcastDrag(tokensChannel, payload);
+  }
+
+  // desenha os cursores remotos direto no DOM (sem passar pelo render()
+  // grande da tela) -- chegam a ~16/s por pessoa, refazer o innerHTML
+  // do tabuleiro inteiro a cada um seria caro à toa e interromperia
+  // qualquer coisa que o usuário local esteja fazendo (arrastar,
+  // popover de edição aberto etc).
+  function renderCursors() {
+    const layer = $('board-cursor-layer');
+    if (!layer) return;
+    layer.innerHTML = Array.from(remoteCursors.values())
+      .map(
+        (c) => `
+      <div class="board-cursor" style="left:${c.x}%; top:${c.y}%;">
+        <svg viewBox="0 0 24 24" width="18" height="18" style="fill:${escapeHtml(c.color)};"><path d="M4 2l16 7.5-6.8 1.7L11 18z"/></svg>
+        <span class="board-cursor-label" style="color:${escapeHtml(c.color)}; border-color:${escapeHtml(c.color)};">${escapeHtml(c.name)}</span>
+      </div>`
+      )
+      .join('');
+  }
+
+  function startCursorPruneTimer() {
+    stopCursorPruneTimer();
+    cursorPruneTimer = setInterval(() => {
+      const now = Date.now();
+      let changed = false;
+      remoteCursors.forEach((c, uid) => {
+        if (now - c.lastSeen > CURSOR_STALE_MS) {
+          remoteCursors.delete(uid);
+          changed = true;
+        }
+      });
+      if (changed) renderCursors();
+    }, 3000);
+  }
+
+  function stopCursorPruneTimer() {
+    if (cursorPruneTimer) {
+      clearInterval(cursorPruneTimer);
+      cursorPruneTimer = null;
+    }
+  }
+
+  function onBoardAreaPointerMove(e) {
+    // se o ponteiro estiver sobre um token/alça/popover, o evento já
+    // borbulha até aqui também (não precisa de listener separado) --
+    // as coordenadas continuam relativas ao board-area inteiro.
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
+    const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
+    maybeBroadcastCursor(x, y);
+  }
+
+  function onBoardAreaPointerLeave() {
+    broadcastCursor(tokensChannel, { userId: session.user.id, leave: true });
   }
 
   function subscribeBoardsRealtime() {
@@ -388,6 +579,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       token.x = x;
       token.y = y;
     }
+    maybeBroadcastDrag(dragTokenId, { x, y });
   }
 
   async function onTokenPointerUp(e) {
@@ -442,6 +634,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     resizeEl.style.width = size + '%';
     const token = tokens.find((t) => t.id === resizeTokenId);
     if (token) token.size = size;
+    maybeBroadcastDrag(resizeTokenId, { size });
   }
 
   async function onResizePointerUp(e) {
@@ -643,9 +836,15 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
           ${tokens.map(tokenHtml).join('')}
           ${isMaster ? `<button type="button" class="board-add-token-fab" id="board-add-token-fab" title="adicionar token de personagem">+ token</button>` : ''}
           ${addTokenPickerHtml()}
+          <div class="board-cursor-layer" id="board-cursor-layer"></div>
         </div>
       </div>`;
     wireFullscreenEvents();
+    // o board-area acabou de ser reconstruído do zero (innerHTML) --
+    // redesenha os cursores que eu já conhecia na camada nova, senão
+    // eles ficam "invisíveis" até a próxima mensagem de Broadcast
+    // chegar (Fase 3).
+    renderCursors();
   }
 
   function render() {
@@ -828,6 +1027,15 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       el.addEventListener('pointerup', onResizePointerUp);
       el.addEventListener('pointercancel', onResizePointerUp);
     });
+
+    // ---- cursor ao vivo (Fase 3) -- rastreia o ponteiro em cima do
+    // board-area inteiro (inclusive quando tá em cima de um token,
+    // que já borbulha até aqui) ----
+    const boardAreaEl = $('board-area');
+    if (boardAreaEl) {
+      boardAreaEl.addEventListener('pointermove', onBoardAreaPointerMove);
+      boardAreaEl.addEventListener('pointerleave', onBoardAreaPointerLeave);
+    }
   }
 
   load();
