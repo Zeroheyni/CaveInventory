@@ -4,6 +4,17 @@
 // vivo com preview/cursor colorido (Fase 3, via Broadcast) -- por
 // ora o arrasto só é local até soltar, e a posição final grava no
 // banco (postgres_changes normal, igual combate).
+//
+// UI em duas telas: a aba abre numa LISTA dos tabuleiros da campanha
+// (igual um menu); clicar num deles entra em modo tela cheia de
+// verdade (position:fixed cobrindo o viewport inteiro, por cima até
+// do cabeçalho do site -- só fica visível a seta do menu lateral,
+// que já tem z-index maior que qualquer coisa aqui, e um botãozinho
+// "voltar" no canto superior esquerdo). "Tabuleiro ativo"
+// (campaigns.active_board_id, escolhido pelo mestre) continua
+// existindo como um indicador/lembrete de qual é o principal da
+// campanha, mas agora é só INFORMATIVO -- abrir um tabuleiro pra
+// olhar/jogar não depende mais dele, qualquer um da lista abre.
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
 import {
@@ -39,13 +50,13 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   }
 
   let boards = [];
-  let activeBoardId = null;
+  let activeBoardId = null; // só informativo agora, ver comentário acima
+  let viewBoardId = null; // null = lista; senão = tabuleiro aberto em tela cheia
   let tokens = [];
   let charactersInCampaign = []; // só carregado pro mestre (picker de "+ token")
   let loading = true;
   let error = '';
 
-  let managePanelOpen = isMaster; // mestre já abre vendo o painel de gerência
   let creatingBoard = false;
   let newBoardName = '';
   let renamingBoardId = null;
@@ -74,7 +85,10 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       ]);
       boards = boardList;
       activeBoardId = campRow?.active_board_id || null;
-      tokens = activeBoardId ? await listBoardTokens(activeBoardId) : [];
+      // se o tabuleiro que eu tinha aberto sumiu (apagado por outro
+      // cliente), volta sozinho pra lista em vez de ficar preso numa
+      // tela cheia órfã.
+      if (viewBoardId && !boards.some((b) => b.id === viewBoardId)) closeBoard();
       if (isMaster) {
         const { data: chars } = await supabase
           .from('characters')
@@ -89,23 +103,49 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     }
     loading = false;
     render();
+  }
+
+  // ---- entrar/sair do modo tela cheia ----
+  async function openBoard(boardId) {
+    viewBoardId = boardId;
+    addTokenOpen = false;
+    tokens = [];
+    render();
+    try {
+      tokens = await listBoardTokens(boardId);
+      error = '';
+    } catch (err) {
+      error = err.message;
+    }
+    render();
     resubscribeTokens();
   }
 
-  // reassina o canal de tokens toda vez que o tabuleiro ativo muda --
-  // o topic carrega o boardId (mesmo padrão de subscribeBoard), então
-  // trocar de tabuleiro ativo sem resubscrever deixaria a tela ouvindo
-  // o tabuleiro ERRADO.
-  let lastSubscribedBoardId = undefined;
-  function resubscribeTokens() {
-    if (activeBoardId === lastSubscribedBoardId) return;
-    lastSubscribedBoardId = activeBoardId;
+  function closeBoard() {
+    viewBoardId = null;
+    tokens = [];
     if (tokensChannel) {
       supabase.removeChannel(tokensChannel);
       tokensChannel = null;
     }
-    if (!activeBoardId) return;
-    tokensChannel = subscribeBoard(activeBoardId, () => {
+    lastSubscribedBoardId = undefined;
+    render();
+  }
+
+  // reassina o canal de tokens toda vez que o tabuleiro aberto muda --
+  // o topic carrega o boardId (mesmo padrão de subscribeBoard), então
+  // trocar de tabuleiro sem resubscrever deixaria a tela ouvindo o
+  // tabuleiro ERRADO.
+  let lastSubscribedBoardId = undefined;
+  function resubscribeTokens() {
+    if (viewBoardId === lastSubscribedBoardId) return;
+    lastSubscribedBoardId = viewBoardId;
+    if (tokensChannel) {
+      supabase.removeChannel(tokensChannel);
+      tokensChannel = null;
+    }
+    if (!viewBoardId) return;
+    tokensChannel = subscribeBoard(viewBoardId, () => {
       clearTimeout(tokensReloadTimer);
       tokensReloadTimer = setTimeout(reloadTokens, 400);
     });
@@ -113,9 +153,9 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
 
   let tokensReloadTimer = null;
   async function reloadTokens() {
-    if (!activeBoardId) return;
+    if (!viewBoardId) return;
     try {
-      const fresh = await listBoardTokens(activeBoardId);
+      const fresh = await listBoardTokens(viewBoardId);
       // preserva a posição local otimista do token que ESTOU arrastando
       // agora -- sem isso, um evento de realtime alheio (outro jogador
       // mexendo em outro token) chegando no meio do meu arrasto faria a
@@ -151,8 +191,8 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     newBoardName = '';
     try {
       const board = await createBoard(campaignId, name);
-      // primeiro tabuleiro da campanha já entra ativo sozinho -- senão o
-      // mestre criava e ainda precisava lembrar de clicar "ativar".
+      // primeiro tabuleiro da campanha já marca sozinho como "ativo" --
+      // senão o mestre criava e ainda precisava lembrar de marcar.
       if (!activeBoardId) await setActiveBoard(campaignId, board.id);
       await load();
     } catch (err) {
@@ -186,6 +226,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   async function handleDeleteBoard(boardId) {
     try {
       await deleteBoard(boardId);
+      if (viewBoardId === boardId) closeBoard();
       await load();
     } catch (err) {
       error = err.message;
@@ -206,7 +247,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   async function handleAddToken(charId) {
     addTokenOpen = false;
     try {
-      const token = await createTokenForCharacter(activeBoardId, campaignId, charId, { x: 50, y: 50 });
+      const token = await createTokenForCharacter(viewBoardId, campaignId, charId, { x: 50, y: 50 });
       tokens = [...tokens, token];
       render();
     } catch (err) {
@@ -294,9 +335,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
 
   function tokenHtml(t) {
     // remover token segue a MESMA permissão de mover ele (dono do
-    // personagem vinculado ou mestre) -- ver db/055. Antes era só o
-    // mestre e o botão só aparecia no hover (pouco visível); agora
-    // fica sempre visível pra quem tem permissão.
+    // personagem vinculado ou mestre) -- ver db/055.
     const movable = canMoveToken(t);
     const shapeClass = t.shape === 'square' ? 'square' : 'circle';
     return `
@@ -308,52 +347,66 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       </div>`;
   }
 
-  function boardRowHtml(b) {
+  // ---- tela 1: lista de tabuleiros ----
+  function boardListItemHtml(b) {
     const active = b.id === activeBoardId;
     const renaming = renamingBoardId === b.id;
     return `
-      <div class="board-row ${active ? 'active' : ''}">
-        <button type="button" class="board-row-activate" data-board-activate="${b.id}" title="${active ? 'tabuleiro ativo' : 'tornar ativo'}">${active ? '●' : '○'}</button>
+      <div class="board-list-item ${active ? 'active' : ''}" data-board-open="${b.id}">
+        <div class="board-list-thumb" style="${b.background_image_url ? `background-image:url('${escapeHtml(b.background_image_url)}');` : ''}">
+          ${!b.background_image_url ? '🗺' : ''}
+        </div>
+        <div class="board-list-info" ${renaming ? 'data-stop-open' : ''}>
+          ${
+            renaming
+              ? `<input type="text" class="board-row-rename-input" id="board-rename-input" value="${escapeHtml(renameValue)}">
+                 <div class="board-list-rename-actions">
+                   <button type="button" class="btn" data-board-rename-confirm="${b.id}">salvar</button>
+                   <button type="button" class="btn btn-ghost" data-board-rename-cancel="1">cancelar</button>
+                 </div>`
+              : `<div class="board-list-name">${escapeHtml(b.name)}${active ? '<span class="board-active-badge" title="tabuleiro ativo da campanha">● ativo</span>' : ''}</div>
+                 <div class="board-list-hint">clique para abrir</div>`
+          }
+        </div>
         ${
-          renaming
-            ? `<input type="text" class="board-row-rename-input" id="board-rename-input" value="${escapeHtml(renameValue)}">
-               <button type="button" class="btn" data-board-rename-confirm="${b.id}">salvar</button>
-               <button type="button" class="btn btn-ghost" data-board-rename-cancel="1">x</button>`
-            : `<span class="board-row-name">${escapeHtml(b.name)}</span>
-               <button type="button" class="board-row-icon-btn" data-board-rename="${b.id}" title="renomear">✎</button>
-               <label class="board-row-icon-btn" title="trocar imagem de fundo">🖼<input type="file" accept="image/*" data-board-bg="${b.id}" style="display:none;"></label>
-               <button type="button" class="admin-danger-btn" data-board-delete="${b.id}">apagar</button>`
+          isMaster && !renaming
+            ? `<div class="board-list-actions" data-stop-open>
+                 <button type="button" class="board-row-icon-btn" data-board-activate="${b.id}" title="${active ? 'tabuleiro ativo' : 'marcar como ativo'}">${active ? '★' : '☆'}</button>
+                 <button type="button" class="board-row-icon-btn" data-board-rename="${b.id}" title="renomear">✎</button>
+                 <label class="board-row-icon-btn" title="trocar imagem de fundo">🖼<input type="file" accept="image/*" data-board-bg="${b.id}" style="display:none;"></label>
+                 <button type="button" class="admin-danger-btn" data-board-delete="${b.id}">apagar</button>
+               </div>`
+            : ''
         }
       </div>`;
   }
 
-  function managePanelHtml() {
-    if (!isMaster) return '';
-    return `
-      <div class="board-manage-panel ${managePanelOpen ? 'open' : ''}">
-        <div class="board-manage-head">
-          <button type="button" class="board-manage-toggle" id="board-manage-toggle">${managePanelOpen ? '▾' : '▸'} gerenciar tabuleiros</button>
-          ${managePanelOpen ? `<button type="button" class="btn btn-ghost" id="board-new-btn">+ novo</button>` : ''}
-        </div>
+  function renderList() {
+    app.innerHTML = `
+      <div class="board-list-screen">
+        ${error ? `<div class="board-error">${escapeHtml(error)}</div>` : ''}
         ${
-          managePanelOpen
-            ? `
-          ${
-            creatingBoard
-              ? `<div class="board-new-form">
-                   <input type="text" id="board-new-name" placeholder="nome do tabuleiro" value="${escapeHtml(newBoardName)}">
-                   <button type="button" class="btn" id="board-new-confirm">criar</button>
-                   <button type="button" class="btn btn-ghost" id="board-new-cancel">cancelar</button>
-                 </div>`
-              : ''
-          }
-          <div class="board-list">
-            ${boards.map(boardRowHtml).join('') || '<div class="admin-empty">nenhum tabuleiro ainda</div>'}
-          </div>
-        `
-            : ''
+          isMaster
+            ? `<div class="board-list-head">
+                 <b>Tabuleiros da campanha</b>
+                 <button type="button" class="btn" id="board-new-btn">+ novo tabuleiro</button>
+               </div>
+               ${
+                 creatingBoard
+                   ? `<div class="board-new-form">
+                        <input type="text" id="board-new-name" placeholder="nome do tabuleiro" value="${escapeHtml(newBoardName)}">
+                        <button type="button" class="btn" id="board-new-confirm">criar</button>
+                        <button type="button" class="btn btn-ghost" id="board-new-cancel">cancelar</button>
+                      </div>`
+                   : ''
+               }`
+            : `<div class="board-list-head"><b>Tabuleiros da campanha</b></div>`
         }
+        <div class="board-list">
+          ${boards.map(boardListItemHtml).join('') || `<div class="admin-empty">${isMaster ? 'nenhum tabuleiro ainda -- crie um acima.' : 'o mestre ainda não criou nenhum tabuleiro.'}</div>`}
+        </div>
       </div>`;
+    wireListEvents();
   }
 
   function addTokenPickerHtml() {
@@ -379,18 +432,21 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       </div>`;
   }
 
-  function boardAreaHtml() {
-    if (!activeBoardId) {
-      return `<div class="admin-empty board-empty-state">${isMaster ? 'nenhum tabuleiro ativo -- crie ou ative um acima.' : 'o mestre ainda não ativou nenhum tabuleiro.'}</div>`;
-    }
-    const board = boards.find((b) => b.id === activeBoardId);
+  // ---- tela 2: tabuleiro em tela cheia ----
+  function renderFullscreen() {
+    const board = boards.find((b) => b.id === viewBoardId);
     const bg = board && board.background_image_url;
-    return `
-      <div class="board-area" id="board-area" style="${bg ? `background-image:url('${escapeHtml(bg)}');` : ''}">
-        ${tokens.map(tokenHtml).join('')}
-        ${isMaster ? `<button type="button" class="board-add-token-fab" id="board-add-token-fab" title="adicionar token de personagem">+ token</button>` : ''}
-        ${addTokenPickerHtml()}
+    app.innerHTML = `
+      <div class="board-fullscreen">
+        <button type="button" class="board-back-btn" id="board-back-btn" title="sair do tabuleiro">←</button>
+        ${error ? `<div class="board-error board-fullscreen-error">${escapeHtml(error)}</div>` : ''}
+        <div class="board-area" id="board-area" style="${bg ? `background-image:url('${escapeHtml(bg)}');` : ''}">
+          ${tokens.map(tokenHtml).join('')}
+          ${isMaster ? `<button type="button" class="board-add-token-fab" id="board-add-token-fab" title="adicionar token de personagem">+ token</button>` : ''}
+          ${addTokenPickerHtml()}
+        </div>
       </div>`;
+    wireFullscreenEvents();
   }
 
   function render() {
@@ -398,19 +454,14 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       app.innerHTML = `<div class="admin-empty" style="padding:24px 0;">carregando tabuleiro…</div>`;
       return;
     }
-    app.innerHTML = `
-      <div class="board-screen">
-        ${error ? `<div class="board-error">${escapeHtml(error)}</div>` : ''}
-        ${managePanelHtml()}
-        ${boardAreaHtml()}
-      </div>`;
-    wireEvents();
+    if (viewBoardId) {
+      renderFullscreen();
+    } else {
+      renderList();
+    }
   }
 
-  function wireEvents() {
-    const manageToggle = $('board-manage-toggle');
-    if (manageToggle) manageToggle.addEventListener('click', () => { managePanelOpen = !managePanelOpen; render(); });
-
+  function wireListEvents() {
     const newBtn = $('board-new-btn');
     if (newBtn) newBtn.addEventListener('click', () => { creatingBoard = true; newBoardName = ''; render(); $('board-new-name')?.focus(); });
 
@@ -427,6 +478,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     const renameInput = $('board-rename-input');
     if (renameInput) {
       renameInput.addEventListener('input', (e) => { renameValue = e.target.value; });
+      renameInput.addEventListener('keydown', (e) => { if (e.key === 'Enter') handleRenameConfirm(renamingBoardId); });
       renameInput.focus();
       renameInput.setSelectionRange(renameInput.value.length, renameInput.value.length);
     }
@@ -467,6 +519,21 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
         input.value = '';
       });
     });
+
+    // clique no cartão do tabuleiro abre ele em tela cheia -- exceto
+    // clique em qualquer coisa marcada com data-stop-open (os botões
+    // de gerência do mestre, que já têm a própria ação).
+    app.querySelectorAll('[data-board-open]').forEach((row) => {
+      row.addEventListener('click', (e) => {
+        if (e.target.closest('[data-stop-open]')) return;
+        openBoard(row.dataset.boardOpen);
+      });
+    });
+  }
+
+  function wireFullscreenEvents() {
+    const backBtn = $('board-back-btn');
+    if (backBtn) backBtn.addEventListener('click', closeBoard);
 
     const addTokenFab = $('board-add-token-fab');
     if (addTokenFab) addTokenFab.addEventListener('click', () => { addTokenOpen = !addTokenOpen; render(); });
