@@ -10,6 +10,7 @@ import { applyGlobalTheme, updateProfileTheme } from '../campaign.js';
 import { THEMES, themeSwatchHtml } from '../themes.js';
 import { listUnlockedGameThemes } from '../games.js';
 import { renderCombatScreen } from './combat.js';
+import { renderBoardScreen } from './board.js';
 import { renderMasterFichaScreen } from './masterFicha.js';
 import { renderNpcBankScreen } from './npcBank.js';
 import { renderMasterInventoryChooser } from './masterInventoryChooser.js';
@@ -26,6 +27,11 @@ const NAV_ITEMS = [
     mode: 'combat',
     label: 'Combate',
     icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14.5 4.5l5 5-9 9-3 1 1-3 9-9z"/><path d="M13 6l5 5"/><path d="M5 19l2-2"/></svg>',
+  },
+  {
+    mode: 'board',
+    label: 'Tabuleiro',
+    icon: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9.5" cy="10" r="2.1"/><path d="M15.5 14.5l-2.2-2.2a1.4 1.4 0 00-2 0L9 14.5" stroke-linecap="round"/></svg>',
   },
   {
     mode: 'ficha',
@@ -49,8 +55,8 @@ const NAV_ITEMS = [
   },
 ];
 
-const MODES = ['inventory', 'combat', 'ficha', 'npcs', 'dice', 'journal'];
-const MODE_TITLES = { inventory: 'INVENTÁRIO', combat: 'COMBATE', ficha: 'FICHA', npcs: 'BANCO DE NPCS', dice: 'DADOS', journal: 'DIÁRIO' };
+const MODES = ['inventory', 'combat', 'board', 'ficha', 'npcs', 'dice', 'journal'];
+const MODE_TITLES = { inventory: 'INVENTÁRIO', combat: 'COMBATE', board: 'TABULEIRO', ficha: 'FICHA', npcs: 'BANCO DE NPCS', dice: 'DADOS', journal: 'DIÁRIO' };
 
 export function renderMasterCampaignHub(app, { session, profile, campaign, onBack, initialMode }) {
   let mode = initialMode || 'ficha';
@@ -215,6 +221,8 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
         renderMasterInventoryChooser(embed, { session, profile, campaign, topApp: app, escapeBack: () => render() });
       } else if (mode === 'combat') {
         renderCombatScreen(embed, { session, profile, campaign, characterId: null, characterName: null });
+      } else if (mode === 'board') {
+        renderBoardScreen(embed, { session, profile, campaign, characterId: null, characterName: null });
       } else if (mode === 'ficha') {
         renderMasterFichaScreen(embed, { session, profile, campaign });
       } else if (mode === 'npcs') {

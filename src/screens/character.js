@@ -10,6 +10,7 @@ import { renderDiceScreen } from './dice.js';
 import { renderBattleLogScreen } from './battleLog.js';
 import { renderSessionJournalScreen } from './sessionJournal.js';
 import { renderMasterInventoryChooser } from './masterInventoryChooser.js';
+import { renderBoardScreen } from './board.js';
 import { createPublicItem, createPublicContainer, listCampaignPlayers, transferCurrencyRpc } from '../publicArea.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 import { updateProfileTheme } from '../campaign.js';
@@ -318,6 +319,11 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     <footer>COMBATE — RASTREADOR DE HP E INICIATIVA</footer>
   </div>
 
+  <div id="board-mode-wrap" style="display:none;">
+    <div id="board-embed"></div>
+    <footer>TABULEIRO — POSIÇÃO DOS TOKENS EM TEMPO REAL</footer>
+  </div>
+
   <div id="ficha-mode-wrap" style="display:none;">
     <div id="ficha-embed"></div>
     <footer>FICHA — STATUS, HISTÓRIA E MÓDULOS DO PERSONAGEM</footer>
@@ -358,6 +364,10 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     <button type="button" class="side-nav-item" id="combat-trigger" data-nav-mode="combat" title="tela de combate">
       <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M14.5 4.5l5 5-9 9-3 1 1-3 9-9z"/><path d="M13 6l5 5"/><path d="M5 19l2-2"/></svg></span>
       <span class="side-nav-label">Combate</span>
+    </button>
+    <button type="button" class="side-nav-item" id="board-trigger" data-nav-mode="board" title="tabuleiro">
+      <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="4" y="4" width="16" height="16" rx="2"/><circle cx="9.5" cy="10" r="2.1"/><path d="M15.5 14.5l-2.2-2.2a1.4 1.4 0 00-2 0L9 14.5" stroke-linecap="round"/></svg></span>
+      <span class="side-nav-label">Tabuleiro</span>
     </button>
     <button type="button" class="side-nav-item" id="ficha-trigger" data-nav-mode="ficha" title="ficha do personagem">
       <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="5" y="3" width="14" height="18" rx="2"/><path d="M8.5 8h7M8.5 12h7M8.5 16h4"/></svg></span>
@@ -1655,6 +1665,10 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     setMode('inventory');
     sideNav.classList.remove('open');
   });
+  document.getElementById('board-trigger').addEventListener('click', ()=>{
+    setMode('board');
+    sideNav.classList.remove('open');
+  });
   document.getElementById('ficha-trigger').addEventListener('click', ()=>{
     setMode('ficha');
     sideNav.classList.remove('open');
@@ -2558,6 +2572,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
 
   // ---- alternância de modo (inventário <-> baú do veículo <-> combate <-> ficha) ----
   let combatMounted = false;
+  let boardMounted = false;
   let fichaMounted = false;
   let npcsMounted = false;
   let chooserMounted = false;
@@ -2588,6 +2603,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     const invWrap = document.getElementById('inventory-mode-wrap');
     const transWrap = document.getElementById('transport-mode-wrap');
     const combatWrap = document.getElementById('combat-mode-wrap');
+    const boardWrap = document.getElementById('board-mode-wrap');
     const fichaWrap = document.getElementById('ficha-mode-wrap');
     const npcsWrap = document.getElementById('npcs-mode-wrap');
     const notebookWrap = document.getElementById('notebook-mode-wrap');
@@ -2601,6 +2617,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     invWrap.style.display = 'none';
     transWrap.style.display = 'none';
     combatWrap.style.display = 'none';
+    boardWrap.style.display = 'none';
     fichaWrap.style.display = 'none';
     npcsWrap.style.display = 'none';
     notebookWrap.style.display = 'none';
@@ -2625,6 +2642,16 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       if(!combatMounted){
         combatMounted = true;
         renderCombatScreen(document.getElementById('combat-embed'), { session, profile, campaign, characterId, characterName });
+      }
+    } else if(mode === 'board'){
+      boardWrap.style.display = 'block';
+      boardWrap.classList.remove('mode-fade-in'); void boardWrap.offsetWidth; boardWrap.classList.add('mode-fade-in');
+      backpackBtn.style.display = 'flex';
+      titleText.textContent = 'TABULEIRO';
+      copyBtn.style.display = 'none';
+      if(!boardMounted){
+        boardMounted = true;
+        renderBoardScreen(document.getElementById('board-embed'), { session, profile, campaign, characterId, characterName });
       }
     } else if(mode === 'ficha'){
       fichaWrap.style.display = 'block';
