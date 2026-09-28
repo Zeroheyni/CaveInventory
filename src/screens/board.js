@@ -117,11 +117,15 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   let lastDragSendAt = 0;
   let cursorPruneTimer = null;
 
-  // ---- Fase 4: HUD (iniciativa/dados/barras) ao redor do tabuleiro --
-  // montado como IRMÃO de `app` (não filho), pra sobreviver aos
-  // innerHTML de renderFullscreen()/renderList() sem perder estado/
-  // Realtime -- ver comentário completo em boardHud.js.
-  let hud = null;
+  // ---- Fase 4: HUD (combate/dados/iniciativa/barras) ao redor do
+  // tabuleiro -- montado como IRMÃO de `app` (não filho), pra
+  // sobreviver aos innerHTML de renderFullscreen()/renderList() sem
+  // perder estado/Realtime, e montado UMA VEZ SÓ (não a cada abrir/
+  // fechar tabuleiro) -- os drawers de Combate/Dados embutem telas
+  // inteiras que não têm como "desmontar" sem vazar canal, então só
+  // trocam de visível/escondido junto com a tela cheia. Ver comentário
+  // completo em boardHud.js.
+  const hud = renderBoardHud(app.parentElement, { session, profile, campaign, characterId, characterName, isMaster });
 
   async function load() {
     loading = true;
@@ -169,7 +173,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     render();
     resubscribeTokens();
     startCursorPruneTimer();
-    if (!hud) hud = renderBoardHud(app.parentElement, { session, profile, campaign, characterId, characterName, isMaster });
+    hud.setVisible(true);
   }
 
   function closeBoard() {
@@ -182,10 +186,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       tokensChannel = null;
     }
     lastSubscribedBoardId = undefined;
-    if (hud) {
-      hud.destroy();
-      hud = null;
-    }
+    hud.setVisible(false);
     render();
   }
 

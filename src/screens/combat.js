@@ -51,22 +51,23 @@ import {
   customBarFormulaLabel,
 } from '../customBars.js';
 
-let activeChannel = null;
-let diceChannel = null;
-
-export function renderCombatScreen(app, { session, profile, campaign, characterId, characterName }) {
+// `topicSuffix` opcional (Fase 4 do tabuleiro) -- essa tela agora pode
+// ser montada em DOIS lugares ao mesmo tempo na mesma sessão (a aba
+// Combate normal E o painel "Combate" do HUD do tabuleiro), cada
+// mount com seu PRÓPRIO estado/canais -- por isso activeChannel/
+// diceChannel viraram variável LOCAL (fechamento desta função) em vez
+// de módulo, e os topics de Realtime ganham o sufixo pra não colidir
+// entre as duas instâncias (mesmo motivo/padrão de sempre: cada
+// assinante independente do mesmo evento precisa do seu topic). Quem
+// não passa nada continua exatamente como antes.
+export function renderCombatScreen(app, { session, profile, campaign, characterId, characterName, topicSuffix }) {
   const campaignId = campaign.id;
   const isMaster = profile.role === 'master';
   const $ = (id) => app.querySelector('#' + id);
+  const suffix = topicSuffix || '';
 
-  if (activeChannel) {
-    supabase.removeChannel(activeChannel);
-    activeChannel = null;
-  }
-  if (diceChannel) {
-    supabase.removeChannel(diceChannel);
-    diceChannel = null;
-  }
+  let activeChannel = null;
+  let diceChannel = null;
 
   const rollerId = session.user.id;
   const rollerName = profile.username || 'jogador';
@@ -167,22 +168,26 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   // request dela terminar (mesmo problema já resolvido em publicArea.js).
   let realtimeReloadTimer = null;
   function subscribeRealtime() {
-    activeChannel = subscribeCombat(campaignId, () => {
-      clearTimeout(realtimeReloadTimer);
-      realtimeReloadTimer = setTimeout(async () => {
-        combatState = await getCombatState(campaignId);
-        participants = await getParticipants(campaignId);
-        // condições customizadas não têm canal de Realtime próprio (baixo
-        // custo, o mestre não cria/edita com frequência) -- reaproveita
-        // esse debounce, que já dispara toda vez que algo no combate muda,
-        // pra manter a lista fresca sem precisar de outra assinatura.
-        customConditions = await listCustomConditions(campaignId);
-        customBarDefs = await listCustomBars(campaignId);
-        characterCustomBars = await listCharacterCustomBars(campaignId);
-        await refreshCharacterStats();
-        render();
-      }, 700);
-    });
+    activeChannel = subscribeCombat(
+      campaignId,
+      () => {
+        clearTimeout(realtimeReloadTimer);
+        realtimeReloadTimer = setTimeout(async () => {
+          combatState = await getCombatState(campaignId);
+          participants = await getParticipants(campaignId);
+          // condições customizadas não têm canal de Realtime próprio (baixo
+          // custo, o mestre não cria/edita com frequência) -- reaproveita
+          // esse debounce, que já dispara toda vez que algo no combate muda,
+          // pra manter a lista fresca sem precisar de outra assinatura.
+          customConditions = await listCustomConditions(campaignId);
+          customBarDefs = await listCustomBars(campaignId);
+          characterCustomBars = await listCharacterCustomBars(campaignId);
+          await refreshCharacterStats();
+          render();
+        }, 700);
+      },
+      'combat-' + campaignId + suffix
+    );
   }
 
   // ---- bandeja retrátil de dados (Fase 8) -- rolar sem sair do combate,
@@ -201,7 +206,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         diceRolls = await listRecentRolls(campaignId, 8);
         render();
       },
-      'dice-combat-' + campaignId
+      'dice-combat-' + campaignId + suffix
     );
   }
   async function performDiceRoll(die) {

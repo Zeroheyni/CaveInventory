@@ -6,24 +6,26 @@ import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
 import { rollDice, listRecentRolls, subscribeDiceRolls, clearRolls, DICE_PRESETS, normalizeCustomDie } from '../dice.js';
 
-let activeChannel = null;
-
 function formatTime(iso) {
   const d = new Date(iso);
   return String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
 }
 
-export function renderDiceScreen(app, { session, profile, campaign }) {
+// `topicSuffix` opcional (Fase 4 do tabuleiro) -- mesmo motivo/padrão
+// de combat.js: essa tela agora pode ser montada em DOIS lugares ao
+// mesmo tempo na mesma sessão (a aba Dados normal E o painel "Dados"
+// do HUD do tabuleiro) -- activeChannel virou variável LOCAL em vez
+// de módulo, e o topic ganha o sufixo pra não colidir entre as duas
+// instâncias. Quem não passa nada continua exatamente como antes.
+export function renderDiceScreen(app, { session, profile, campaign, topicSuffix }) {
   const campaignId = campaign.id;
   const rollerId = session.user.id;
   const rollerName = profile.username || 'jogador';
   const isMaster = profile.role === 'master';
   const $ = (id) => app.querySelector('#' + id);
+  const suffix = topicSuffix || '';
 
-  if (activeChannel) {
-    supabase.removeChannel(activeChannel);
-    activeChannel = null;
-  }
+  let activeChannel = null;
 
   let rolls = [];
   let qty = 1;
@@ -38,10 +40,14 @@ export function renderDiceScreen(app, { session, profile, campaign }) {
   }
 
   function subscribeRealtime() {
-    activeChannel = subscribeDiceRolls(campaignId, async () => {
-      rolls = await listRecentRolls(campaignId);
-      render();
-    });
+    activeChannel = subscribeDiceRolls(
+      campaignId,
+      async () => {
+        rolls = await listRecentRolls(campaignId);
+        render();
+      },
+      'dice-' + campaignId + suffix
+    );
   }
 
   function render() {
