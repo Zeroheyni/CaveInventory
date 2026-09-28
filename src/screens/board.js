@@ -41,6 +41,7 @@ import {
   broadcastCursor,
   broadcastDrag,
 } from '../board.js';
+import { renderBoardHud } from './boardHud.js';
 
 // throttle do que é mandado por Broadcast (Fase 3) -- cursor e preview
 // de arrasto/redimensionar não precisam (nem devem) mandar uma
@@ -116,6 +117,12 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   let lastDragSendAt = 0;
   let cursorPruneTimer = null;
 
+  // ---- Fase 4: HUD (iniciativa/dados/barras) ao redor do tabuleiro --
+  // montado como IRMÃO de `app` (não filho), pra sobreviver aos
+  // innerHTML de renderFullscreen()/renderList() sem perder estado/
+  // Realtime -- ver comentário completo em boardHud.js.
+  let hud = null;
+
   async function load() {
     loading = true;
     render();
@@ -162,6 +169,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     render();
     resubscribeTokens();
     startCursorPruneTimer();
+    if (!hud) hud = renderBoardHud(app.parentElement, { session, profile, campaign, characterId, characterName, isMaster });
   }
 
   function closeBoard() {
@@ -174,6 +182,10 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       tokensChannel = null;
     }
     lastSubscribedBoardId = undefined;
+    if (hud) {
+      hud.destroy();
+      hud = null;
+    }
     render();
   }
 

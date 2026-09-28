@@ -31,9 +31,15 @@ export async function getParticipants(campaignId) {
   return data;
 }
 
-export function subscribeCombat(campaignId, onChange) {
+// `topic` opcional -- mesmo motivo de subscribeDiceRolls (dice.js):
+// um segundo assinante independente do MESMO campaignId (ex: o painel
+// de iniciativa do tabuleiro, Fase 4) não pode usar o topic padrão
+// 'combat-<campaignId>', porque a aba Combate já pode estar com esse
+// canal aberto (fica montada mesmo escondida) -- topic repetido
+// quebra os dois. Quem não passa nada continua no padrão de sempre.
+export function subscribeCombat(campaignId, onChange, topic) {
   return supabase
-    .channel('combat-' + campaignId)
+    .channel(topic || 'combat-' + campaignId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'combat_participants', filter: `campaign_id=eq.${campaignId}` }, onChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_combat', filter: `campaign_id=eq.${campaignId}` }, onChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'character_custom_bars', filter: `campaign_id=eq.${campaignId}` }, onChange)
