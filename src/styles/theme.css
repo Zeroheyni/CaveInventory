@@ -479,17 +479,17 @@
   html[data-theme="flappy-noturno"] body::before,
   html[data-theme="flappy-aurora"] body::before,
   html[data-theme="2048-ambar"] body::before,
-  html[data-theme="2048-marfim"] body::before,
-  html[data-theme="breakout-neon"] body::before,
-  html[data-theme="breakout-confeitaria"] body::before{ opacity:0; }
+  html[data-theme="2048-marfim"] body::before{ opacity:0; }
   html[data-theme="snake-terrario"] body::after,
   html[data-theme="snake-jardim"] body::after,
   html[data-theme="tetris-nebulosa"] body::after,
   html[data-theme="tetris-vidro"] body::after,
   html[data-theme="flappy-aurora"] body::after,
   html[data-theme="2048-ambar"] body::after,
-  html[data-theme="2048-marfim"] body::after,
-  html[data-theme="breakout-confeitaria"] body::after{ opacity:0; }
+  html[data-theme="2048-marfim"] body::after{ opacity:0; }
+  /* Breakout (os 2) NÃO entram nessa lista -- ganham conteúdo próprio
+     em body::before/::after logo abaixo (fileiras de tijolo + confete/
+     scanline), em vez de ficarem desligados feito os outros. */
   /* breakout-neon MANTÉM o scanline compartilhado (body::after padrão)
      de propósito -- é literalmente uma tela de tubo de fliperama, o
      efeito CRT combina em vez de atrapalhar. */
@@ -652,37 +652,95 @@
     50%{ background-position: 47% -6%, 97% 96%; }
   }
 
-  /* Breakout, escuro -- cabine de fliperama: luzes de letreiro rosa/
-     amarelo brilhando no topo, vinheta escurecendo os cantos (o
-     scanline compartilhado, ligado de propósito, já dá o resto do
-     clima de tubo de imagem). */
+  /* Breakout, escuro -- cabine de fliperama: 3 luzes de letreiro (rosa,
+     amarelo, e um roxo mais fundo pra dar profundidade) brilhando,
+     vinheta escurecendo os cantos (o scanline compartilhado, ligado de
+     propósito, já dá o resto do clima de tubo de imagem). `body::before`
+     vira as fileiras de tijolo do próprio jogo descendo devagar sem
+     parar (rola pra sempre, tipo esteira), e `body::after` (além do
+     scanline) ganha um brilho de letreiro passando de leve.  */
   html[data-theme="breakout-neon"] body{
     background:
-      radial-gradient(ellipse 260px 200px at 20% 8%, rgba(255,46,136,0.18), transparent 65%),
-      radial-gradient(ellipse 260px 200px at 82% 12%, rgba(255,217,61,0.1), transparent 65%),
-      radial-gradient(ellipse 140% 100% at 50% 50%, transparent 55%, rgba(0,0,0,0.35) 100%),
+      radial-gradient(ellipse 280px 220px at 18% 6%, rgba(255,46,136,0.22), transparent 65%),
+      radial-gradient(ellipse 280px 220px at 84% 10%, rgba(255,217,61,0.12), transparent 65%),
+      radial-gradient(ellipse 320px 260px at 50% 100%, rgba(217,31,107,0.16), transparent 70%),
+      radial-gradient(ellipse 140% 100% at 50% 50%, transparent 50%, rgba(0,0,0,0.4) 100%),
       var(--void);
-    animation: neon-marquee-drift 26s ease-in-out infinite;
+    animation: neon-marquee-drift 22s ease-in-out infinite;
   }
   @keyframes neon-marquee-drift{
-    0%,100%{ background-position: 20% 8%, 82% 12%, 50% 50%; }
-    50%{ background-position: 24% 11%, 78% 9%, 50% 50%; }
+    0%,100%{ background-position: 18% 6%, 84% 10%, 50% 100%, 50% 50%; }
+    50%{ background-position: 23% 10%, 79% 7%, 50% 100%, 50% 50%; }
   }
+  html[data-theme="breakout-neon"] body::before{
+    opacity:0.07; mix-blend-mode:normal;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      var(--danger) 0px, var(--danger) 13px,
+      var(--warn) 13px, var(--warn) 26px,
+      var(--accent) 26px, var(--accent) 39px,
+      var(--accent-core) 39px, var(--accent-core) 52px,
+      var(--ink-dim) 52px, var(--ink-dim) 65px,
+      transparent 65px, transparent 130px
+    );
+    background-size: 100% 130px;
+    animation: brick-rows-scroll 24s linear infinite;
+  }
+  @keyframes brick-rows-scroll{ from{ background-position-y:0; } to{ background-position-y:-130px; } }
+  /* scanline compartilhado ganha um leve rolar/tremular só aqui (mesma
+     ideia do LCD da Cobrinha) -- reforça o clima de tubo de imagem por
+     cima das luzes de letreiro do `body`. */
+  html[data-theme="breakout-neon"] body::after{
+    animation: scanline-drift-neon 5s linear infinite, neon-tube-flicker 4s ease-in-out infinite;
+  }
+  @keyframes scanline-drift-neon{ from{ background-position-y:0; } to{ background-position-y:-4px; } }
+  @keyframes neon-tube-flicker{ 0%,100%{ opacity:0.5; } 45%{ opacity:0.4; } 55%{ opacity:0.58; } }
 
   /* Breakout, claro -- confeitaria: manchas de luz cor de doce
-     (rosa-chiclete, laranja) bem suaves, respirando devagar. */
+     (rosa-chiclete, laranja, e um hortelã suave pra variar), `body::
+     before` vira as mesmas fileiras de tijolo do jogo (só que pastel,
+     como fileiras de bala numa vitrine), e `body::after` ganha
+     confeitinhos/sprinkles coloridos cintilando -- tipo granulado de
+     doce, não estrela (aquela é do Flappy noturno). */
   html[data-theme="breakout-confeitaria"] body{
     background:
-      radial-gradient(ellipse 220px 160px at 15% 10%, rgba(255,92,158,0.28), transparent 68%),
-      radial-gradient(ellipse 220px 160px at 85% 14%, rgba(255,176,32,0.22), transparent 68%),
-      radial-gradient(ellipse 900px 500px at 50% 118%, var(--accent-faint), transparent 60%),
+      radial-gradient(ellipse 230px 170px at 14% 8%, rgba(255,92,158,0.3), transparent 68%),
+      radial-gradient(ellipse 230px 170px at 86% 12%, rgba(255,176,32,0.24), transparent 68%),
+      radial-gradient(ellipse 260px 200px at 50% 104%, rgba(120,220,190,0.18), transparent 70%),
       var(--void);
-    animation: candy-drift 20s ease-in-out infinite;
+    animation: candy-drift 18s ease-in-out infinite;
   }
   @keyframes candy-drift{
-    0%,100%{ background-position: 15% 10%, 85% 14%, 50% 118%; }
-    50%{ background-position: 19% 13%, 81% 11%, 50% 118%; }
+    0%,100%{ background-position: 14% 8%, 86% 12%, 50% 104%; }
+    50%{ background-position: 19% 12%, 81% 9%, 50% 104%; }
   }
+  html[data-theme="breakout-confeitaria"] body::before{
+    opacity:0.1; mix-blend-mode:normal;
+    background-image: repeating-linear-gradient(
+      to bottom,
+      var(--danger) 0px, var(--danger) 13px,
+      var(--warn) 13px, var(--warn) 26px,
+      var(--accent) 26px, var(--accent) 39px,
+      var(--accent-core) 39px, var(--accent-core) 52px,
+      var(--stone-line) 52px, var(--stone-line) 65px,
+      transparent 65px, transparent 130px
+    );
+    background-size: 100% 130px;
+    animation: brick-rows-scroll 30s linear infinite;
+  }
+  html[data-theme="breakout-confeitaria"] body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:0.5; background-repeat:no-repeat;
+    background-image:
+      radial-gradient(3px 3px at 8% 18%, var(--accent), transparent 100%),
+      radial-gradient(2.5px 2.5px at 22% 7%, var(--warn), transparent 100%),
+      radial-gradient(3px 3px at 38% 22%, var(--accent-core), transparent 100%),
+      radial-gradient(2.5px 2.5px at 55% 9%, var(--accent), transparent 100%),
+      radial-gradient(3px 3px at 70% 19%, var(--warn), transparent 100%),
+      radial-gradient(2.5px 2.5px at 85% 6%, var(--accent-core), transparent 100%),
+      radial-gradient(2.5px 2.5px at 95% 20%, var(--accent), transparent 100%);
+    animation: sprinkle-twinkle-a 2.8s ease-in-out infinite;
+  }
+  @keyframes sprinkle-twinkle-a{ 0%,100%{ opacity:0.3; } 50%{ opacity:0.7; } }
 
   .wrap{ max-width: 780px; margin: 0 auto; position:relative; z-index:1; }
 
@@ -782,19 +840,36 @@
 
   /* Breakout -- uma bolinha quicando de verdade num cantinho (zigue-
      zague com `alternate`, pra "voltar" parecer outro quique em vez de
-     um salto de reset). */
+     um salto de reset), com uma leve "achatada" nos pontos de impacto
+     (o mesmo squash-and-stretch de todo jogo com bola que quica). */
   html[data-theme="breakout-neon"] .wrap::before,
   html[data-theme="breakout-confeitaria"] .wrap::before{
-    content:""; position:fixed; right:20px; top:20px; width:8px; height:8px; border-radius:50%;
-    background: var(--accent); box-shadow: 0 0 6px 1px var(--accent); opacity:0.55; pointer-events:none; z-index:0;
+    content:""; position:fixed; right:20px; top:20px; width:9px; height:9px; border-radius:50%;
+    background: var(--accent); opacity:0.65; pointer-events:none; z-index:0;
+    box-shadow: 0 0 6px 1px var(--accent), 0 0 16px 5px var(--accent-faint);
     animation: breakout-bounce 5s ease-in-out infinite alternate;
   }
   @keyframes breakout-bounce{
-    0%{ transform: translate(0, 0); }
-    25%{ transform: translate(-32px, 36px); }
-    50%{ transform: translate(0, 72px); }
-    75%{ transform: translate(-32px, 108px); }
-    100%{ transform: translate(0, 144px); }
+    0%{ transform: translate(0, 0) scale(1); }
+    12%{ transform: translate(-16px, 18px) scale(0.85, 1.15); }
+    25%{ transform: translate(-32px, 36px) scale(1); }
+    37%{ transform: translate(-16px, 54px) scale(0.85, 1.15); }
+    50%{ transform: translate(0, 72px) scale(1); }
+    62%{ transform: translate(-16px, 90px) scale(0.85, 1.15); }
+    75%{ transform: translate(-32px, 108px) scale(1); }
+    87%{ transform: translate(-16px, 126px) scale(0.85, 1.15); }
+    100%{ transform: translate(0, 144px) scale(1); }
+  }
+  /* na versão doce, a bolinha cintila entre rosa-chiclete e laranja --
+     igual bala colorida brilhando (propriedade diferente do bounce
+     acima -- transform ali, box-shadow/background aqui -- então dá
+     pra rodar as duas animações juntas sem uma atropelar a outra). */
+  html[data-theme="breakout-confeitaria"] .wrap::before{
+    animation: breakout-bounce 5s ease-in-out infinite alternate, candy-shimmer 2.4s ease-in-out infinite;
+  }
+  @keyframes candy-shimmer{
+    0%,100%{ background: var(--accent); box-shadow: 0 0 6px 1px var(--accent), 0 0 16px 5px var(--accent-faint); }
+    50%{ background: var(--warn); box-shadow: 0 0 6px 1px var(--warn), 0 0 16px 5px rgba(255,176,32,0.35); }
   }
 
   /* ---------- SELETOR DE TEMA ---------- */
