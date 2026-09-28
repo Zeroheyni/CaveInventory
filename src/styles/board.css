@@ -208,8 +208,10 @@
 
 .board-hud-panel{
   position:fixed; pointer-events:auto; width:250px; max-width:calc(100vw - 28px); box-sizing:border-box;
-  background: linear-gradient(165deg, rgba(20,27,33,0.88), rgba(9,13,16,0.93));
-  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  /* SEM backdrop-filter de propósito (removido -- ver comentário nos
+     drawers logo abaixo, mesmo motivo: fundo sólido opaco em vez de
+     "vidro fosco" pra não pesar o navegador). */
+  background: linear-gradient(165deg, rgba(16,21,26,0.97), rgba(7,10,12,0.99));
   border:1px solid var(--accent-core); border-radius:12px;
   box-shadow: 0 0 0 1px rgba(var(--accent-rgb),0.12), 0 0 26px rgba(var(--accent-rgb),0.14), 0 10px 30px rgba(0,0,0,0.55);
   padding:12px; animation: board-hud-in 0.35s cubic-bezier(.22,1,.36,1) both;
@@ -262,18 +264,25 @@
 
 /* ---------- drawers (Combate/Dados, Fase 4b) ---------- */
 /* mesmo espírito visual de .combat-dice-tray (combat.css) que já
-   existia, só que translúcido/com blur igual o resto do HUD, bem mais
-   largo (embute a tela INTEIRA de combate/dados, não uma versão
-   reduzida) e nos DOIS lados -- Dados na esquerda, Combate na direita.
-   Deslocado pra baixo (top:calc(50% + 70px)) pra não brigar com
-   .side-nav-handle, que também fica em left:0;top:50%. */
+   existia, bem mais largo (embute a tela INTEIRA de combate/dados,
+   não uma versão reduzida) e nos DOIS lados -- Dados na esquerda,
+   Combate na direita. Deslocado pra baixo (top:calc(50% + 70px)) pra
+   não brigar com .side-nav-handle, que também fica em left:0;top:50%.
+   SEM backdrop-filter de propósito (removido -- fundo sólido/quase
+   opaco no lugar) -- "vidro fosco" nesses painéis fica em cima de um
+   tabuleiro que recebe atualização de posição de cursor/arrasto a
+   ~16/s (Fase 3, Broadcast); todo frame em que algo se move por trás
+   de um blur precisa recalcular o blur inteiro de novo, e eram VÁRIOS
+   painéis assim ao mesmo tempo -- isso que deixava a aba pesada/lenta
+   (reportado pelo usuário). Sem o blur, o navegador só recompõe uma
+   camada sólida normal, muito mais barato. */
 .board-hud-drawer{ position:fixed; top:calc(50% + 70px); pointer-events:auto; display:flex; align-items:flex-start; }
 .board-hud-drawer.side-left{ left:0; }
 .board-hud-drawer.side-right{ right:0; }
 
 .board-hud-drawer-handle{
-  width:30px; height:56px; flex-shrink:0; background: linear-gradient(160deg, rgba(20,27,33,0.9), rgba(9,13,16,0.94));
-  backdrop-filter: blur(8px); border:1px solid var(--accent-core); color: var(--accent);
+  width:30px; height:56px; flex-shrink:0; background: linear-gradient(160deg, rgba(18,23,28,0.98), rgba(7,10,12,1));
+  border:1px solid var(--accent-core); color: var(--accent);
   display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:19px; transition: all 0.15s ease;
   animation: side-nav-handle-pulse 2.6s ease-in-out infinite;
 }
@@ -287,8 +296,8 @@
 
 .board-hud-drawer-panel{
   max-width:0; max-height:min(78vh, 720px); overflow:hidden;
-  background: linear-gradient(165deg, rgba(20,27,33,0.93), rgba(9,13,16,0.97));
-  backdrop-filter: blur(10px); border:1px solid var(--accent-core);
+  background: linear-gradient(165deg, rgba(16,21,26,0.98), rgba(7,10,12,1));
+  border:1px solid var(--accent-core);
   transition: max-width 0.3s cubic-bezier(.22,1,.36,1);
 }
 .board-hud-drawer.side-left .board-hud-drawer-panel{ border-left:none; border-radius:0 12px 12px 0; box-shadow: 3px 0 20px rgba(0,0,0,0.45); }

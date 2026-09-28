@@ -2648,7 +2648,12 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     } else if(mode === 'board'){
       boardWrap.style.display = 'block';
       boardWrap.classList.remove('mode-fade-in'); void boardWrap.offsetWidth; boardWrap.classList.add('mode-fade-in');
-      backpackBtn.style.display = 'flex';
+      // tabuleiro é tela cheia de verdade (position:fixed cobrindo o
+      // viewport, ver board.css) -- ao contrário das outras abas
+      // secundárias, nem o botão "voltar pro inventário" (cadeado,
+      // #backpack-return-btn) fica flutuando por cima, senão sobra
+      // ícone solto onde não devia em cima do tabuleiro/HUD.
+      backpackBtn.style.display = 'none';
       titleText.textContent = 'TABULEIRO';
       copyBtn.style.display = 'none';
       if(!boardMounted){
