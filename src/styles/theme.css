@@ -419,6 +419,24 @@
     --warn:#edc22e; --warn-rgb:237,194,46;
     --danger:#f65e3b; --danger-rgb:246,94,59;
   }
+  html[data-theme="breakout-neon"]{
+    /* Breakout, variante escura -- cabine de fliperama à noite: quase
+       preto com tom arroxeado, rosa-neon de letreiro como acento. */
+    --void:#0a0612; --stone-900:#120b1e; --stone-800:#1a1129; --stone-700:#241a38; --stone-line:#362653;
+    --ink:#f5e8ff; --ink-dim:#b89ddb; --ink-faint:#715c8f;
+    --accent:#ff2e88; --accent-core:#d91f6b; --accent-deep:#451530; --accent-faint:rgba(255,46,136,0.12); --accent-rgb:255,46,136;
+    --warn:#ffd93d; --warn-rgb:255,217,61;
+    --danger:#ff4444; --danger-rgb:255,68,68;
+  }
+  html[data-theme="breakout-confeitaria"]{
+    /* Breakout, variante clara -- confeitaria: fundo rosa-algodão-doce
+       clarinho, os tijolos viram bala colorida. */
+    --void:#fff3f8; --stone-900:#ffe9f2; --stone-800:#ffdcec; --stone-700:#ffcce2; --stone-line:#f3a8c9;
+    --ink:#5a2a44; --ink-dim:#8a5570; --ink-faint:#b688a0;
+    --accent:#ff5c9e; --accent-core:#e8407f; --accent-deep:#ffe0ee; --accent-faint:rgba(232,64,127,0.14); --accent-rgb:232,64,127;
+    --warn:#ffb020; --warn-rgb:255,176,32;
+    --danger:#ff6b6b; --danger-rgb:255,107,107;
+  }
 
   *{box-sizing:border-box; margin:0; padding:0;}
 
@@ -461,14 +479,20 @@
   html[data-theme="flappy-noturno"] body::before,
   html[data-theme="flappy-aurora"] body::before,
   html[data-theme="2048-ambar"] body::before,
-  html[data-theme="2048-marfim"] body::before{ opacity:0; }
+  html[data-theme="2048-marfim"] body::before,
+  html[data-theme="breakout-neon"] body::before,
+  html[data-theme="breakout-confeitaria"] body::before{ opacity:0; }
   html[data-theme="snake-terrario"] body::after,
   html[data-theme="snake-jardim"] body::after,
   html[data-theme="tetris-nebulosa"] body::after,
   html[data-theme="tetris-vidro"] body::after,
   html[data-theme="flappy-aurora"] body::after,
   html[data-theme="2048-ambar"] body::after,
-  html[data-theme="2048-marfim"] body::after{ opacity:0; }
+  html[data-theme="2048-marfim"] body::after,
+  html[data-theme="breakout-confeitaria"] body::after{ opacity:0; }
+  /* breakout-neon MANTÉM o scanline compartilhado (body::after padrão)
+     de propósito -- é literalmente uma tela de tubo de fliperama, o
+     efeito CRT combina em vez de atrapalhar. */
 
   /* Cobrinha, escuro -- terrário à noite: vaga-lumes (pontinhos
      dourados) e um brilho verde saindo do centro, vinheta suave nos
@@ -628,6 +652,38 @@
     50%{ background-position: 47% -6%, 97% 96%; }
   }
 
+  /* Breakout, escuro -- cabine de fliperama: luzes de letreiro rosa/
+     amarelo brilhando no topo, vinheta escurecendo os cantos (o
+     scanline compartilhado, ligado de propósito, já dá o resto do
+     clima de tubo de imagem). */
+  html[data-theme="breakout-neon"] body{
+    background:
+      radial-gradient(ellipse 260px 200px at 20% 8%, rgba(255,46,136,0.18), transparent 65%),
+      radial-gradient(ellipse 260px 200px at 82% 12%, rgba(255,217,61,0.1), transparent 65%),
+      radial-gradient(ellipse 140% 100% at 50% 50%, transparent 55%, rgba(0,0,0,0.35) 100%),
+      var(--void);
+    animation: neon-marquee-drift 26s ease-in-out infinite;
+  }
+  @keyframes neon-marquee-drift{
+    0%,100%{ background-position: 20% 8%, 82% 12%, 50% 50%; }
+    50%{ background-position: 24% 11%, 78% 9%, 50% 50%; }
+  }
+
+  /* Breakout, claro -- confeitaria: manchas de luz cor de doce
+     (rosa-chiclete, laranja) bem suaves, respirando devagar. */
+  html[data-theme="breakout-confeitaria"] body{
+    background:
+      radial-gradient(ellipse 220px 160px at 15% 10%, rgba(255,92,158,0.28), transparent 68%),
+      radial-gradient(ellipse 220px 160px at 85% 14%, rgba(255,176,32,0.22), transparent 68%),
+      radial-gradient(ellipse 900px 500px at 50% 118%, var(--accent-faint), transparent 60%),
+      var(--void);
+    animation: candy-drift 20s ease-in-out infinite;
+  }
+  @keyframes candy-drift{
+    0%,100%{ background-position: 15% 10%, 85% 14%, 50% 118%; }
+    50%{ background-position: 19% 13%, 81% 11%, 50% 118%; }
+  }
+
   .wrap{ max-width: 780px; margin: 0 auto; position:relative; z-index:1; }
 
   /* ---------- HEADER ---------- */
@@ -654,6 +710,10 @@
   @keyframes dot-flap{ 0%,100%{ transform: translateY(0); } 45%{ transform: translateY(-3px); } }
   html[data-theme="2048-ambar"] .title .dot{ border-radius:3px; } /* vira uma mini peça de tabuleiro */
   html[data-theme="2048-marfim"] .title .dot{ border-radius:3px; }
+  html[data-theme="breakout-neon"] .title .dot{ animation: dot-ball-flash 1s ease-in-out infinite; } /* pisca igual impacto de bola */
+  @keyframes dot-ball-flash{ 0%,100%{ transform:scale(1); box-shadow:0 0 10px 2px var(--accent); } 50%{ transform:scale(1.4); box-shadow:0 0 16px 5px var(--accent); } }
+  html[data-theme="breakout-confeitaria"] .title .dot{ animation: dot-bounce 1.1s cubic-bezier(.28,1.2,.5,1) infinite; } /* quica igual bolinha */
+  @keyframes dot-bounce{ 0%,100%{ transform:translateY(0); } 40%{ transform:translateY(-6px); } 55%{ transform:translateY(0); } }
 
   /* ---------- temas especiais: uma animação-assinatura ligada de
      verdade ao jogo (não só cor/fundo), pra ficarem mais únicos.
@@ -718,6 +778,23 @@
   @keyframes tile-merge-pulse{
     0%,80%,100%{ transform: scale(1); opacity:0.35; box-shadow:none; }
     88%{ transform: scale(1.5); opacity:0.75; box-shadow: 0 0 10px 3px var(--accent); }
+  }
+
+  /* Breakout -- uma bolinha quicando de verdade num cantinho (zigue-
+     zague com `alternate`, pra "voltar" parecer outro quique em vez de
+     um salto de reset). */
+  html[data-theme="breakout-neon"] .wrap::before,
+  html[data-theme="breakout-confeitaria"] .wrap::before{
+    content:""; position:fixed; right:20px; top:20px; width:8px; height:8px; border-radius:50%;
+    background: var(--accent); box-shadow: 0 0 6px 1px var(--accent); opacity:0.55; pointer-events:none; z-index:0;
+    animation: breakout-bounce 5s ease-in-out infinite alternate;
+  }
+  @keyframes breakout-bounce{
+    0%{ transform: translate(0, 0); }
+    25%{ transform: translate(-32px, 36px); }
+    50%{ transform: translate(0, 72px); }
+    75%{ transform: translate(-32px, 108px); }
+    100%{ transform: translate(0, 144px); }
   }
 
   /* ---------- SELETOR DE TEMA ---------- */

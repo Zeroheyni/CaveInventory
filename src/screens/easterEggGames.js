@@ -9,12 +9,14 @@ import { createSnakeGame } from '../games/snake.js';
 import { createTetrisGame } from '../games/tetris.js';
 import { createFlappyGame } from '../games/flappy.js';
 import { createGame2048, BOARD_PIXEL_SIZE as SIZE_2048 } from '../games/2048.js';
+import { createBreakoutGame } from '../games/breakout.js';
 
 const GAMES = {
   snake: { label: 'Cobrinha', icon: '🐍', factory: createSnakeGame, width: 360, height: 360, hasPreview: false },
   tetris: { label: 'Tetris', icon: '🧱', factory: createTetrisGame, width: 200, height: 400, hasPreview: true },
   flappy: { label: 'Flappy Bird', icon: '🐤', factory: createFlappyGame, width: 300, height: 450, hasPreview: false },
   '2048': { label: '2048', icon: '🔢', factory: createGame2048, width: SIZE_2048, height: SIZE_2048, hasPreview: false },
+  breakout: { label: 'Breakout', icon: '🏓', factory: createBreakoutGame, width: 240, height: 320, hasPreview: false },
 };
 
 // chamado quando o overlay fecha -- pra tela de baixo (character.js/
@@ -215,6 +217,7 @@ export function renderEasterEggOverlay({ campaign, profile, onClose }) {
                   ${selectedGame === 'snake' ? '⌨ setas ou WASD pra mover' : ''}
                   ${selectedGame === 'flappy' ? '⌨ espaço/↑ ou clique na tela pra bater asa' : ''}
                   ${selectedGame === '2048' ? '⌨ setas ou WASD pra deslizar as peças' : ''}
+                  ${selectedGame === 'breakout' ? '⌨ ◄ ► ou A/D pra mover a raquete' : ''}
                 </div>
               </div>
               ${

@@ -62,4 +62,11 @@ export const sfx = {
     tone(220, 0.18, 'sawtooth', 0.12);
     setTimeout(() => tone(140, 0.3, 'sawtooth', 0.12), 140);
   },
+  // Breakout -- tijolo quebrando sobe de tom com o combo (mesmo
+  // espírito do combo do Tetris), pancada grave na raquete/parede, e
+  // um tom triste quando perde uma vida.
+  brick: (comboLevel) => tone(500 + Math.min(comboLevel, 8) * 60, 0.06, 'square', 0.11),
+  paddleBounce: () => tone(220, 0.05, 'triangle', 0.1),
+  wallBounce: () => tone(300, 0.03, 'triangle', 0.06),
+  lifeLost: () => tone(160, 0.16, 'sawtooth', 0.12),
 };

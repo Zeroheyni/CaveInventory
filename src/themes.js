@@ -4,7 +4,7 @@
 // importa `renderFichaScreen` de ficha.js, então ficha.js importar de
 // volta `THEMES`/`themeSwatchHtml` de character.js criaria um import
 // circular. Módulo próprio, sem depender de nenhuma tela.
-export const GAME_THEME_LABELS = { snake: 'Cobrinha', tetris: 'Tetris', flappy: 'Flappy Bird', '2048': '2048' };
+export const GAME_THEME_LABELS = { snake: 'Cobrinha', tetris: 'Tetris', flappy: 'Flappy Bird', '2048': '2048', breakout: 'Breakout' };
 
 // html de UM swatch do seletor de tema -- compartilhado entre
 // character.js, masterCampaignHub.js e ficha.js (tema por NPC) pra não
@@ -79,5 +79,7 @@ export const THEMES = [
   {id:'flappy-noturno', label:'Voo Noturno', group:'especial', accent:'#ffb03e', void:'#0a0e24', unlockGame:'flappy'},
   {id:'flappy-aurora', label:'Aurora Matinal', group:'especial', accent:'#ff8a5c', void:'#cdeaff', unlockGame:'flappy'},
   {id:'2048-ambar', label:'Âmbar Noturno', group:'especial', accent:'#f2a65a', void:'#16130f', unlockGame:'2048'},
-  {id:'2048-marfim', label:'Tabuleiro de Marfim', group:'especial', accent:'#f2b179', void:'#faf8ef', unlockGame:'2048'}
+  {id:'2048-marfim', label:'Tabuleiro de Marfim', group:'especial', accent:'#f2b179', void:'#faf8ef', unlockGame:'2048'},
+  {id:'breakout-neon', label:'Fliperama Neon', group:'especial', accent:'#ff2e88', void:'#0a0612', unlockGame:'breakout'},
+  {id:'breakout-confeitaria', label:'Confeitaria Pastel', group:'especial', accent:'#ff5c9e', void:'#fff3f8', unlockGame:'breakout'}
 ];
