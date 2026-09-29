@@ -1,22 +1,29 @@
-// Tabuleiro -- Fase 4 (+ pedido de acompanhamento): HUD ao redor do
+// Tabuleiro -- Fase 4 (+ pedidos de acompanhamento): HUD ao redor do
 // tabuleiro em tela cheia, visual "HUD de jogo" (painéis flutuantes
 // translúcidos com borda em glow, por cima do tabuleiro mas sempre
 // abaixo da seta do menu lateral, ver z-index em board.css). A ideia é
 // o tabuleiro virar uma central -- o mestre não precisa mais sair pra
 // aba Combate/Dados pra nada, TUDO fica disponível aqui, cada painel
 // podendo ser recolhido:
-//   - Combate (drawer na borda direita) -- embute a MESMA tela
-//     `renderCombatScreen` de combat.js (iniciar/encerrar combate, HP,
-//     condições, barras customizadas, etc -- tudo, não é uma versão
-//     reduzida).
-//   - Dados (drawer na borda esquerda) -- embute a MESMA tela
-//     `renderDiceScreen` de dice.js (histórico completo, limpar).
-//   - Iniciativa (canto superior direito, recolhível) -- resumo
-//     compacto sempre à vista (rank/avatar/HP/turno atual), pra não
-//     precisar abrir o drawer de Combate só pra espiar a ordem.
-//   - Barras do personagem (canto configurável, recolhível) -- HP/
-//     Estamina/barras customizadas do PRÓPRIO personagem, só leitura.
-//     Não aparece pro mestre (ele não tem personagem próprio).
+//   - Combate (drawer na borda direita, SÓ MESTRE) -- embute a MESMA
+//     tela `renderCombatScreen` de combat.js (iniciar/encerrar
+//     combate, HP de qualquer um, condições, barras customizadas,
+//     passar turno, etc -- tudo, não é uma versão reduzida). Pro
+//     player, a única coisa que aparece é o painel de Iniciativa
+//     abaixo (pedido explícito: "pros players deve aparecer apenas a
+//     lista de iniciativa").
+//   - Dados (drawer na borda esquerda, todo mundo) -- embute a MESMA
+//     tela `renderDiceScreen` de dice.js (histórico completo, limpar).
+//   - Iniciativa (canto superior direito, recolhível, todo mundo) --
+//     resumo compacto sempre à vista (rank/avatar/HP/turno atual).
+//   - Barras do personagem (canto configurável, recolhível, só
+//     player) -- HP/Estamina/barras customizadas do PRÓPRIO
+//     personagem, com +/- pra ajustar na hora (grava em
+//     combat_participants TAMBÉM se tiver um participante ativo pra
+//     esse personagem, mesmo caminho de updateParticipantHp do
+//     combate -- senão o valor ficava dessincronizado entre tabuleiro
+//     e combate). Não aparece pro mestre (ele não tem personagem
+//     próprio).
 //
 // Montado UMA VEZ só (não a cada vez que abre/fecha um tabuleiro) --
 // igual toda aba de character.js, que monta e nunca desmonta, só
@@ -33,11 +40,11 @@
 // completo (com o raciocínio de z-index) em board.css.
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
-import { getCombatState, getParticipants, subscribeCombat, isVisibleToPlayer } from '../combat.js';
+import { getCombatState, getParticipants, subscribeCombat, isVisibleToPlayer, updateParticipantHp, updateParticipantStamina } from '../combat.js';
 import { renderCombatScreen } from './combat.js';
 import { renderDiceScreen } from './dice.js';
 import { hpMax, estaminaMax, hpBarClass } from '../characterSheet.js';
-import { listCharacterCustomBarsFor, customBarMax } from '../customBars.js';
+import { listCharacterCustomBarsFor, customBarMax, updateCharacterCustomBarValue } from '../customBars.js';
 
 const BARS_CORNER_KEY = 'board-hud-bars-corner';
 const collapsedKey = (name) => 'board-hud-collapsed-' + name;
@@ -65,7 +72,11 @@ export function renderBoardHud(mountParent, { session, profile, campaign, charac
   root.style.display = 'none';
   mountParent.appendChild(root);
 
-  mountCombatDrawer(root, { session, profile, campaign, characterId, characterName });
+  // Combate completo (iniciar/encerrar, gerenciar HP de qualquer um,
+  // passar turno etc) é só do mestre -- pro player, a única coisa que
+  // deve aparecer é a lista de iniciativa (painel compacto abaixo) e
+  // as PRÓPRIAS barras (mountBarsPanel, interativo).
+  if (isMaster) mountCombatDrawer(root, { session, profile, campaign, characterId, characterName });
   mountDiceDrawer(root, { session, profile, campaign });
   mountInitiativePanel(root, { campaignId, profile, characterId, isMaster });
   if (!isMaster && characterId) mountBarsPanel(root, { campaignId, characterId });
@@ -127,7 +138,7 @@ function mountCombatDrawer(root, { session, profile, campaign, characterId, char
     icon: '⚔',
     title: 'combate',
     mountBody(container) {
-      renderCombatScreen(container, { session, profile, campaign, characterId, characterName, topicSuffix: '-board' });
+      renderCombatScreen(container, { session, profile, campaign, characterId, characterName, topicSuffix: '-board', embedded: true });
     },
   });
 }
@@ -285,6 +296,21 @@ function mountBarsPanel(root, { campaignId, characterId }) {
 
   let char = null;
   let customBars = [];
+  let busy = false; // trava dupla-gravação enquanto uma requisição de +/- tá em voo
+
+  // controles +/- + input numérico, mesmo padrão visual/UX de
+  // combat.js (.combat-hp-controls no self-card) -- pedido do usuário:
+  // "permita os player mecherem em suas barras no tabuleiro, aumentar
+  // diminuir vida/stamina/etc". `kind` é 'hp' | 'estamina' | um id de
+  // character_custom_bars (string).
+  function barControlsHtml(kind, current, max) {
+    return `
+      <div class="board-hud-bar-controls">
+        <button type="button" class="board-hud-mini-btn" data-bar-delta="-1" data-bar-kind="${kind}" ${busy ? 'disabled' : ''}>−</button>
+        <input type="number" class="board-hud-bar-input" data-bar-input data-bar-kind="${kind}" value="${current}" min="0" max="${max}" ${busy ? 'disabled' : ''}>
+        <button type="button" class="board-hud-mini-btn" data-bar-delta="1" data-bar-kind="${kind}" ${busy ? 'disabled' : ''}>+</button>
+      </div>`;
+  }
 
   function render() {
     el.className = `board-hud-panel board-hud-bars corner-${corner}` + (collapsed ? ' collapsed' : '');
@@ -309,17 +335,23 @@ function mountBarsPanel(root, { campaignId, characterId }) {
         collapsed
           ? ''
           : `<div class="board-hud-body">
-        <div class="board-hud-bar-row">
-          <span class="board-hud-bar-label">❤ HP</span>
-          <div class="combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hPct)}" style="width:${hPct}%"></div></div>
-          <span class="board-hud-bar-txt">${char.hp_current}/${hMax}</span>
+        <div class="board-hud-bar-block">
+          <div class="board-hud-bar-row">
+            <span class="board-hud-bar-label">❤ HP</span>
+            <div class="combat-hp-bar"><div class="combat-hp-fill ${hpBarClass(hPct)}" style="width:${hPct}%"></div></div>
+            <span class="board-hud-bar-txt">${char.hp_current}/${hMax}</span>
+          </div>
+          ${barControlsHtml('hp', char.hp_current, hMax)}
         </div>
         ${
           eMax > 0
-            ? `<div class="board-hud-bar-row">
-                 <span class="board-hud-bar-label">⚡ EST</span>
-                 <div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${ePct}%"></div></div>
-                 <span class="board-hud-bar-txt">${char.estamina_current}/${eMax}</span>
+            ? `<div class="board-hud-bar-block">
+                 <div class="board-hud-bar-row">
+                   <span class="board-hud-bar-label">⚡ EST</span>
+                   <div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${ePct}%"></div></div>
+                   <span class="board-hud-bar-txt">${char.estamina_current}/${eMax}</span>
+                 </div>
+                 ${barControlsHtml('estamina', char.estamina_current, eMax)}
                </div>`
             : ''
         }
@@ -328,10 +360,13 @@ function mountBarsPanel(root, { campaignId, characterId }) {
             const max = customBarMax(cb.bar, char);
             const pct = max > 0 ? Math.max(0, Math.min(100, Math.round((cb.current_value / max) * 100))) : 0;
             return `
-          <div class="board-hud-bar-row">
-            <span class="board-hud-bar-label" style="color:${escapeHtml(cb.bar.color)};">${escapeHtml(cb.bar.name)}</span>
-            <div class="combat-hp-bar"><div class="combat-hp-fill" style="width:${pct}%; background:${escapeHtml(cb.bar.color)}"></div></div>
-            <span class="board-hud-bar-txt">${cb.current_value}/${max}</span>
+          <div class="board-hud-bar-block">
+            <div class="board-hud-bar-row">
+              <span class="board-hud-bar-label" style="color:${escapeHtml(cb.bar.color)};">${escapeHtml(cb.bar.name)}</span>
+              <div class="combat-hp-bar"><div class="combat-hp-fill" style="width:${pct}%; background:${escapeHtml(cb.bar.color)}"></div></div>
+              <span class="board-hud-bar-txt">${cb.current_value}/${max}</span>
+            </div>
+            ${barControlsHtml(cb.id, cb.current_value, max)}
           </div>`;
           })
           .join('')}
@@ -358,6 +393,77 @@ function mountBarsPanel(root, { campaignId, characterId }) {
         render();
       });
     }
+    el.querySelectorAll('[data-bar-delta]').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        const kind = btn.dataset.barKind;
+        const { current, max } = barValueFor(kind);
+        applyBarValue(kind, Math.max(0, Math.min(max, current + Number(btn.dataset.barDelta))));
+      });
+    });
+    el.querySelectorAll('[data-bar-input]').forEach((input) => {
+      input.addEventListener('change', () => {
+        const kind = input.dataset.barKind;
+        const { max } = barValueFor(kind);
+        applyBarValue(kind, Math.max(0, Math.min(max, parseInt(input.value, 10) || 0)));
+      });
+    });
+  }
+
+  // acha o valor/máximo ATUAL de uma barra pelo `kind` usado nos data-*
+  // (evita duplicar essa lógica entre o handler de delta e o de input).
+  function barValueFor(kind) {
+    if (kind === 'hp') return { current: char.hp_current, max: hpMax(char) };
+    if (kind === 'estamina') return { current: char.estamina_current, max: estaminaMax(char) };
+    const cb = customBars.find((c) => c.id === kind);
+    return cb ? { current: cb.current_value, max: customBarMax(cb.bar, char) } : { current: 0, max: 0 };
+  }
+
+  // grava e atualiza local -- HP/Estamina passam por updateParticipantHp/
+  // updateParticipantStamina (combat.js) SE o personagem tiver um
+  // participante de combate ativo agora (grava characters E
+  // combat_participants juntos, mesmo caminho do self-card da aba
+  // Combate -- sem isso, ajustar aqui deixaria o combate com um valor
+  // desatualizado até a próxima sincronização manual); sem combate
+  // ativo, grava direto em `characters` (RLS já permite -- dono edita
+  // a própria linha inteira). Barra customizada não tem esse problema
+  // (character_custom_bars não é espelhado em lugar nenhum), sempre
+  // grava direto.
+  async function applyBarValue(kind, next) {
+    if (busy) return;
+    busy = true;
+    // otimista -- aplica local antes do roundtrip, igual o resto do app.
+    if (kind === 'hp') char.hp_current = next;
+    else if (kind === 'estamina') char.estamina_current = next;
+    else {
+      const cb = customBars.find((c) => c.id === kind);
+      if (cb) cb.current_value = next;
+    }
+    render();
+    try {
+      if (kind === 'hp' || kind === 'estamina') {
+        const { data: participant } = await supabase
+          .from('combat_participants')
+          .select('id')
+          .eq('campaign_id', campaignId)
+          .eq('character_id', characterId)
+          .maybeSingle();
+        if (participant) {
+          if (kind === 'hp') await updateParticipantHp(participant.id, next, characterId);
+          else await updateParticipantStamina(participant.id, next, characterId);
+        } else {
+          const field = kind === 'hp' ? 'hp_current' : 'estamina_current';
+          const { error } = await supabase.from('characters').update({ [field]: next }).eq('id', characterId);
+          if (error) throw error;
+        }
+      } else {
+        await updateCharacterCustomBarValue(kind, next);
+      }
+    } catch (_) {
+      // se falhar, o próximo postgres_changes (ou o load() seguinte)
+      // corrige sozinho -- não trava a barra num estado quebrado.
+    }
+    busy = false;
+    render();
   }
 
   let reloadTimer = null;

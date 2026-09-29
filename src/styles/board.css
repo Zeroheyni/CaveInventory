@@ -256,27 +256,43 @@
 .board-hud-panel.collapsed .board-hud-head{ margin-bottom:0; }
 .board-hud-body{ display:block; } /* espaçamento interno já vem de .board-hud-bar-row/.board-hud-initiative-list, não duplica aqui */
 
-.board-hud-bar-row{ display:flex; align-items:center; gap:8px; margin-top:8px; }
-.board-hud-bar-row:first-of-type{ margin-top:0; }
+/* .board-hud-bar-block agrupa a barra (linha com label/fill/número) +
+   os controles de +/- logo abaixo -- espaçamento ENTRE barras fica no
+   bloco (não na linha), porque cada bloco só tem uma linha dentro
+   (:first-of-type da linha sempre bateria se o espaçamento tivesse
+   ficado na linha, já que ela nunca tem irmã do mesmo tipo dentro do
+   próprio bloco). */
+.board-hud-bar-block{ margin-top:10px; }
+.board-hud-bar-block:first-of-type{ margin-top:0; }
+.board-hud-bar-row{ display:flex; align-items:center; gap:8px; }
 .board-hud-bar-label{ font-family: var(--font-mono); font-size:10px; color: var(--ink-faint); width:34px; flex-shrink:0; }
 .board-hud-bar-row .combat-hp-bar{ flex:1; }
 .board-hud-bar-txt{ font-family: var(--font-mono); font-size:10px; color: var(--ink-dim); flex-shrink:0; min-width:38px; text-align:right; }
+.board-hud-bar-controls{ display:flex; align-items:center; justify-content:center; gap:6px; margin-top:4px; }
+.board-hud-bar-controls input{
+  width:44px; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
+  font-family: var(--font-mono); font-size:11px; padding:3px 4px; border-radius:5px; text-align:center;
+}
 
 /* ---------- drawers (Combate/Dados, Fase 4b) ---------- */
 /* mesmo espírito visual de .combat-dice-tray (combat.css) que já
    existia, bem mais largo (embute a tela INTEIRA de combate/dados,
-   não uma versão reduzida) e nos DOIS lados -- Dados na esquerda,
-   Combate na direita. Deslocado pra baixo (top:calc(50% + 70px)) pra
-   não brigar com .side-nav-handle, que também fica em left:0;top:50%.
-   SEM backdrop-filter de propósito (removido -- fundo sólido/quase
-   opaco no lugar) -- "vidro fosco" nesses painéis fica em cima de um
-   tabuleiro que recebe atualização de posição de cursor/arrasto a
-   ~16/s (Fase 3, Broadcast); todo frame em que algo se move por trás
-   de um blur precisa recalcular o blur inteiro de novo, e eram VÁRIOS
-   painéis assim ao mesmo tempo -- isso que deixava a aba pesada/lenta
-   (reportado pelo usuário). Sem o blur, o navegador só recompõe uma
-   camada sólida normal, muito mais barato. */
-.board-hud-drawer{ position:fixed; top:calc(50% + 70px); pointer-events:auto; display:flex; align-items:flex-start; }
+   não uma versão reduzida) -- Dados na esquerda (todo mundo), Combate
+   na direita (só mestre). Deslocado um pouco pra baixo do centro
+   (top:calc(50% + 36px)) só o suficiente pra não brigar com
+   .side-nav-handle (também left:0;top:50%, ~64px de altura) -- mais
+   perto do meio do que antes de propósito, pra não colidir com o
+   painel de Barras (canto inferior esquerdo por padrão -- ver
+   corner-bottom-left logo abaixo). SEM backdrop-filter de propósito
+   (removido -- fundo sólido/quase opaco no lugar) -- "vidro fosco"
+   nesses painéis fica em cima de um tabuleiro que recebe atualização
+   de posição de cursor/arrasto a ~16/s (Fase 3, Broadcast); todo
+   frame em que algo se move por trás de um blur precisa recalcular o
+   blur inteiro de novo, e eram VÁRIOS painéis assim ao mesmo tempo --
+   isso que deixava a aba pesada/lenta (reportado pelo usuário). Sem
+   o blur, o navegador só recompõe uma camada sólida normal, muito
+   mais barato. */
+.board-hud-drawer{ position:fixed; top:calc(50% + 36px); pointer-events:auto; display:flex; align-items:flex-start; }
 .board-hud-drawer.side-left{ left:0; }
 .board-hud-drawer.side-right{ right:0; }
 
@@ -316,7 +332,7 @@
 
 @media (max-width:640px){
   .board-hud-panel{ width:210px; }
-  .board-hud-drawer{ top:calc(50% + 40px); }
+  .board-hud-drawer{ top:calc(50% + 34px); }
   .board-hud-drawer-panel, .board-hud-drawer-body{ max-height:min(70vh, 600px); }
   .board-hud-drawer-body{ width:min(88vw, 400px); }
   .board-hud-drawer.open .board-hud-drawer-panel{ max-width:min(88vw, 400px); }

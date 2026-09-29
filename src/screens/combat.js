@@ -60,7 +60,15 @@ import {
 // entre as duas instâncias (mesmo motivo/padrão de sempre: cada
 // assinante independente do mesmo evento precisa do seu topic). Quem
 // não passa nada continua exatamente como antes.
-export function renderCombatScreen(app, { session, profile, campaign, characterId, characterName, topicSuffix }) {
+// `embedded` (Fase 4b do tabuleiro) -- quando true, esconde a bandeja
+// retrátil de dados PRÓPRIA desta tela (diceTrayHtml()). Ela é
+// `position:fixed; left:0; top:110px` (combat.css), então quando essa
+// tela é embutida em OUTRO lugar (o drawer de Combate do tabuleiro),
+// ela escapa do container e flutua sozinha no canto esquerdo da tela
+// por cima de tudo -- duplicando (e colidindo com) o drawer de Dados
+// que o próprio tabuleiro já tem. Character.js/masterCampaignHub.js
+// não passam isso, continuam vendo a bandeja normal de sempre.
+export function renderCombatScreen(app, { session, profile, campaign, characterId, characterName, topicSuffix, embedded }) {
   const campaignId = campaign.id;
   const isMaster = profile.role === 'master';
   const $ = (id) => app.querySelector('#' + id);
@@ -627,7 +635,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       : null;
     const nextTurn = computeNextTurn(allSorted, currentTurn);
     const summaryHtml = isMaster ? masterPlayersSummary(currentTurn, nextTurn) : '';
-    const trayHtml = diceTrayHtml();
+    const trayHtml = embedded ? '' : diceTrayHtml();
     const barsMgmtHtml = isMaster ? customBarsManagementSection() : '';
     if (!combatState.active) {
       app.innerHTML =
