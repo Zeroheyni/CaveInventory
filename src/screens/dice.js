@@ -34,17 +34,33 @@ export function renderDiceScreen(app, { session, profile, campaign, topicSuffix 
   let rolling = false;
   let error = '';
 
+  // achado testando o HUD do tabuleiro (Fase 4b, via harness isolado --
+  // sem login de teste nesse ambiente pra reproduzir com conta real):
+  // sem o try/catch aqui, uma falha na consulta inicial (rede, RLS,
+  // timing de auth etc) rejeitava a promise de `load()` ANTES de
+  // chegar em `render()` -- como `load()` é chamada sem `await`/catch
+  // lá embaixo, a rejeição virava uma "unhandled promise rejection"
+  // silenciosa e a tela inteira ficava em branco pra sempre (essa
+  // tela só monta uma vez por sessão, nunca tenta de novo sozinha).
+  // Provavelmente a causa real do "esse dado não tá funcionando" --
+  // o drawer abria (CSS) mas o conteúdo nunca aparecia.
   async function load() {
-    rolls = await listRecentRolls(campaignId);
+    try {
+      rolls = await listRecentRolls(campaignId);
+      error = '';
+    } catch (err) {
+      error = err.message;
+    }
     render();
   }
 
   function subscribeRealtime() {
     activeChannel = subscribeDiceRolls(
       campaignId,
-      async () => {
-        rolls = await listRecentRolls(campaignId);
-        render();
+      () => {
+        // fire-and-forget com o mesmo cuidado de load() -- uma falha
+        // aqui não pode virar unhandled rejection.
+        load();
       },
       'dice-' + campaignId + suffix
     );

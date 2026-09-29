@@ -304,11 +304,16 @@ function mountBarsPanel(root, { campaignId, characterId }) {
   // diminuir vida/stamina/etc". `kind` é 'hp' | 'estamina' | um id de
   // character_custom_bars (string).
   function barControlsHtml(kind, current, max) {
+    // "pill" único (−, número, +) em vez de 3 caixinhas soltas com
+    // gap -- pedido do usuário: os controles antigos (reaproveitando
+    // .board-hud-mini-btn, com setinhas nativas do input number)
+    // ficaram "feios". Setinhas nativas removidas no CSS
+    // (.board-hud-bar-stepper input::-webkit-*).
     return `
-      <div class="board-hud-bar-controls">
-        <button type="button" class="board-hud-mini-btn" data-bar-delta="-1" data-bar-kind="${kind}" ${busy ? 'disabled' : ''}>−</button>
+      <div class="board-hud-bar-stepper">
+        <button type="button" class="board-hud-stepper-btn" data-bar-delta="-1" data-bar-kind="${kind}" ${busy ? 'disabled' : ''}>−</button>
         <input type="number" class="board-hud-bar-input" data-bar-input data-bar-kind="${kind}" value="${current}" min="0" max="${max}" ${busy ? 'disabled' : ''}>
-        <button type="button" class="board-hud-mini-btn" data-bar-delta="1" data-bar-kind="${kind}" ${busy ? 'disabled' : ''}>+</button>
+        <button type="button" class="board-hud-stepper-btn" data-bar-delta="1" data-bar-kind="${kind}" ${busy ? 'disabled' : ''}>+</button>
       </div>`;
   }
 

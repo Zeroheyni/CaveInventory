@@ -268,11 +268,31 @@
 .board-hud-bar-label{ font-family: var(--font-mono); font-size:10px; color: var(--ink-faint); width:34px; flex-shrink:0; }
 .board-hud-bar-row .combat-hp-bar{ flex:1; }
 .board-hud-bar-txt{ font-family: var(--font-mono); font-size:10px; color: var(--ink-dim); flex-shrink:0; min-width:38px; text-align:right; }
-.board-hud-bar-controls{ display:flex; align-items:center; justify-content:center; gap:6px; margin-top:4px; }
-.board-hud-bar-controls input{
-  width:44px; background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink);
-  font-family: var(--font-mono); font-size:11px; padding:3px 4px; border-radius:5px; text-align:center;
+/* stepper "pill" único (−, número, +) -- substituiu 3 caixinhas soltas
+   com gap (achado feio pelo usuário) por um bloco único com bordas
+   internas separando as partes, mais parecido com um controle de
+   verdade. Setinhas nativas do <input type="number"> removidas de
+   propósito (webkit spin button + firefox textfield) -- ficavam
+   deslocadas/genéricas dentro do visual customizado do HUD, e já tem
+   os botões −/+ fazendo o mesmo trabalho. */
+.board-hud-bar-stepper{
+  display:flex; align-items:stretch; justify-content:center; width:fit-content; margin:6px auto 0;
+  background: var(--stone-900); border:1px solid var(--stone-line); border-radius:7px; overflow:hidden;
 }
+.board-hud-stepper-btn{
+  border:none; background:none; width:26px; color: var(--ink-dim); cursor:pointer; font-size:13px;
+  display:flex; align-items:center; justify-content:center; transition: all 0.15s ease;
+}
+.board-hud-stepper-btn:hover:not(:disabled){ background: var(--accent-faint); color: var(--accent); }
+.board-hud-stepper-btn:disabled{ opacity:0.4; cursor:default; }
+.board-hud-bar-input{
+  width:42px; background:none; border:none; border-left:1px solid var(--stone-line); border-right:1px solid var(--stone-line);
+  color: var(--ink); font-family: var(--font-mono); font-size:12px; text-align:center; padding:5px 0;
+}
+.board-hud-bar-input:focus{ outline:none; background: var(--accent-faint); }
+.board-hud-bar-input::-webkit-outer-spin-button,
+.board-hud-bar-input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+.board-hud-bar-input[type="number"]{ -moz-appearance: textfield; appearance: textfield; }
 
 /* ---------- drawers (Combate/Dados, Fase 4b) ---------- */
 /* mesmo espírito visual de .combat-dice-tray (combat.css) que já

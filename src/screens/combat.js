@@ -160,13 +160,25 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     }
   }
 
+  // mesmo achado/conserto de dice.js (Fase 4b, testado num harness
+  // isolado, ver comentário lá): sem o try/catch, uma falha em
+  // QUALQUER uma dessas chamadas rejeitava a promise de `load()` antes
+  // de chegar em `render()` -- como `load()` é chamada sem `await`/
+  // catch lá embaixo, virava unhandled rejection silenciosa e a tela
+  // inteira ficava em branco pra sempre (só monta uma vez por sessão).
+  // Bem provavelmente a causa real do drawer de Combate do tabuleiro
+  // abrir e não mostrar nada.
   async function load() {
-    combatState = await getCombatState(campaignId);
-    participants = await getParticipants(campaignId);
-    customConditions = await listCustomConditions(campaignId);
-    customBarDefs = await listCustomBars(campaignId);
-    characterCustomBars = await listCharacterCustomBars(campaignId);
-    await refreshCharacterStats();
+    try {
+      combatState = await getCombatState(campaignId);
+      participants = await getParticipants(campaignId);
+      customConditions = await listCustomConditions(campaignId);
+      customBarDefs = await listCustomBars(campaignId);
+      characterCustomBars = await listCharacterCustomBars(campaignId);
+      await refreshCharacterStats();
+    } catch (err) {
+      console.error('combate: falha ao carregar', err);
+    }
     render();
   }
 
