@@ -474,48 +474,128 @@
 /* ======================= DRAWERS (Dados / Combate) ======================= */
 /* mesmo espírito de .combat-dice-tray (combat.css), bem mais largo (embute
    a tela INTEIRA de combate/dados) -- Dados na esquerda (todo mundo),
-   Combate na direita (só mestre). Alça no ALTO da lateral (top:104px, abaixo do botão voltar) --
-   longe do dock embaixo e do .side-nav-handle (left:0;top:50%). */
-.board-hud-drawer{ position:fixed; top:104px; pointer-events:auto; display:flex; align-items:flex-start; }
-.board-hud-drawer-handle.icon-only{ height:56px; }
-.board-hud-drawer-handle.icon-only .hud-handle-icon{ font-size:22px; }
+   Combate na direita (só mestre). Alça no ALTO da lateral (top:104px,
+   abaixo do botão voltar) -- longe do dock embaixo e do .side-nav-handle
+   (left:0;top:50%).
+   O painel NÃO empurra nada: fica absoluto colado na alça e "abre" com
+   um reveal de clip-path (cortina saindo da alça) + deslize + fade, com o
+   conteúdo entrando um instante depois; fechar faz o caminho inverso
+   (visibility só some DEPOIS da animação). Margem negativa no clip-path
+   pra sombra não ser cortada. */
+.board-hud-drawer{ position:fixed; top:104px; pointer-events:none; }
 .board-hud-drawer.side-left{ left:0; }
 .board-hud-drawer.side-right{ right:0; }
 
 .board-hud-drawer-handle{
-  width:34px; height:94px; flex-shrink:0; background: linear-gradient(160deg, rgba(18,23,28,0.98), rgba(7,10,12,1));
+  position:relative; z-index:2; pointer-events:auto;
+  width:34px; height:94px; background: linear-gradient(160deg, rgba(18,23,28,0.98), rgba(7,10,12,1));
   border:1px solid var(--accent-core); color: var(--accent); gap:7px;
-  display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition: all 0.15s ease;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer;
+  transition: background 0.15s ease, border-radius 0.35s cubic-bezier(.22,1,.36,1), border-color 0.3s ease, box-shadow 0.3s ease, transform 0.2s cubic-bezier(.22,1.4,.4,1);
   animation: side-nav-handle-pulse 2.6s ease-in-out infinite;
 }
-.hud-handle-icon{ font-size:18px; line-height:1; display:inline-block; transition: transform 0.3s cubic-bezier(.22,1,.36,1); }
-.hud-handle-label{ font-family: var(--font-display); font-size:8.5px; letter-spacing:0.16em; writing-mode:vertical-rl; color: var(--ink-faint); }
+.board-hud-drawer-handle.icon-only{ height:56px; }
+.board-hud-drawer-handle.icon-only .hud-handle-icon{ font-size:22px; }
+.board-hud-drawer-handle:active{ transform: scale(0.93); }
+.hud-handle-icon{ font-size:18px; line-height:1; display:inline-block; transition: transform 0.4s cubic-bezier(.22,1.5,.4,1); }
+.hud-handle-label{ font-family: var(--font-display); font-size:8.5px; letter-spacing:0.16em; writing-mode:vertical-rl; color: var(--ink-faint); transition: color 0.2s ease; }
 .board-hud-drawer.side-left .board-hud-drawer-handle{ border-left:none; border-radius:0 14px 14px 0; box-shadow: 3px 0 16px rgba(0,0,0,0.4), 0 0 12px var(--accent-faint); }
 .board-hud-drawer.side-right .board-hud-drawer-handle{ border-right:none; border-radius:14px 0 0 14px; box-shadow: -3px 0 16px rgba(0,0,0,0.4), 0 0 12px var(--accent-faint); }
-.board-hud-drawer.open .board-hud-drawer-handle{ animation:none; }
-.board-hud-drawer.side-left.open .hud-handle-icon{ transform: rotate(18deg); }
-.board-hud-drawer.side-right.open .hud-handle-icon{ transform: rotate(-18deg); }
 .board-hud-drawer-handle:hover{ background: var(--accent-faint); animation:none; }
 .board-hud-drawer-handle:hover .hud-handle-label{ color: var(--accent); }
+/* aberto: a alça "gruda" no painel (cantos retos do lado dele, borda some) */
+.board-hud-drawer.open .board-hud-drawer-handle{ animation:none; border-color: var(--accent); }
+.board-hud-drawer.side-left.open .board-hud-drawer-handle{ border-radius:0 0 0 0; border-right-color:transparent; box-shadow:none; }
+.board-hud-drawer.side-right.open .board-hud-drawer-handle{ border-radius:0 0 0 0; border-left-color:transparent; box-shadow:none; }
+.board-hud-drawer.side-left.open .hud-handle-icon{ transform: rotate(360deg) scale(1.1); }
+.board-hud-drawer.side-right.open .hud-handle-icon{ transform: rotate(-360deg) scale(1.1); }
 
 .board-hud-drawer-panel{
-  max-width:0; max-height:min(calc(100vh - 124px), 720px); overflow:hidden;
+  position:absolute; top:0; z-index:1; box-sizing:border-box;
+  width:min(560px, calc(100vw - 70px)); max-height:min(calc(100vh - 124px), 720px); overflow:hidden;
   background: linear-gradient(165deg, rgba(16,21,26,0.98), rgba(7,10,12,1));
   border:1px solid var(--accent-core);
-  transition: max-width 0.3s cubic-bezier(.22,1,.36,1);
+  visibility:hidden; pointer-events:none; opacity:0;
+  transition: clip-path 0.42s cubic-bezier(.22,1,.36,1), transform 0.42s cubic-bezier(.22,1,.36,1), opacity 0.24s ease, visibility 0s linear 0.42s;
 }
-.board-hud-drawer.side-left .board-hud-drawer-panel{ border-left:none; border-radius:0 12px 12px 0; box-shadow: 3px 0 20px rgba(0,0,0,0.45); }
-.board-hud-drawer.side-right .board-hud-drawer-panel{ border-right:none; border-radius:12px 0 0 12px; box-shadow: -3px 0 20px rgba(0,0,0,0.45); }
-.board-hud-drawer.open .board-hud-drawer-panel{ max-width:min(560px, calc(100vw - 60px)); }
+.board-hud-drawer.side-left .board-hud-drawer-panel{
+  left:100%; border-left:none; border-radius:0 14px 14px 0; box-shadow: 3px 0 24px rgba(0,0,0,0.5);
+  clip-path: inset(-40px 100% -40px 0); transform: translateX(-24px);
+}
+.board-hud-drawer.side-right .board-hud-drawer-panel{
+  right:100%; border-right:none; border-radius:14px 0 0 14px; box-shadow: -3px 0 24px rgba(0,0,0,0.5);
+  clip-path: inset(-40px 0 -40px 100%); transform: translateX(24px);
+}
+.board-hud-drawer.open .board-hud-drawer-panel{
+  visibility:visible; pointer-events:auto; opacity:1; transform:none; transition-delay:0s;
+}
+.board-hud-drawer.side-left.open .board-hud-drawer-panel{ clip-path: inset(-40px -60px -40px 0); }
+.board-hud-drawer.side-right.open .board-hud-drawer-panel{ clip-path: inset(-40px 0 -40px -60px); }
 .board-hud-drawer-body{
-  width:min(560px, calc(100vw - 92px)); max-height:min(calc(100vh - 124px), 720px); overflow-y:auto; overflow-x:hidden;
+  width:100%; max-height:min(calc(100vh - 124px), 720px); overflow-y:auto; overflow-x:hidden;
   padding:16px; box-sizing:border-box;
 }
+.board-hud-drawer.open .board-hud-drawer-body{ animation: drawer-body-in 0.5s 0.1s cubic-bezier(.22,1,.36,1) both; }
+@keyframes drawer-body-in{ from{ opacity:0; transform:translateY(10px); } to{ opacity:1; transform:none; } }
 /* combat.js/dice.js foram feitos pra caber nos 780px do .wrap normal
    -- dentro do drawer (mais estreito) só ajusta o layout de duas
    colunas do combate (tabs STATUS/LOG) pra empilhar. */
 .board-hud-drawer-body .combat-layout{ flex-direction:column; }
 .board-hud-drawer-body .combat-tabs{ flex-direction:row; width:auto; }
+
+/* ======================= ANIMAÇÕES EXTRAS ======================= */
+/* troca de conteúdo ao recolher/expandir (o tamanho é animado em JS, `morph`) */
+.board-dock.swap > *, .board-hud-tracker.swap > *{ animation: hud-swap-in 0.38s 0.06s cubic-bezier(.22,1,.36,1) both; }
+@keyframes hud-swap-in{ from{ opacity:0; transform:translateY(6px) scale(0.98); } to{ opacity:1; transform:none; } }
+/* rastreador saindo quando o combate acaba */
+.board-hud-tracker.leaving{ animation: tracker-out 0.3s ease-in both; pointer-events:none; }
+@keyframes tracker-out{ to{ opacity:0; transform:translateX(-50%) translateY(-14px) scale(0.94); } }
+.trk-round-num b{ display:inline-block; }
+
+/* token que ganha a vez: estouro de anel + "pulinho" (o pulso contínuo
+   de .turn-active volta depois) */
+.board-token.turn-arrive{ animation: token-arrive 1s cubic-bezier(.22,1,.36,1), token-turn-pulse 1.5s ease-in-out 1s infinite; }
+@keyframes token-arrive{
+  0%{ scale:0.82; box-shadow:0 0 0 3px #4ade80, 0 0 0 0 rgba(74,222,128,0.95); }
+  35%{ scale:1.2; }
+  100%{ scale:1; box-shadow:0 0 0 3px #4ade80, 0 0 0 70px rgba(74,222,128,0); }
+}
+
+/* dado do feed: arremessado de cima, quica duas vezes e assenta */
+.roll-die{ animation: roll-die-throw 0.85s cubic-bezier(.3,0,.4,1) both; }
+@keyframes roll-die-throw{
+  0%{ transform: translate(-60px,-80px) rotate(-420deg) scale(0.35); opacity:0; }
+  30%{ opacity:1; transform: translate(0,4px) rotate(-30deg) scale(1.18); }
+  46%{ transform: translate(0,-16px) rotate(14deg) scale(1); }
+  62%{ transform: translate(0,0) rotate(-7deg) scale(1.06,0.92); }
+  78%{ transform: translate(0,-5px) rotate(3deg) scale(1); }
+  100%{ transform:none; opacity:1; }
+}
+/* ondulação saindo do cartão quando o resultado aparece */
+.roll-toast::after{ content:""; position:absolute; inset:-1px; border-radius:inherit; border:2px solid var(--accent); opacity:0; pointer-events:none; }
+.roll-toast.revealed::after{ animation: roll-ripple 0.8s ease-out; }
+.roll-toast.crit.revealed::after{ border-color:#ffd84d; animation-duration:1.1s; }
+.roll-toast.fumble.revealed::after{ border-color:#ff5a5a; }
+@keyframes roll-ripple{ 0%{ opacity:0.9; transform:scale(1); } 100%{ opacity:0; transform:scale(1.14, 1.5); } }
+/* faíscas do crítico */
+.roll-toast .spark{
+  position:absolute; left:39px; top:50%; width:6px; height:6px; margin:-3px 0 0 -3px; border-radius:50%; pointer-events:none;
+  background:#ffd84d; box-shadow:0 0 8px 2px rgba(255,216,77,0.9); animation: spark-fly 0.95s cubic-bezier(.2,.7,.3,1) forwards;
+}
+@keyframes spark-fly{
+  from{ transform: rotate(var(--a)) translateX(10px) scale(1); opacity:1; }
+  to{ transform: rotate(var(--a)) translateX(var(--d)) scale(0); opacity:0; }
+}
+/* chips de dado/atributo: mola ao rolar */
+.dock-chip.rolling{ animation: chip-jolt 0.45s ease-in-out infinite; }
+@keyframes chip-jolt{ 0%,100%{ transform: translateY(-3px) rotate(0); } 25%{ transform: translateY(-5px) rotate(-6deg); } 75%{ transform: translateY(-5px) rotate(6deg); } }
+.dock-chip.rolling .dock-stat-ico{ animation:none; }
+
+/* tudo parado pra quem pediu menos movimento (o JS também pula os morphs/FLIPs) */
+@media (prefers-reduced-motion: reduce){
+  .board-hud-root *, .board-hud-root *::before, .board-hud-root *::after,
+  .board-token.turn-arrive, .board-token.hud-ping, .board-token.turn-active{ animation-duration:0.001ms !important; animation-iteration-count:1 !important; transition-duration:0.001ms !important; transition-delay:0s !important; }
+}
 
 @media (max-width:760px){
   .board-hud-tracker{ max-width:calc(100vw - 120px); top:10px; }
@@ -534,7 +614,6 @@
   .dock-chip, .dock-mini-field{ flex-shrink:0; }
   .roll-toast{ min-width:0; width:min(340px, 100%); }
   .board-hud-drawer{ top:100px; }
+  .board-hud-drawer-panel{ width:min(88vw, 400px); }
   .board-hud-drawer-panel, .board-hud-drawer-body{ max-height:min(calc(100vh - 124px), 600px); }
-  .board-hud-drawer-body{ width:min(88vw, 400px); }
-  .board-hud-drawer.open .board-hud-drawer-panel{ max-width:min(88vw, 400px); }
 }

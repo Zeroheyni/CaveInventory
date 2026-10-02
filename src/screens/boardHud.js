@@ -53,6 +53,63 @@ function setCollapsed(name, value) {
   }
 }
 
+// ---- helpers de animação (sem biblioteca: Web Animations API + transição) ----
+const reduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+const EASE = 'cubic-bezier(.22,1,.36,1)';
+
+// "morph": anima a LARGURA/ALTURA de um painel enquanto o conteúdo troca
+// (recolher/expandir). Mede antes, deixa o `mutate` rearrumar o DOM,
+// mede depois, e transiciona de um tamanho pro outro com o conteúdo
+// novo já aparecendo por cima (classe .swap no CSS faz o fade-in).
+function morph(el, mutate) {
+  if (reduceMotion() || el.style.display === 'none') {
+    mutate();
+    return;
+  }
+  const before = el.getBoundingClientRect();
+  clearTimeout(el._morphT);
+  el.style.transition = 'none';
+  el.style.width = '';
+  el.style.height = '';
+  el.style.overflow = '';
+  mutate();
+  const after = el.getBoundingClientRect();
+  if (Math.abs(after.width - before.width) < 1 && Math.abs(after.height - before.height) < 1) return;
+  el.style.overflow = 'hidden';
+  el.style.width = before.width + 'px';
+  el.style.height = before.height + 'px';
+  void el.offsetWidth; // aplica o tamanho "antes" sem transição
+  el.style.transition = `width .4s ${EASE}, height .4s ${EASE}`;
+  el.style.width = after.width + 'px';
+  el.style.height = after.height + 'px';
+  el._morphT = setTimeout(() => {
+    el.style.transition = '';
+    el.style.overflow = '';
+    el.style.width = '';
+    el.style.height = '';
+  }, 460);
+}
+
+// FLIP: os filhos que já existiam deslizam suavemente pro novo lugar
+// quando algo é inserido/removido (usa a propriedade `translate`, que não
+// briga com os `transform` que o CSS já usa neles).
+function flipChildren(container, mutate) {
+  if (reduceMotion()) {
+    mutate();
+    return;
+  }
+  const before = new Map(Array.from(container.children).map((c) => [c, c.getBoundingClientRect()]));
+  mutate();
+  before.forEach((rect, child) => {
+    if (!child.isConnected) return;
+    const now = child.getBoundingClientRect();
+    const dx = rect.left - now.left;
+    const dy = rect.top - now.top;
+    if (Math.abs(dx) < 1 && Math.abs(dy) < 1) return;
+    child.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0 0' }], { duration: 420, easing: EASE });
+  });
+}
+
 const STAT_ABBR = { vitalidade: 'VIT', forca: 'FOR', agilidade: 'AGI', destreza: 'DES', inteligencia: 'INT', estamina: 'EST', observacao: 'OBS' };
 const pctOf = (cur, max) => (max > 0 ? Math.max(0, Math.min(100, Math.round((cur / max) * 100))) : 0);
 function hpTone(pct) {
@@ -207,6 +264,18 @@ function mountRollFeed(feedEl, { campaignId, isVisible }) {
     return `${r.qty}${r.die} · ${dice}${mod}`;
   }
 
+  // faíscas douradas saindo do dado num crítico
+  function sparks(toast) {
+    for (let i = 0; i < 12; i++) {
+      const s = document.createElement('i');
+      s.className = 'spark';
+      s.style.setProperty('--a', i * 30 + Math.round(Math.random() * 14) + 'deg');
+      s.style.setProperty('--d', 46 + Math.round(Math.random() * 40) + 'px');
+      toast.appendChild(s);
+      setTimeout(() => s.remove(), 1000);
+    }
+  }
+
   function show(r, own) {
     if (!r || seen.has(r.id)) return;
     seen.add(r.id);
@@ -227,11 +296,13 @@ function mountRollFeed(feedEl, { campaignId, isVisible }) {
         ${crit ? '<div class="roll-tag crit">CRÍTICO!</div>' : fumble ? '<div class="roll-tag fumble">FALHA CRÍTICA</div>' : ''}
       </div>
       <button type="button" class="roll-x" title="fechar">×</button>`;
-    feedEl.appendChild(el);
-    while (feedEl.children.length > MAX) feedEl.firstElementChild.remove();
+    flipChildren(feedEl, () => {
+      feedEl.appendChild(el);
+      while (feedEl.children.length > MAX) feedEl.firstElementChild.remove();
+    });
 
     const numEl = el.querySelector('.roll-num');
-    const SPIN_MS = 650;
+    const SPIN_MS = 800; // casa com a duração do 'arremesso' do dado no CSS
     const spin = setInterval(() => {
       numEl.textContent = String(1 + Math.floor(Math.random() * Math.max(sides, 2)));
     }, 55);
@@ -239,12 +310,14 @@ function mountRollFeed(feedEl, { campaignId, isVisible }) {
       clearInterval(spin);
       numEl.textContent = String(r.total);
       el.classList.add('revealed');
+      if (crit && !reduceMotion()) sparks(el);
     }, SPIN_MS);
 
     const remove = () => {
       clearInterval(spin);
+      if (!el.isConnected || el.classList.contains('leaving')) return;
       el.classList.add('leaving');
-      setTimeout(() => el.remove(), 260);
+      setTimeout(() => flipChildren(feedEl, () => el.remove()), 260);
     };
     el.querySelector('.roll-x').addEventListener('click', remove);
     setTimeout(remove, crit || fumble ? 9000 : 7000);
@@ -295,13 +368,46 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
     return `<span class="trk-avatar trk-avatar-letter">${escapeHtml(letter)}</span>`;
   }
 
-  function render() {
+  let prevRound;
+  let leaveTimer = null;
+
+  // foto do estado visual ANTES de re-renderizar: posição de cada cartão
+  // (pra animar a troca de ordem), largura da barra de HP (pra animar o
+  // dano/cura) e a rolagem da fileira.
+  function snapshot() {
+    const rects = new Map();
+    const hp = new Map();
+    el.querySelectorAll('.trk-card').forEach((c) => {
+      rects.set(c.dataset.pid, c.getBoundingClientRect());
+      const fill = c.querySelector('.trk-hp-fill');
+      hp.set(c.dataset.pid, fill ? fill.style.width : null);
+    });
+    const listEl = el.querySelector('#trk-list');
+    return { rects, hp, scroll: listEl ? listEl.scrollLeft : undefined };
+  }
+
+  function render({ noFlip = false } = {}) {
     if (!combat.state.active) {
-      el.style.display = 'none';
-      el.innerHTML = '';
       prevCurrentId = undefined;
+      prevRound = undefined;
+      if (el.style.display === 'none' || el.classList.contains('leaving')) return;
+      if (reduceMotion()) {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        return;
+      }
+      // saída suave quando o combate termina
+      el.classList.add('leaving');
+      clearTimeout(leaveTimer);
+      leaveTimer = setTimeout(() => {
+        el.style.display = 'none';
+        el.innerHTML = '';
+        el.classList.remove('leaving');
+      }, 300);
       return;
     }
+    clearTimeout(leaveTimer);
+    const snap = el.style.display === 'none' || noFlip ? null : snapshot();
     el.style.display = '';
     const allSorted = combat.participants.slice().sort((a, b) => a.position - b.position);
     const current = currentTurnOf(allSorted);
@@ -347,25 +453,90 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
     `;
 
     el.querySelector('#trk-toggle').addEventListener('click', () => {
-      collapsed = !collapsed;
-      setCollapsed('rastreador', collapsed);
-      render();
+      morph(el, () => {
+        collapsed = !collapsed;
+        setCollapsed('rastreador', collapsed);
+        render({ noFlip: true });
+        el.classList.add('swap');
+      });
     });
     el.querySelectorAll('.trk-card').forEach((card) => {
       card.addEventListener('mouseenter', () => tokenFor(card.dataset.cid)?.classList.add('hud-hl'));
       card.addEventListener('mouseleave', () => tokenFor(card.dataset.cid)?.classList.remove('hud-hl'));
       card.addEventListener('click', () => ping(card.dataset.cid));
     });
-    // mantém o turno atual à vista numa fileira que rola
+
+    const currentId = current ? current.id : null;
+    const turnChanged = prevCurrentId !== undefined && currentId !== prevCurrentId;
+    const animate = !reduceMotion();
+
+    // fileira: mantém a rolagem de antes e desliza suave até o turno atual
+    const listEl = el.querySelector('#trk-list');
     const curCard = el.querySelector('.trk-card.current');
-    if (curCard) {
-      const listEl = el.querySelector('#trk-list');
-      listEl.scrollLeft = curCard.offsetLeft - listEl.clientWidth / 2 + curCard.clientWidth / 2;
+    if (listEl) {
+      const target = curCard ? curCard.offsetLeft - listEl.clientWidth / 2 + curCard.clientWidth / 2 : 0;
+      listEl.style.scrollBehavior = 'auto';
+      if (snap && snap.scroll !== undefined && animate) {
+        listEl.scrollLeft = snap.scroll;
+        void listEl.offsetWidth;
+        listEl.style.scrollBehavior = '';
+        if (Math.abs(target - snap.scroll) > 2) listEl.scrollTo({ left: target, behavior: 'smooth' });
+      } else {
+        listEl.scrollLeft = target;
+        listEl.style.scrollBehavior = '';
+      }
     }
 
+    if (animate) {
+      if (snap) {
+        el.querySelectorAll('.trk-card').forEach((card) => {
+          const pid = card.dataset.pid;
+          const was = snap.rects.get(pid);
+          const now = card.getBoundingClientRect();
+          if (was) {
+            const dx = was.left - now.left;
+            const dy = was.top - now.top;
+            // cartão trocou de lugar na ordem: desliza do lugar antigo pro novo
+            if (Math.abs(dx) > 1 || Math.abs(dy) > 1) card.animate([{ translate: `${dx}px ${dy}px` }, { translate: '0 0' }], { duration: 560, easing: EASE });
+          } else if (snap.rects.size) {
+            card.animate([{ opacity: 0, scale: 0.5 }, { opacity: 1, scale: 1 }], { duration: 400, easing: EASE });
+          }
+          // dano/cura: a barra anda do valor antigo pro novo (o elemento é
+          // novo, então a transição de CSS precisa de um ponto de partida)
+          const fill = card.querySelector('.trk-hp-fill');
+          const prevW = snap.hp.get(pid);
+          if (fill && prevW && prevW !== fill.style.width) {
+            const to = fill.style.width;
+            fill.style.width = prevW;
+            void fill.offsetWidth;
+            fill.style.width = to;
+          }
+        });
+      }
+      if (turnChanged) {
+        el.querySelectorAll('.trk-card').forEach((card) => {
+          const pid = card.dataset.pid;
+          if (pid === currentId) {
+            // passa o bastão: quem ganhou a vez cresce com um estouro de anel
+            card.animate([{ scale: 0.85 }, { scale: 1.1, offset: 0.55 }, { scale: 1 }], { duration: 620, easing: EASE });
+            const tag = card.querySelector('.trk-now');
+            if (tag) tag.animate([{ scale: 0, opacity: 0 }, { scale: 1.2, opacity: 1, offset: 0.6 }, { scale: 1, opacity: 1 }], { duration: 520, easing: EASE });
+            const av = card.querySelector('.trk-avatar');
+            if (av) av.animate([{ boxShadow: '0 0 0 0 rgba(74,222,128,0.95)' }, { boxShadow: '0 0 0 22px rgba(74,222,128,0)' }], { duration: 800, easing: 'ease-out' });
+          } else if (pid === prevCurrentId) {
+            card.animate([{ scale: 1.12 }, { scale: 1 }], { duration: 420, easing: EASE });
+          }
+        });
+      }
+      if (prevRound !== undefined && prevRound !== combat.state.round) {
+        const num = el.querySelector('.trk-round-num b');
+        if (num) num.animate([{ scale: 2.4, color: '#ffffff' }, { scale: 1 }], { duration: 700, easing: EASE });
+      }
+    }
+    prevRound = combat.state.round;
+
     // "SEU TURNO!" -- só quando a vez MUDA pra mim (não a cada reload)
-    const currentId = current ? current.id : null;
-    if (prevCurrentId !== undefined && currentId !== prevCurrentId && current && characterId && current.character_id === characterId) {
+    if (turnChanged && current && characterId && current.character_id === characterId) {
       showBanner();
     }
     prevCurrentId = currentId;
@@ -394,16 +565,28 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
     t.classList.add('hud-ping');
     setTimeout(() => t.classList.remove('hud-ping'), 1500);
   }
+  const deco = { current: undefined };
   function decorate() {
-    const tokens = document.querySelectorAll('.board-token[data-character-id]');
-    if (!tokens.length) return;
     const active = combat.state.active;
     const allSorted = active ? combat.participants.slice().sort((a, b) => a.position - b.position) : [];
     const current = active ? currentTurnOf(allSorted) : null;
+    // a vez mudou desde a última vez que olhei? (undefined = primeira leitura, não anima)
+    const curId = current ? current.id : null;
+    const arrive = active && deco.current !== undefined && deco.current !== curId;
+    deco.current = active ? curId : undefined;
+    const tokens = document.querySelectorAll('.board-token[data-character-id]');
+    if (!tokens.length) return;
     const visible = active ? visibleParticipants() : [];
     tokens.forEach((t) => {
       const p = visible.find((x) => x.character_id === t.dataset.characterId);
-      t.classList.toggle('turn-active', !!(p && current && p.id === current.id));
+      const isTurn = !!(p && current && p.id === current.id);
+      t.classList.toggle('turn-active', isTurn);
+      if (isTurn && arrive && !reduceMotion()) {
+        t.classList.remove('turn-arrive');
+        void t.offsetWidth;
+        t.classList.add('turn-arrive');
+        setTimeout(() => t.classList.remove('turn-arrive'), 1100);
+      }
       if (p && canSeeHp(p)) {
         const pct = pctOf(p.hp_current, p.hp_max);
         t.classList.add('has-hp');
@@ -527,6 +710,8 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
       if (kind === 'hp') fill.dataset.tone = hpTone(pct);
       const input = block.querySelector('.dock-vital-input');
       if (input && document.activeElement !== input) input.value = cur;
+      const maxEl = block.querySelector('.dock-vital-max');
+      if (maxEl) maxEl.textContent = '/' + max;
     }
     if (kind === 'hp') {
       const pct = pctOf(cur, max);
@@ -718,9 +903,12 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
     const col = el.querySelector('#dock-collapse');
     if (col) {
       col.addEventListener('click', () => {
-        collapsed = !collapsed;
-        setCollapsed('dock', collapsed);
-        render();
+        morph(el, () => {
+          collapsed = !collapsed;
+          setCollapsed('dock', collapsed);
+          render();
+          el.classList.add('swap'); // conteúdo novo entra com fade (CSS)
+        });
       });
     }
 
@@ -793,10 +981,22 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
     } catch (_) {
       // dock é "glance" -- se falhar, fica com o último estado conhecido
     }
-    // se o usuário está com o foco num campo do dock (digitando), só atualiza números no lugar
-    if (el.contains(document.activeElement) && document.activeElement.tagName === 'INPUT' && char) {
-      vitalsList().forEach((v) => updateVitalUi(v.kind));
-      return;
+    // mesma estrutura de antes (mesmas barras, não recolhido)? atualiza SÓ os
+    // números no lugar -- as barras deslizam do valor antigo pro novo em vez
+    // de o dock inteiro ser recriado (e some o foco/digitação em andamento).
+    if (char && !collapsed && el.querySelector('.dock-vital')) {
+      const list = vitalsList();
+      const domKinds = Array.from(el.querySelectorAll('.dock-vital')).map((n) => n.dataset.kind).join('|');
+      if (domKinds === list.map((v) => v.kind).join('|')) {
+        list.forEach((v) => updateVitalUi(v.kind));
+        el.querySelectorAll('.dock-stat').forEach((chip) => {
+          const i = chip.querySelector('i');
+          if (i) i.textContent = char[chip.dataset.stat] || 0;
+        });
+        const idTxt = el.querySelector('.dock-id-txt small');
+        if (idTxt) idTxt.textContent = 'Nv ' + (char.level || 1);
+        return;
+      }
     }
     render();
   }
