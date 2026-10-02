@@ -1434,7 +1434,16 @@
   .vehicle-dropzone.drag-over{ opacity:1; border-color: var(--accent-core); background: var(--accent-faint); color: var(--accent); box-shadow: 0 0 14px var(--accent-faint); transform: scale(1.08); }
 
   /* ---------- MENU RETRÁTIL LATERAL (navegação secundária, ex: combate) ---------- */
-  .side-nav{ position:fixed; left:0; top:50%; transform:translateY(-50%); z-index:39; display:flex; align-items:stretch; }
+  /* pointer-events:none no CONTAINER de propósito: ele tem a altura da lista
+     inteira de itens (~290px, mesmo com a lista recolhida em max-width:0 --
+     o flex "stretch" estica o container pela coluna escondida), e como tem
+     z-index:39, essa caixa transparente engolia o clique de QUALQUER coisa
+     que ficasse na borda esquerda dentro dessa faixa (foi o bug do ícone de
+     dados do tabuleiro que "nunca abria": o clique caía no <nav>, não no
+     botão). Só a setinha e os itens (com o menu aberto) recebem clique. */
+  .side-nav{ position:fixed; left:0; top:50%; transform:translateY(-50%); z-index:39; display:flex; align-items:stretch; pointer-events:none; }
+  .side-nav-handle{ pointer-events:auto; }
+  .side-nav.open .side-nav-items{ pointer-events:auto; }
   .side-nav-handle{
     width:28px; height:64px; flex-shrink:0; border-radius:0 12px 12px 0;
     background: linear-gradient(160deg, var(--stone-800), var(--stone-900)); border:1px solid var(--accent-core); border-left:none;
