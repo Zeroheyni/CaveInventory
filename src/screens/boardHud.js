@@ -135,7 +135,8 @@ function mountDrawer(root, { side, icon, label, title, mountBody }) {
   handle.type = 'button';
   handle.className = 'board-hud-drawer-handle';
   handle.title = title;
-  handle.innerHTML = `<span class="hud-handle-icon">${icon}</span><span class="hud-handle-label">${label}</span>`;
+  handle.classList.toggle('icon-only', !label);
+  handle.innerHTML = `<span class="hud-handle-icon">${icon}</span>${label ? `<span class="hud-handle-label">${label}</span>` : ''}`;
 
   const panel = document.createElement('div');
   panel.className = 'board-hud-drawer-panel';
@@ -182,7 +183,7 @@ function mountDiceDrawer(root, { session, profile, campaign }) {
   return mountDrawer(root, {
     side: 'left',
     icon: '🎲',
-    label: 'DADOS',
+    label: '', // só o ícone -- a alça fica no alto da lateral, longe do dock
     title: 'histórico e dados avançados',
     mountBody(container) {
       renderDiceScreen(container, { session, profile, campaign, topicSuffix: '-board' });

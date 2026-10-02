@@ -474,10 +474,11 @@
 /* ======================= DRAWERS (Dados / Combate) ======================= */
 /* mesmo espírito de .combat-dice-tray (combat.css), bem mais largo (embute
    a tela INTEIRA de combate/dados) -- Dados na esquerda (todo mundo),
-   Combate na direita (só mestre). Deslocado um pouco pra baixo do centro
-   (top:calc(50% + 36px)) só o suficiente pra não brigar com
-   .side-nav-handle (também left:0;top:50%, ~64px de altura). */
-.board-hud-drawer{ position:fixed; top:calc(50% + 36px); pointer-events:auto; display:flex; align-items:flex-start; }
+   Combate na direita (só mestre). Alça no ALTO da lateral (top:104px, abaixo do botão voltar) --
+   longe do dock embaixo e do .side-nav-handle (left:0;top:50%). */
+.board-hud-drawer{ position:fixed; top:104px; pointer-events:auto; display:flex; align-items:flex-start; }
+.board-hud-drawer-handle.icon-only{ height:56px; }
+.board-hud-drawer-handle.icon-only .hud-handle-icon{ font-size:22px; }
 .board-hud-drawer.side-left{ left:0; }
 .board-hud-drawer.side-right{ right:0; }
 
@@ -498,7 +499,7 @@
 .board-hud-drawer-handle:hover .hud-handle-label{ color: var(--accent); }
 
 .board-hud-drawer-panel{
-  max-width:0; max-height:min(78vh, 720px); overflow:hidden;
+  max-width:0; max-height:min(calc(100vh - 124px), 720px); overflow:hidden;
   background: linear-gradient(165deg, rgba(16,21,26,0.98), rgba(7,10,12,1));
   border:1px solid var(--accent-core);
   transition: max-width 0.3s cubic-bezier(.22,1,.36,1);
@@ -507,7 +508,7 @@
 .board-hud-drawer.side-right .board-hud-drawer-panel{ border-right:none; border-radius:12px 0 0 12px; box-shadow: -3px 0 20px rgba(0,0,0,0.45); }
 .board-hud-drawer.open .board-hud-drawer-panel{ max-width:min(560px, calc(100vw - 60px)); }
 .board-hud-drawer-body{
-  width:min(560px, calc(100vw - 92px)); max-height:min(78vh, 720px); overflow-y:auto; overflow-x:hidden;
+  width:min(560px, calc(100vw - 92px)); max-height:min(calc(100vh - 124px), 720px); overflow-y:auto; overflow-x:hidden;
   padding:16px; box-sizing:border-box;
 }
 /* combat.js/dice.js foram feitos pra caber nos 780px do .wrap normal
@@ -532,8 +533,8 @@
   .dock-chips::-webkit-scrollbar{ display:none; }
   .dock-chip, .dock-mini-field{ flex-shrink:0; }
   .roll-toast{ min-width:0; width:min(340px, 100%); }
-  .board-hud-drawer{ top:calc(50% + 34px); }
-  .board-hud-drawer-panel, .board-hud-drawer-body{ max-height:min(70vh, 600px); }
+  .board-hud-drawer{ top:100px; }
+  .board-hud-drawer-panel, .board-hud-drawer-body{ max-height:min(calc(100vh - 124px), 600px); }
   .board-hud-drawer-body{ width:min(88vw, 400px); }
   .board-hud-drawer.open .board-hud-drawer-panel{ max-width:min(88vw, 400px); }
 }
