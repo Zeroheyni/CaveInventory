@@ -69,4 +69,11 @@ export const sfx = {
   paddleBounce: () => tone(220, 0.05, 'triangle', 0.1),
   wallBounce: () => tone(300, 0.03, 'triangle', 0.06),
   lifeLost: () => tone(160, 0.16, 'sawtooth', 0.12),
+  // Pong -- o "blip" clássico da raquete, mais agudo a cada rebatida
+  // seguida no mesmo ponto (a bola também acelera, o som acompanha), e
+  // um arpejinho subindo quando você ganha o ponto.
+  paddleHit: (rally) => tone(330 + Math.min(rally, 12) * 38, 0.05, 'square', 0.11),
+  pointWon: () => {
+    [523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.09, 'triangle', 0.12), i * 70));
+  },
 };

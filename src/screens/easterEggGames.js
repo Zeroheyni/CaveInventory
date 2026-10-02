@@ -10,13 +10,17 @@ import { createTetrisGame } from '../games/tetris.js';
 import { createFlappyGame } from '../games/flappy.js';
 import { createGame2048, BOARD_PIXEL_SIZE as SIZE_2048 } from '../games/2048.js';
 import { createBreakoutGame } from '../games/breakout.js';
+import { createPongGame } from '../games/pong.js';
 
 const GAMES = {
   snake: { label: 'Cobrinha', icon: '🐍', factory: createSnakeGame, width: 360, height: 360, hasPreview: false },
   tetris: { label: 'Tetris', icon: '🧱', factory: createTetrisGame, width: 200, height: 400, hasPreview: true },
   flappy: { label: 'Flappy Bird', icon: '🐤', factory: createFlappyGame, width: 300, height: 450, hasPreview: false },
   '2048': { label: '2048', icon: '🔢', factory: createGame2048, width: SIZE_2048, height: SIZE_2048, hasPreview: false },
-  breakout: { label: 'Breakout', icon: '🏓', factory: createBreakoutGame, width: 240, height: 320, hasPreview: false },
+  // Breakout trocou de ícone (era 🏓) -- o Pong é que é o jogo de raquete
+  // de ping-pong de verdade, os dois não podiam ter o mesmo emoji.
+  breakout: { label: 'Breakout', icon: '💥', factory: createBreakoutGame, width: 240, height: 320, hasPreview: false },
+  pong: { label: 'Pong', icon: '🏓', factory: createPongGame, width: 360, height: 270, hasPreview: false },
 };
 
 // chamado quando o overlay fecha -- pra tela de baixo (character.js/
@@ -117,6 +121,13 @@ export function renderEasterEggOverlay({ campaign, profile, onClose }) {
       document.addEventListener('keyup', keyUpHandler);
     }
     if (activeEngine.handleClick) canvas.addEventListener('click', activeEngine.handleClick);
+    // Pong (e qualquer jogo futuro de controle "arrastando"): mouse mexendo
+    // ou dedo arrastando em cima do canvas. pointerdown junto pra um toque
+    // simples já começar a partida no celular.
+    if (activeEngine.handlePointer) {
+      canvas.addEventListener('pointermove', activeEngine.handlePointer);
+      canvas.addEventListener('pointerdown', activeEngine.handlePointer);
+    }
     activeEngine.start();
   }
 
@@ -218,6 +229,7 @@ export function renderEasterEggOverlay({ campaign, profile, onClose }) {
                   ${selectedGame === 'flappy' ? '⌨ espaço/↑ ou clique na tela pra bater asa' : ''}
                   ${selectedGame === '2048' ? '⌨ setas ou WASD pra deslizar as peças' : ''}
                   ${selectedGame === 'breakout' ? '⌨ ◄ ► ou A/D pra mover a raquete' : ''}
+                  ${selectedGame === 'pong' ? '⌨ ↑ ↓ ou W/S · ou arraste o mouse/dedo na quadra' : ''}
                 </div>
               </div>
               ${

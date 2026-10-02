@@ -38,7 +38,7 @@ const HISTORIA_COLLAPSED_H = 90;
 const MODULE_COLLAPSED_H = 56;
 // picker de tema de NPC (db/050) nunca mostra cadeado -- não é
 // recompensa de recorde de jogo, é o mestre escolhendo livremente.
-const NPC_THEME_UNLOCKED = new Set(['snake', 'tetris', 'flappy', '2048', 'breakout']);
+const NPC_THEME_UNLOCKED = new Set(['snake', 'tetris', 'flappy', '2048', 'breakout', 'pong']);
 
 export function renderFichaScreen(app, { session, profile, campaign, characterId, onBack }) {
   const isMaster = profile.role === 'master';
