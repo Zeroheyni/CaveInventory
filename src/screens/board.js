@@ -684,6 +684,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     const shapeClass = t.shape === 'square' ? 'square' : 'circle';
     return `
       <div class="board-token ${shapeClass} ${movable ? 'movable' : ''}" data-token-id="${t.id}"
+        ${t.character_id ? 'data-character-id="' + escapeHtml(t.character_id) + '"' : ''}
         style="left:${t.x}%; top:${t.y}%; width:${t.size}%; border-color:${escapeHtml(t.border_color)}; z-index:${t.z_index};"
         title="${escapeHtml(t.label || '?')}">
         ${avatarOrLetter(t)}
@@ -858,6 +859,9 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     // eles ficam "invisíveis" até a próxima mensagem de Broadcast
     // chegar (Fase 3).
     renderCursors();
+    // tokens recriados do zero: devolve o anel de turno / mini-barra de HP
+    // (o HUD é quem sabe o estado do combate, ver boardHud.js)
+    if (hud.decorate) hud.decorate();
   }
 
   function render() {

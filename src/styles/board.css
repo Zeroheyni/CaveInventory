@@ -198,137 +198,304 @@
   background: var(--stone-900); border:1px solid; white-space:nowrap; box-shadow:0 2px 8px rgba(0,0,0,0.45);
 }
 
-/* ---------- Fase 4: HUD (iniciativa/dados/barras) ---------- */
+
+/* ---------- HUD (rastreador, dock, feed de rolagens, drawers) ---------- */
 /* .board-hud-root é IRMÃO de #board-embed/#hub-embed-board (não filho
    de .board-fullscreen) -- ver comentário em boardHud.js sobre
    sobreviver aos innerHTML do board.js. z-index:36 é de propósito
    ENTRE .board-fullscreen (35) e .side-nav (39): fica por cima do
-   tabuleiro, mas a seta de trocar de aba continua por cima do HUD. */
+   tabuleiro, mas a seta de trocar de aba continua por cima do HUD.
+   Nada aqui usa backdrop-filter (pesava com o tabuleiro atualizando
+   cursor/arrasto ~16x/s): fundos sólidos/quase opacos. */
 .board-hud-root{ position:fixed; inset:0; z-index:36; pointer-events:none; }
 
-.board-hud-panel{
-  position:fixed; pointer-events:auto; width:250px; max-width:calc(100vw - 28px); box-sizing:border-box;
-  /* SEM backdrop-filter de propósito (removido -- ver comentário nos
-     drawers logo abaixo, mesmo motivo: fundo sólido opaco em vez de
-     "vidro fosco" pra não pesar o navegador). */
-  background: linear-gradient(165deg, rgba(16,21,26,0.97), rgba(7,10,12,0.99));
-  border:1px solid var(--accent-core); border-radius:12px;
-  box-shadow: 0 0 0 1px rgba(var(--accent-rgb),0.12), 0 0 26px rgba(var(--accent-rgb),0.14), 0 10px 30px rgba(0,0,0,0.55);
-  padding:12px; animation: board-hud-in 0.35s cubic-bezier(.22,1,.36,1) both;
+/* superfície comum dos painéis */
+.board-hud-tracker, .board-dock, .roll-toast{
+  background: linear-gradient(165deg, rgba(18,24,30,0.97), rgba(8,11,14,0.99));
+  border:1px solid rgba(var(--accent-rgb),0.55);
+  box-shadow: 0 0 0 1px rgba(var(--accent-rgb),0.1), 0 0 26px rgba(var(--accent-rgb),0.12), 0 12px 30px rgba(0,0,0,0.55);
 }
-@keyframes board-hud-in{ from{ opacity:0; transform:translateY(-8px); } to{ opacity:1; transform:translateY(0); } }
 
-.board-hud-initiative{ top:14px; right:14px; }
-.board-hud-bars.corner-bottom-left{ bottom:14px; left:14px; }
-/* top-left precisa descer do topo pra não brigar com o board-back-btn
-   (também top:14px;left:14px, mas dentro de outra stacking context --
-   se não afastasse, os dois se sobrepunham visualmente na tela). */
-.board-hud-bars.corner-top-left{ top:64px; left:14px; }
+/* ======================= RASTREADOR DE INICIATIVA ======================= */
+.board-hud-tracker{
+  position:absolute; top:12px; left:50%; transform:translateX(-50%); pointer-events:auto;
+  max-width:calc(100vw - 170px); display:flex; align-items:stretch; gap:6px; padding:6px 8px; border-radius:18px;
+  animation: board-hud-in 0.35s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes board-hud-in{ from{ opacity:0; margin-top:-8px; } to{ opacity:1; margin-top:0; } }
+.trk-round{
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px; flex-shrink:0; min-width:62px;
+  background: rgba(var(--accent-rgb),0.08); border:1px solid rgba(var(--accent-rgb),0.35); border-radius:12px; padding:4px 8px;
+  color: var(--accent); cursor:pointer; font-family: var(--font-display); letter-spacing:0.08em; transition: background 0.15s ease;
+}
+.trk-round:hover{ background: rgba(var(--accent-rgb),0.18); }
+.trk-round-icon{ font-size:14px; line-height:1; }
+.trk-round-num{ font-size:8.5px; color: var(--ink-faint); }
+.trk-round-num b{ font-size:13px; color: var(--accent); margin-left:2px; }
+.trk-round-caret{ font-size:9px; color: var(--ink-faint); line-height:1; }
+.board-hud-tracker.collapsed .trk-round{ flex-direction:row; gap:8px; padding:5px 12px; }
+.trk-round-now{ font-family: var(--font-mono); font-size:11px; letter-spacing:0; color: var(--ink); max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
-.board-hud-head{
-  display:flex; align-items:center; gap:8px; font-family: var(--font-display); font-size:11px;
-  letter-spacing:0.08em; color: var(--accent); text-shadow:0 0 10px var(--accent-faint); margin-bottom:10px;
+.trk-list{ display:flex; gap:8px; overflow-x:auto; padding:12px 6px 4px; scrollbar-width:none; scroll-behavior:smooth; min-width:0; }
+.trk-list::-webkit-scrollbar{ display:none; }
+.trk-empty{ color: var(--ink-faint); font-size:11.5px; padding:10px 12px; white-space:nowrap; }
+.trk-card{
+  position:relative; flex-shrink:0; width:62px; display:flex; flex-direction:column; align-items:center; gap:3px; padding:4px 2px 5px;
+  background:none; border:none; border-radius:12px; cursor:pointer; color: var(--ink);
+  transition: transform 0.2s cubic-bezier(.22,1,.36,1), background 0.15s ease;
 }
-.board-hud-head-icon{ font-size:13px; flex-shrink:0; }
-.board-hud-head > span:not(.board-hud-head-icon){ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.board-hud-head .combat-avatar{ flex-shrink:0; }
-.board-hud-mini-btn{
-  background:none; border:1px solid var(--stone-line); color: var(--ink-faint); border-radius:5px; width:22px; height:22px;
-  display:flex; align-items:center; justify-content:center; font-size:11px; cursor:pointer; flex-shrink:0; transition: all 0.15s ease;
+.trk-card:hover{ background: rgba(255,255,255,0.06); transform: translateY(-2px); }
+.trk-avatar{
+  width:42px; height:42px; border-radius:50%; object-fit:cover; flex-shrink:0; border:3px solid var(--ink-faint);
+  background: var(--stone-800); box-shadow: 0 2px 8px rgba(0,0,0,0.5);
 }
-.board-hud-mini-btn:hover{ color: var(--accent); border-color: var(--accent-core); }
-.board-hud-empty{ color: var(--ink-faint); font-size:11.5px; text-align:center; padding:8px 0; }
+.trk-avatar-letter{ display:flex; align-items:center; justify-content:center; font-family: var(--font-display); color: var(--ink-dim); font-size:16px; }
+.trk-card.team-aliado .trk-avatar{ border-color: var(--accent-core); }
+.trk-card.team-inimigo .trk-avatar{ border-color: var(--danger); }
+.trk-name{ font-family: var(--font-mono); font-size:9.5px; color: var(--ink-dim); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.trk-hp{ width:44px; height:5px; border-radius:3px; background: rgba(0,0,0,0.55); border:1px solid rgba(255,255,255,0.08); overflow:hidden; }
+.trk-hp-fill{ display:block; height:100%; border-radius:3px; transition: width 0.3s ease; }
+.trk-hp-fill.tone-ok{ background: linear-gradient(90deg,#16a34a,#4ade80); }
+.trk-hp-fill.tone-mid{ background: linear-gradient(90deg,#d97706,#ffb84d); }
+.trk-hp-fill.tone-low{ background: linear-gradient(90deg,#b91c1c,#ff5a5a); }
+.trk-rank{
+  position:absolute; top:0; left:2px; font-family: var(--font-mono); font-size:8.5px; line-height:1; color: var(--ink-faint);
+  background: var(--stone-900); border:1px solid var(--stone-line); border-radius:6px; padding:2px 4px; z-index:1;
+}
+.trk-me-tag{
+  position:absolute; top:0; right:0; font-size:7.5px; line-height:1; letter-spacing:0.06em; text-transform:uppercase; color: var(--void);
+  background: var(--accent); border-radius:6px; padding:2px 4px; z-index:1; font-weight:700;
+}
+.trk-card.current{ transform: scale(1.12); margin:0 4px; background: rgba(74,222,128,0.1); }
+.trk-card.current:hover{ transform: scale(1.12) translateY(-2px); }
+.trk-card.current .trk-avatar{ border-color:#4ade80; box-shadow: 0 0 0 2px rgba(74,222,128,0.35), 0 0 16px rgba(74,222,128,0.6); animation: trk-current-pulse 1.6s ease-in-out infinite; }
+.trk-card.current .trk-name{ color: var(--ink); }
+.trk-now{
+  position:absolute; top:-11px; left:50%; transform:translateX(-50%); font-family: var(--font-display); font-size:7.5px; letter-spacing:0.12em;
+  color:#06210f; background:#4ade80; border-radius:8px; padding:2px 6px; z-index:2; box-shadow:0 0 10px rgba(74,222,128,0.6); white-space:nowrap;
+}
+@keyframes trk-current-pulse{ 0%,100%{ box-shadow:0 0 0 2px rgba(74,222,128,0.3), 0 0 10px rgba(74,222,128,0.4); } 50%{ box-shadow:0 0 0 4px rgba(74,222,128,0.15), 0 0 22px rgba(74,222,128,0.75); } }
 
-.board-hud-initiative-list{ display:flex; flex-direction:column; gap:6px; max-height:min(46vh, 340px); overflow-y:auto; padding-right:2px; }
-.board-hud-init-row{
-  display:flex; align-items:center; gap:8px; background: rgba(255,255,255,0.03); border:1px solid var(--stone-line);
-  border-left:3px solid var(--ink-faint); border-radius:7px; padding:6px 8px; transition: all 0.2s ease;
+/* aviso "SEU TURNO!" */
+.board-hud-turn-banner{ position:absolute; top:118px; left:50%; transform:translateX(-50%); pointer-events:none; opacity:0; z-index:5; }
+.turn-banner-inner{
+  font-family: var(--font-display); font-size:clamp(18px,3.2vw,28px); font-weight:900; letter-spacing:0.14em; color:#fff; white-space:nowrap;
+  padding:12px 30px; border-radius:40px; background: linear-gradient(90deg, rgba(22,163,74,0.95), rgba(74,222,128,0.95), rgba(22,163,74,0.95));
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.35), 0 0 40px rgba(74,222,128,0.8), 0 12px 30px rgba(0,0,0,0.5); text-shadow:0 2px 0 rgba(0,60,20,0.6);
 }
-.board-hud-init-row.team-aliado{ border-left-color: var(--accent-core); }
-.board-hud-init-row.team-inimigo{ border-left-color: var(--danger); }
-.board-hud-init-row.current-turn{ border-color:#4ade80; box-shadow:0 0 0 1px #4ade80, 0 0 12px rgba(74,222,128,0.3); }
-.board-hud-init-main{ flex:1; min-width:0; }
-.board-hud-init-name{ font-family: var(--font-mono); font-size:11.5px; color: var(--ink); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.board-hud-init-hpbar{ margin-top:3px; height:6px; }
+.turn-banner-inner span{ margin-right:8px; }
+.board-hud-turn-banner.show{ animation: turn-banner 2.6s cubic-bezier(.22,1,.36,1) both; }
+@keyframes turn-banner{
+  0%{ opacity:0; transform:translate(-50%,-14px) scale(0.7); }
+  14%{ opacity:1; transform:translate(-50%,0) scale(1.08); }
+  24%{ transform:translate(-50%,0) scale(1); }
+  82%{ opacity:1; transform:translate(-50%,0) scale(1); }
+  100%{ opacity:0; transform:translate(-50%,-10px) scale(0.96); }
+}
 
-/* recolhido (Fase 4b) -- só o cabeçalho fica, sem a margem que
-   pressupõe um corpo logo abaixo. */
-.board-hud-panel.collapsed .board-hud-head{ margin-bottom:0; }
-.board-hud-body{ display:block; } /* espaçamento interno já vem de .board-hud-bar-row/.board-hud-initiative-list, não duplica aqui */
+/* ======================= TOKENS (decorados pelo HUD) ======================= */
+.board-token.turn-active{ box-shadow: 0 0 0 3px #4ade80, 0 0 24px 6px rgba(74,222,128,0.55); animation: token-turn-pulse 1.5s ease-in-out infinite; }
+@keyframes token-turn-pulse{ 0%,100%{ box-shadow:0 0 0 3px #4ade80, 0 0 14px 3px rgba(74,222,128,0.4); } 50%{ box-shadow:0 0 0 4px #4ade80, 0 0 30px 9px rgba(74,222,128,0.7); } }
+.board-token.has-hp::after{
+  content:""; position:absolute; left:0; right:0; bottom:0; height:17%; pointer-events:none; z-index:2;
+  background: linear-gradient(90deg, var(--hp-color) var(--hp), rgba(0,0,0,0.72) var(--hp)); border-top:1px solid rgba(0,0,0,0.65);
+}
+.board-token.hud-hl{ box-shadow: 0 0 0 3px #fff, 0 0 20px 5px rgba(255,255,255,0.5); }
+.board-token.hud-ping{ animation: token-ping 1.4s ease-out; }
+@keyframes token-ping{
+  0%{ box-shadow:0 0 0 0 rgba(255,255,255,0.95), 0 0 0 0 rgba(var(--accent-rgb),0.9); }
+  70%{ box-shadow:0 0 0 46px rgba(255,255,255,0), 0 0 0 78px rgba(var(--accent-rgb),0); }
+  100%{ box-shadow:0 0 0 0 rgba(255,255,255,0), 0 0 0 0 rgba(var(--accent-rgb),0); }
+}
 
-/* .board-hud-bar-block agrupa a barra (linha com label/fill/número) +
-   os controles de +/- logo abaixo -- espaçamento ENTRE barras fica no
-   bloco (não na linha), porque cada bloco só tem uma linha dentro
-   (:first-of-type da linha sempre bateria se o espaçamento tivesse
-   ficado na linha, já que ela nunca tem irmã do mesmo tipo dentro do
-   próprio bloco). */
-.board-hud-bar-block{ margin-top:10px; }
-.board-hud-bar-block:first-of-type{ margin-top:0; }
-.board-hud-bar-row{ display:flex; align-items:center; gap:8px; }
-.board-hud-bar-label{ font-family: var(--font-mono); font-size:10px; color: var(--ink-faint); width:34px; flex-shrink:0; }
-.board-hud-bar-row .combat-hp-bar{ flex:1; }
-.board-hud-bar-txt{ font-family: var(--font-mono); font-size:10px; color: var(--ink-dim); flex-shrink:0; min-width:38px; text-align:right; }
-/* stepper "pill" único (−, número, +) -- substituiu 3 caixinhas soltas
-   com gap (achado feio pelo usuário) por um bloco único com bordas
-   internas separando as partes, mais parecido com um controle de
-   verdade. Setinhas nativas do <input type="number"> removidas de
-   propósito (webkit spin button + firefox textfield) -- ficavam
-   deslocadas/genéricas dentro do visual customizado do HUD, e já tem
-   os botões −/+ fazendo o mesmo trabalho. */
-.board-hud-bar-stepper{
-  display:flex; align-items:stretch; justify-content:center; width:fit-content; margin:6px auto 0;
-  background: var(--stone-900); border:1px solid var(--stone-line); border-radius:7px; overflow:hidden;
+/* ======================= COLUNA DE BAIXO: FEED + DOCK ======================= */
+.board-hud-bottom{
+  position:absolute; left:50%; bottom:12px; transform:translateX(-50%); width:min(960px, calc(100vw - 24px));
+  display:flex; flex-direction:column; align-items:center; gap:10px; pointer-events:none;
 }
-.board-hud-stepper-btn{
-  border:none; background:none; width:26px; color: var(--ink-dim); cursor:pointer; font-size:13px;
-  display:flex; align-items:center; justify-content:center; transition: all 0.15s ease;
-}
-.board-hud-stepper-btn:hover:not(:disabled){ background: var(--accent-faint); color: var(--accent); }
-.board-hud-stepper-btn:disabled{ opacity:0.4; cursor:default; }
-.board-hud-bar-input{
-  width:42px; background:none; border:none; border-left:1px solid var(--stone-line); border-right:1px solid var(--stone-line);
-  color: var(--ink); font-family: var(--font-mono); font-size:12px; text-align:center; padding:5px 0;
-}
-.board-hud-bar-input:focus{ outline:none; background: var(--accent-faint); }
-.board-hud-bar-input::-webkit-outer-spin-button,
-.board-hud-bar-input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
-.board-hud-bar-input[type="number"]{ -moz-appearance: textfield; appearance: textfield; }
 
-/* ---------- drawers (Combate/Dados, Fase 4b) ---------- */
-/* mesmo espírito visual de .combat-dice-tray (combat.css) que já
-   existia, bem mais largo (embute a tela INTEIRA de combate/dados,
-   não uma versão reduzida) -- Dados na esquerda (todo mundo), Combate
-   na direita (só mestre). Deslocado um pouco pra baixo do centro
+/* ---------- feed de rolagens ---------- */
+.board-hud-feed{ display:flex; flex-direction:column; align-items:center; gap:8px; pointer-events:none; }
+.roll-toast{
+  pointer-events:auto; position:relative; display:flex; align-items:center; gap:12px; padding:8px 34px 8px 10px; border-radius:16px; min-width:230px;
+  animation: roll-toast-in 0.34s cubic-bezier(.22,1.3,.4,1) both;
+}
+.roll-toast.own{ border-color: var(--accent); box-shadow: 0 0 0 1px rgba(var(--accent-rgb),0.25), 0 0 28px rgba(var(--accent-rgb),0.3), 0 12px 30px rgba(0,0,0,0.55); }
+.roll-toast.leaving{ animation: roll-toast-out 0.26s ease-in both; }
+@keyframes roll-toast-in{ from{ opacity:0; transform:translateY(16px) scale(0.9); } to{ opacity:1; transform:none; } }
+@keyframes roll-toast-out{ to{ opacity:0; transform:translateY(8px) scale(0.94); } }
+.roll-die{
+  position:relative; width:58px; height:64px; flex-shrink:0; display:flex; flex-direction:column; align-items:center; justify-content:center;
+  background: linear-gradient(160deg, rgba(var(--accent-rgb),0.7), rgba(var(--accent-rgb),0.2)); color:#fff;
+  clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+  animation: roll-die-spin 0.65s cubic-bezier(.3,1.2,.5,1) both;
+}
+.roll-toast.die-d6 .roll-die{ clip-path: inset(6% round 14px); height:58px; }
+.roll-toast.die-d4 .roll-die{ clip-path: polygon(50% 4%, 100% 92%, 0% 92%); }
+.roll-die::before{ content:""; position:absolute; inset:2px; background: var(--stone-900); clip-path: inherit; z-index:0; }
+.roll-die > *{ position:relative; z-index:1; }
+.roll-die b{ font-family: var(--font-display); font-size:22px; line-height:1; font-variant-numeric: tabular-nums; }
+.roll-die small{ font-family: var(--font-mono); font-size:8.5px; color: var(--ink-faint); margin-top:2px; }
+@keyframes roll-die-spin{ 0%{ transform: rotate(-200deg) scale(0.4); } 70%{ transform: rotate(14deg) scale(1.08); } 100%{ transform:none; } }
+.roll-toast.revealed .roll-die b{ animation: roll-num-pop 0.4s cubic-bezier(.22,1.6,.4,1); }
+@keyframes roll-num-pop{ 0%{ transform:scale(0.5); } 60%{ transform:scale(1.35); } 100%{ transform:scale(1); } }
+.roll-meta{ display:flex; flex-direction:column; gap:2px; min-width:0; }
+.roll-who{ display:flex; align-items:baseline; gap:8px; flex-wrap:wrap; font-family: var(--font-mono); font-size:12px; color: var(--ink); }
+.roll-label{ font-family: var(--font-display); font-size:9.5px; letter-spacing:0.12em; color: var(--accent); text-transform:uppercase; }
+.roll-calc{ font-family: var(--font-mono); font-size:11px; color: var(--ink-dim); }
+.roll-tag{ font-family: var(--font-display); font-size:9px; letter-spacing:0.16em; margin-top:2px; }
+.roll-tag.crit{ color:#ffd84d; text-shadow:0 0 10px rgba(255,216,77,0.8); }
+.roll-tag.fumble{ color:#ff5a5a; text-shadow:0 0 10px rgba(255,90,90,0.8); }
+.roll-x{
+  position:absolute; top:6px; right:8px; background:none; border:none; color: var(--ink-faint); font-size:16px; line-height:1; cursor:pointer; padding:2px 4px;
+}
+.roll-x:hover{ color: var(--ink); }
+.roll-toast.crit{ border-color:#ffd84d; box-shadow: 0 0 0 1px rgba(255,216,77,0.4), 0 0 40px rgba(255,216,77,0.55), 0 12px 30px rgba(0,0,0,0.55); }
+.roll-toast.crit.revealed .roll-die{ background: linear-gradient(160deg, rgba(255,216,77,0.9), rgba(255,170,0,0.3)); animation: roll-crit-glow 1s ease-in-out 2; }
+.roll-toast.crit.revealed .roll-die b{ color:#ffe27a; }
+@keyframes roll-crit-glow{ 0%,100%{ filter:drop-shadow(0 0 0 rgba(255,216,77,0)); } 50%{ filter:drop-shadow(0 0 12px rgba(255,216,77,0.95)); } }
+.roll-toast.fumble{ border-color:#ff5a5a; box-shadow: 0 0 0 1px rgba(255,90,90,0.4), 0 0 34px rgba(255,90,90,0.45), 0 12px 30px rgba(0,0,0,0.55); }
+.roll-toast.fumble.revealed{ animation: roll-shake 0.45s 0.05s; }
+.roll-toast.fumble.revealed .roll-die b{ color:#ff8a8a; }
+@keyframes roll-shake{ 0%,100%{ translate:0 0; } 20%{ translate:-6px 0; } 40%{ translate:6px 0; } 60%{ translate:-4px 0; } 80%{ translate:3px 0; } }
+
+/* ---------- dock do personagem ---------- */
+.board-dock{
+  pointer-events:auto; width:100%; box-sizing:border-box; border-radius:20px; padding:12px 14px;
+  animation: board-dock-in 0.4s cubic-bezier(.22,1,.36,1) both;
+}
+@keyframes board-dock-in{ from{ opacity:0; transform:translateY(14px); } to{ opacity:1; transform:none; } }
+.board-dock.low{ border-color:#ff5a5a; animation: dock-low 1.5s ease-in-out infinite; }
+@keyframes dock-low{
+  0%,100%{ box-shadow:0 0 0 1px rgba(255,90,90,0.2), 0 0 16px rgba(255,90,90,0.2), 0 12px 30px rgba(0,0,0,0.55); }
+  50%{ box-shadow:0 0 0 1px rgba(255,90,90,0.5), 0 0 34px rgba(255,90,90,0.5), 0 12px 30px rgba(0,0,0,0.55); }
+}
+.dock-top{ display:flex; align-items:center; gap:16px; }
+.dock-id{ display:flex; align-items:center; gap:10px; flex-shrink:0; max-width:170px; }
+.dock-avatar{ width:50px; height:50px; border-radius:50%; object-fit:cover; flex-shrink:0; border:3px solid var(--accent); box-shadow:0 0 14px rgba(var(--accent-rgb),0.45); background: var(--stone-800); }
+.dock-avatar-letter{ display:flex; align-items:center; justify-content:center; font-family: var(--font-display); color: var(--accent); font-size:20px; }
+.dock-id-txt{ display:flex; flex-direction:column; min-width:0; }
+.dock-id-txt b{ font-family: var(--font-display); font-size:12.5px; letter-spacing:0.05em; color: var(--ink); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dock-id-txt small{ font-family: var(--font-mono); font-size:10px; color: var(--accent); }
+.dock-vitals{ flex:1; min-width:0; display:flex; flex-wrap:wrap; gap:8px 18px; }
+.dock-vital{ flex:1 1 180px; max-width:300px; min-width:150px; }
+.dock-vital-top{ display:flex; align-items:baseline; justify-content:space-between; margin-bottom:4px; }
+.dock-vital-label{ font-family: var(--font-display); font-size:10px; letter-spacing:0.1em; color: var(--ink-dim); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:60%; }
+.dock-vital-val{ display:flex; align-items:baseline; font-family: var(--font-mono); }
+.dock-vital-input{
+  width:42px; background:none; border:none; border-bottom:1px dashed transparent; color: var(--ink); font-family: var(--font-mono); font-size:15px; font-weight:700;
+  text-align:right; padding:0 2px; border-radius:3px; transition: border-color 0.15s ease, background 0.15s ease;
+}
+.dock-vital-input:hover{ border-bottom-color: var(--ink-faint); }
+.dock-vital-input:focus{ outline:none; background: var(--accent-faint); border-bottom-color: var(--accent); }
+.dock-vital-max{ font-size:11px; color: var(--ink-faint); }
+.dock-bar{ position:relative; height:13px; border-radius:8px; background: rgba(0,0,0,0.6); border:1px solid var(--stone-line); }
+.dock-bar-fill{ height:100%; border-radius:7px; background: var(--accent-core); transition: width 0.25s cubic-bezier(.22,1,.36,1), background 0.3s ease; box-shadow: inset 0 2px 0 rgba(255,255,255,0.22); }
+.dock-bar-fill[data-tone="ok"]{ background: linear-gradient(90deg,#16a34a,#4ade80); }
+.dock-bar-fill[data-tone="mid"]{ background: linear-gradient(90deg,#d97706,#ffb84d); }
+.dock-bar-fill[data-tone="low"]{ background: linear-gradient(90deg,#b91c1c,#ff5a5a); animation: fill-low 1.1s ease-in-out infinite; }
+@keyframes fill-low{ 0%,100%{ filter:brightness(1); } 50%{ filter:brightness(1.4); } }
+.dock-bar.flash-dmg{ animation: bar-flash-dmg 0.45s ease-out; }
+.dock-bar.flash-heal{ animation: bar-flash-heal 0.45s ease-out; }
+@keyframes bar-flash-dmg{ 0%{ box-shadow:0 0 0 0 rgba(255,90,90,0.9); } 100%{ box-shadow:0 0 0 8px rgba(255,90,90,0); } }
+@keyframes bar-flash-heal{ 0%{ box-shadow:0 0 0 0 rgba(74,222,128,0.9); } 100%{ box-shadow:0 0 0 8px rgba(74,222,128,0); } }
+.dock-float{ position:absolute; right:6px; top:-4px; font-family: var(--font-display); font-size:17px; font-weight:900; opacity:0; pointer-events:none; }
+.dock-float.dmg{ color:#ff6b6b; text-shadow:0 2px 6px rgba(0,0,0,0.9), 0 0 12px rgba(255,90,90,0.8); }
+.dock-float.heal{ color:#6bf59a; text-shadow:0 2px 6px rgba(0,0,0,0.9), 0 0 12px rgba(74,222,128,0.8); }
+.dock-float.pop{ animation: dock-float-pop 0.9s ease-out; }
+@keyframes dock-float-pop{ 0%{ opacity:0; transform:translateY(4px) scale(0.7); } 18%{ opacity:1; transform:translateY(-8px) scale(1.2); } 100%{ opacity:0; transform:translateY(-30px) scale(1); } }
+.dock-steps{ display:flex; gap:4px; justify-content:center; margin-top:6px; }
+.dock-step{
+  flex:1; max-width:56px; height:26px; border-radius:8px; border:1px solid var(--stone-line); background: var(--stone-800); color: var(--ink-dim);
+  font-family: var(--font-mono); font-size:11.5px; font-weight:700; cursor:pointer; user-select:none; touch-action:manipulation;
+  transition: transform 0.08s ease, background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+.dock-step.minus:hover{ background: rgba(255,90,90,0.16); color:#ff8a8a; border-color:#ff5a5a; }
+.dock-step.plus:hover{ background: rgba(74,222,128,0.16); color:#6bf59a; border-color:#4ade80; }
+.dock-step:active{ transform: scale(0.9); }
+.dock-collapse{
+  align-self:flex-start; flex-shrink:0; width:26px; height:26px; border-radius:8px; border:1px solid var(--stone-line); background:none; color: var(--ink-faint);
+  cursor:pointer; font-size:11px; transition: all 0.15s ease;
+}
+.dock-collapse:hover{ color: var(--accent); border-color: var(--accent-core); }
+
+.dock-actions{ display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:10px 18px; margin-top:12px; padding-top:11px; border-top:1px dashed var(--stone-line); }
+.board-dock.no-char .dock-actions{ margin-top:0; padding-top:0; border-top:none; justify-content:center; }
+.board-dock.no-char .dock-actions .dock-collapse{ align-self:center; }
+.dock-group{ display:flex; align-items:center; gap:8px; min-width:0; }
+.dock-group-label{ font-family: var(--font-display); font-size:8.5px; letter-spacing:0.14em; color: var(--ink-faint); white-space:nowrap; }
+.dock-group-label i{ font-style:normal; color: var(--ink-faint); opacity:0.6; letter-spacing:0.04em; }
+.dock-chips{ display:flex; flex-wrap:wrap; align-items:center; gap:6px; }
+.dock-chip{
+  display:inline-flex; align-items:center; gap:5px; height:34px; padding:0 11px; border-radius:17px; cursor:pointer; user-select:none; touch-action:manipulation;
+  background: var(--stone-800); border:1px solid var(--stone-line); color: var(--ink); font-family: var(--font-mono); font-size:12px;
+  transition: transform 0.12s cubic-bezier(.22,1.4,.4,1), border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+}
+.dock-chip:hover{ transform: translateY(-3px); }
+.dock-chip:active{ transform: translateY(0) scale(0.94); }
+.dock-stat{ border-color: color-mix(in srgb, var(--c) 55%, var(--stone-line)); background: color-mix(in srgb, var(--c) 10%, var(--stone-800)); }
+.dock-stat:hover{ border-color: var(--c); box-shadow: 0 6px 16px color-mix(in srgb, var(--c) 40%, transparent); }
+.dock-stat b{ font-family: var(--font-display); font-size:10px; letter-spacing:0.08em; color: var(--c); }
+.dock-stat i{ font-style:normal; font-weight:700; min-width:14px; text-align:right; }
+.dock-stat-ico{ font-size:13px; }
+.dock-die{ font-weight:700; letter-spacing:0.02em; padding:0 12px; }
+.dock-die:hover{ border-color: var(--accent); background: var(--accent-faint); color: var(--accent); box-shadow: 0 6px 16px rgba(var(--accent-rgb),0.3); }
+.dock-die[data-die="d20"]{ border-color: var(--accent-core); color: var(--accent); }
+.dock-more{ padding:0 10px; color: var(--ink-faint); }
+.dock-more:hover{ color: var(--accent); border-color: var(--accent-core); }
+.dock-chip.rolling{ pointer-events:none; }
+.dock-chip.rolling .dock-stat-ico, .dock-die.rolling{ animation: dock-spin 0.5s linear infinite; }
+@keyframes dock-spin{ to{ transform: rotate(360deg); } }
+.dock-mini-field{
+  display:inline-flex; align-items:center; gap:3px; height:34px; padding:0 4px 0 9px; border-radius:17px; background: var(--stone-900); border:1px solid var(--stone-line);
+  color: var(--ink-faint); font-family: var(--font-mono); font-size:12px;
+}
+.dock-mini-field input{
+  width:34px; background:none; border:none; color: var(--ink); font-family: var(--font-mono); font-size:12.5px; font-weight:700; text-align:center; padding:0;
+  -moz-appearance:textfield; appearance:textfield;
+}
+.dock-mini-field input:focus{ outline:none; color: var(--accent); }
+.dock-mini-field input::-webkit-outer-spin-button, .dock-mini-field input::-webkit-inner-spin-button{ -webkit-appearance:none; margin:0; }
+
+/* dock recolhido */
+.board-dock.collapsed{ width:auto; max-width:100%; padding:7px 12px; border-radius:30px; }
+.dock-mini{ display:flex; align-items:center; gap:10px; }
+.dock-mini .dock-avatar{ width:34px; height:34px; border-width:2px; font-size:14px; }
+.dock-mini-main{ display:flex; flex-direction:column; gap:4px; min-width:90px; }
+.dock-mini-main b{ font-family: var(--font-display); font-size:10.5px; letter-spacing:0.05em; color: var(--ink); max-width:120px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.dock-mini-bar{ height:7px; border-radius:4px; background: rgba(0,0,0,0.6); border:1px solid var(--stone-line); overflow:hidden; }
+.dock-mini-fill{ height:100%; transition: width 0.25s ease; background: linear-gradient(90deg,#16a34a,#4ade80); }
+.dock-mini-fill[data-tone="mid"]{ background: linear-gradient(90deg,#d97706,#ffb84d); }
+.dock-mini-fill[data-tone="low"]{ background: linear-gradient(90deg,#b91c1c,#ff5a5a); }
+.dock-mini-txt{ font-family: var(--font-mono); font-size:12px; font-weight:700; color: var(--ink); }
+.dock-mini .dock-collapse{ align-self:center; }
+.dock-expand-solo{ background:none; border:none; font-size:20px; cursor:pointer; padding:0 6px; }
+
+/* ======================= DRAWERS (Dados / Combate) ======================= */
+/* mesmo espírito de .combat-dice-tray (combat.css), bem mais largo (embute
+   a tela INTEIRA de combate/dados) -- Dados na esquerda (todo mundo),
+   Combate na direita (só mestre). Deslocado um pouco pra baixo do centro
    (top:calc(50% + 36px)) só o suficiente pra não brigar com
-   .side-nav-handle (também left:0;top:50%, ~64px de altura) -- mais
-   perto do meio do que antes de propósito, pra não colidir com o
-   painel de Barras (canto inferior esquerdo por padrão -- ver
-   corner-bottom-left logo abaixo). SEM backdrop-filter de propósito
-   (removido -- fundo sólido/quase opaco no lugar) -- "vidro fosco"
-   nesses painéis fica em cima de um tabuleiro que recebe atualização
-   de posição de cursor/arrasto a ~16/s (Fase 3, Broadcast); todo
-   frame em que algo se move por trás de um blur precisa recalcular o
-   blur inteiro de novo, e eram VÁRIOS painéis assim ao mesmo tempo --
-   isso que deixava a aba pesada/lenta (reportado pelo usuário). Sem
-   o blur, o navegador só recompõe uma camada sólida normal, muito
-   mais barato. */
+   .side-nav-handle (também left:0;top:50%, ~64px de altura). */
 .board-hud-drawer{ position:fixed; top:calc(50% + 36px); pointer-events:auto; display:flex; align-items:flex-start; }
 .board-hud-drawer.side-left{ left:0; }
 .board-hud-drawer.side-right{ right:0; }
 
 .board-hud-drawer-handle{
-  width:30px; height:56px; flex-shrink:0; background: linear-gradient(160deg, rgba(18,23,28,0.98), rgba(7,10,12,1));
-  border:1px solid var(--accent-core); color: var(--accent);
-  display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:19px; transition: all 0.15s ease;
+  width:34px; height:94px; flex-shrink:0; background: linear-gradient(160deg, rgba(18,23,28,0.98), rgba(7,10,12,1));
+  border:1px solid var(--accent-core); color: var(--accent); gap:7px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; cursor:pointer; transition: all 0.15s ease;
   animation: side-nav-handle-pulse 2.6s ease-in-out infinite;
 }
-.board-hud-drawer.side-left .board-hud-drawer-handle{ border-left:none; border-radius:0 12px 12px 0; box-shadow: 3px 0 16px rgba(0,0,0,0.4), 0 0 12px var(--accent-faint); }
-.board-hud-drawer.side-right .board-hud-drawer-handle{ border-right:none; border-radius:12px 0 0 12px; box-shadow: -3px 0 16px rgba(0,0,0,0.4), 0 0 12px var(--accent-faint); }
+.hud-handle-icon{ font-size:18px; line-height:1; display:inline-block; transition: transform 0.3s cubic-bezier(.22,1,.36,1); }
+.hud-handle-label{ font-family: var(--font-display); font-size:8.5px; letter-spacing:0.16em; writing-mode:vertical-rl; color: var(--ink-faint); }
+.board-hud-drawer.side-left .board-hud-drawer-handle{ border-left:none; border-radius:0 14px 14px 0; box-shadow: 3px 0 16px rgba(0,0,0,0.4), 0 0 12px var(--accent-faint); }
+.board-hud-drawer.side-right .board-hud-drawer-handle{ border-right:none; border-radius:14px 0 0 14px; box-shadow: -3px 0 16px rgba(0,0,0,0.4), 0 0 12px var(--accent-faint); }
 .board-hud-drawer.open .board-hud-drawer-handle{ animation:none; }
-.board-hud-drawer-handle span{ display:inline-block; transition: transform 0.3s cubic-bezier(.22,1,.36,1); }
-.board-hud-drawer.side-left.open .board-hud-drawer-handle span{ transform: rotate(18deg); }
-.board-hud-drawer.side-right.open .board-hud-drawer-handle span{ transform: rotate(-18deg); }
+.board-hud-drawer.side-left.open .hud-handle-icon{ transform: rotate(18deg); }
+.board-hud-drawer.side-right.open .hud-handle-icon{ transform: rotate(-18deg); }
 .board-hud-drawer-handle:hover{ background: var(--accent-faint); animation:none; }
+.board-hud-drawer-handle:hover .hud-handle-label{ color: var(--accent); }
 
 .board-hud-drawer-panel{
   max-width:0; max-height:min(78vh, 720px); overflow:hidden;
@@ -345,13 +512,26 @@
 }
 /* combat.js/dice.js foram feitos pra caber nos 780px do .wrap normal
    -- dentro do drawer (mais estreito) só ajusta o layout de duas
-   colunas do combate (tabs STATUS/LOG) pra empilhar, dá mais espaço
-   de verdade pro conteúdo em vez de espremer os dois lado a lado. */
+   colunas do combate (tabs STATUS/LOG) pra empilhar. */
 .board-hud-drawer-body .combat-layout{ flex-direction:column; }
 .board-hud-drawer-body .combat-tabs{ flex-direction:row; width:auto; }
 
-@media (max-width:640px){
-  .board-hud-panel{ width:210px; }
+@media (max-width:760px){
+  .board-hud-tracker{ max-width:calc(100vw - 120px); top:10px; }
+  .trk-round{ min-width:52px; padding:4px 6px; }
+  .board-hud-bottom{ width:calc(100vw - 16px); bottom:8px; }
+  .board-dock{ padding:10px; border-radius:16px; }
+  .dock-top{ flex-wrap:wrap; gap:10px; }
+  .dock-collapse{ margin-left:auto; order:2; }
+  .dock-id{ order:1; flex:1; max-width:none; }
+  .dock-vitals{ order:3; flex-basis:100%; gap:8px 12px; }
+  .dock-vital{ flex-basis:140px; min-width:130px; }
+  .dock-actions{ gap:8px 14px; }
+  .dock-group{ width:100%; flex-wrap:wrap; }
+  .dock-chips{ flex-wrap:nowrap; overflow-x:auto; scrollbar-width:none; padding:4px 2px; width:100%; }
+  .dock-chips::-webkit-scrollbar{ display:none; }
+  .dock-chip, .dock-mini-field{ flex-shrink:0; }
+  .roll-toast{ min-width:0; width:min(340px, 100%); }
   .board-hud-drawer{ top:calc(50% + 34px); }
   .board-hud-drawer-panel, .board-hud-drawer-body{ max-height:min(70vh, 600px); }
   .board-hud-drawer-body{ width:min(88vw, 400px); }
