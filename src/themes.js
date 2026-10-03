@@ -4,7 +4,7 @@
 // importa `renderFichaScreen` de ficha.js, então ficha.js importar de
 // volta `THEMES`/`themeSwatchHtml` de character.js criaria um import
 // circular. Módulo próprio, sem depender de nenhuma tela.
-export const GAME_THEME_LABELS = { snake: 'Cobrinha', tetris: 'Tetris', flappy: 'Flappy Bird', '2048': '2048', breakout: 'Breakout', pong: 'Pong', asteroids: 'Asteroids', dino: 'Dino', invaders: 'Space Invaders' };
+export const GAME_THEME_LABELS = { snake: 'Cobrinha', tetris: 'Tetris', flappy: 'Flappy Bird', '2048': '2048', breakout: 'Breakout', pong: 'Pong', asteroids: 'Asteroids', dino: 'Dino', invaders: 'Space Invaders', minas: 'Campo Minado', frogger: 'Frogger', farkle: 'Farkle' };
 
 // html de UM swatch do seletor de tema -- compartilhado entre
 // character.js, masterCampaignHub.js e ficha.js (tema por NPC) pra não
@@ -89,5 +89,11 @@ export const THEMES = [
   {id:'dino-jurassico', label:'Era Jurássica', group:'especial', accent:'#ff5a2e', void:'#120806', unlockGame:'dino'},
   {id:'dino-offline', label:'Sem Internet', group:'especial', accent:'#535353', void:'#f7f7f7', unlockGame:'dino'},
   {id:'invaders-alien', label:'Invasão Alienígena', group:'especial', accent:'#b6ff3c', void:'#0d0420', unlockGame:'invaders'},
-  {id:'invaders-gibi', label:'Gibi Retrô', group:'especial', accent:'#e0402a', void:'#fff6dc', unlockGame:'invaders'}
+  {id:'invaders-gibi', label:'Gibi Retrô', group:'especial', accent:'#e0402a', void:'#fff6dc', unlockGame:'invaders'},
+  {id:'minas-perigo', label:'Zona de Perigo', group:'especial', accent:'#ffd400', void:'#0c0c08', unlockGame:'minas'},
+  {id:'minas-janela', label:'Janela 95', group:'especial', accent:'#000080', void:'#008080', unlockGame:'minas'},
+  {id:'frogger-noite', label:'Travessia Noturna', group:'especial', accent:'#3ef0c4', void:'#050d14', unlockGame:'frogger'},
+  {id:'frogger-nenufar', label:'Lago de Nenúfares', group:'especial', accent:'#d9548c', void:'#eef6f1', unlockGame:'frogger'},
+  {id:'farkle-cassino', label:'Cassino Veludo', group:'especial', accent:'#f5c542', void:'#12060a', unlockGame:'farkle'},
+  {id:'farkle-taverna', label:'Taverna de Madeira', group:'especial', accent:'#2a6f6a', void:'#efe0bd', unlockGame:'farkle'}
 ];

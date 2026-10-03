@@ -14,6 +14,9 @@ import { createPongGame } from '../games/pong.js';
 import { createAsteroidsGame } from '../games/asteroids.js';
 import { createDinoGame } from '../games/dino.js';
 import { createInvadersGame } from '../games/invaders.js';
+import { createMinasGame } from '../games/minas.js';
+import { createFroggerGame } from '../games/frogger.js';
+import { createFarkleGame } from '../games/farkle.js';
 
 const GAMES = {
   snake: { label: 'Cobrinha', icon: '🐍', factory: createSnakeGame, width: 360, height: 360, hasPreview: false },
@@ -27,6 +30,9 @@ const GAMES = {
   asteroids: { label: 'Asteroids', icon: '☄️', factory: createAsteroidsGame, width: 400, height: 400, hasPreview: false },
   dino: { label: 'Dino', icon: '🦖', factory: createDinoGame, width: 560, height: 200, hasPreview: false },
   invaders: { label: 'Space Invaders', icon: '👾', factory: createInvadersGame, width: 360, height: 420, hasPreview: false },
+  minas: { label: 'Campo Minado', icon: '💣', factory: createMinasGame, width: 360, height: 410, hasPreview: false },
+  frogger: { label: 'Frogger', icon: '🐸', factory: createFroggerGame, width: 364, height: 392, hasPreview: false },
+  farkle: { label: 'Farkle', icon: '🎲', factory: createFarkleGame, width: 360, height: 420, hasPreview: false },
 };
 
 // chamado quando o overlay fecha -- pra tela de baixo (character.js/
@@ -238,6 +244,9 @@ export function renderEasterEggOverlay({ campaign, profile, onClose }) {
                   ${selectedGame === 'pong' ? '⌨ ↑ ↓ ou W/S · ou arraste o mouse/dedo na quadra' : ''}
                   ${selectedGame === 'asteroids' ? '⌨ ◄ ► gira · ↑ acelera · espaço atira · H hiperespaço (arriscado!)' : ''}
                   ${selectedGame === 'dino' ? '⌨ espaço/↑ pula (segure = mais alto) · ↓ abaixa · ou clique/toque na tela' : ''}
+                  ${selectedGame === 'minas' ? '🖱 clique abre · botão direito (ou segurar no toque) marca · setas + espaço/F no teclado' : ''}
+                  ${selectedGame === 'frogger' ? '⌨ setas/WASD pulam uma casa · ou deslize/toque na tela' : ''}
+                  ${selectedGame === 'farkle' ? '🖱 clique nos dados que pontuam · R rola · B guarda · 1-6 seleciona · A seleciona tudo' : ''}
                   ${selectedGame === 'invaders' ? '⌨ ◄ ► ou A/D move · espaço atira · ou arraste o mouse/dedo (clique/toque atira)' : ''}
                 </div>
               </div>

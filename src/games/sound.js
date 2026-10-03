@@ -149,6 +149,44 @@ export const sfx = {
   },
   march: (i) => tone([110, 98, 87, 82][i % 4], 0.08, 'square', 0.1),
   invaderDie: () => sweep(520, 110, 0.14, 'square', 0.09),
+  // Farkle
+  diceRoll: () => {
+    for (let i = 0; i < 6; i++) setTimeout(() => noiseBurst(0.05, 0.1, 2600 - i * 200, 500), i * 85);
+  },
+  select: () => tone(520, 0.04, 'triangle', 0.08),
+  bank: () => {
+    [880, 1175, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.08, 'square', 0.08), i * 60));
+  },
+  farkle: () => {
+    sweep(330, 70, 0.55, 'sawtooth', 0.11);
+    setTimeout(() => tone(110, 0.3, 'sawtooth', 0.1), 250);
+  },
+  hotDice: () => {
+    [523, 784, 1046, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.09, 'triangle', 0.12), i * 55));
+  },
+  // Frogger
+  hop: () => sweep(260, 520, 0.07, 'square', 0.06),
+  splash: () => {
+    noiseBurst(0.35, 0.13, 900, 160);
+    sweep(500, 140, 0.25, 'sine', 0.08);
+  },
+  squash: () => {
+    noiseBurst(0.18, 0.18, 700, 90);
+    sweep(220, 60, 0.2, 'square', 0.09);
+  },
+  home: () => {
+    [660, 880, 1175].forEach((f, i) => setTimeout(() => tone(f, 0.09, 'triangle', 0.12), i * 70));
+  },
+  // Campo Minado
+  reveal: (n) => tone(400 + Math.min(n, 12) * 28, 0.04, 'square', 0.06),
+  flag: () => tone(260, 0.05, 'triangle', 0.09),
+  levelClear: () => {
+    [523, 659, 784, 1046, 1318].forEach((f, i) => setTimeout(() => tone(f, 0.1, 'triangle', 0.12), i * 70));
+  },
+  mineBoom: () => {
+    noiseBurst(0.7, 0.28, 2200, 70);
+    sweep(180, 40, 0.5, 'sawtooth', 0.14);
+  },
   pointWon: () => {
     [523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.09, 'triangle', 0.12), i * 70));
   },

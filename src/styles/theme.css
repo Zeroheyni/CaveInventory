@@ -515,6 +515,60 @@
     --danger:#c62828; --danger-rgb:198,40,40;
   }
 
+  html[data-theme="minas-perigo"]{
+    /* Campo Minado, escuro -- zona de perigo: preto-oliva com amarelo de
+       fita de isolamento como destaque (e laranja/vermelho de alerta). */
+    --void:#0c0c08; --stone-900:#14140d; --stone-800:#1c1c13; --stone-700:#26261a; --stone-line:#3d3d28;
+    --ink:#f2f0d8; --ink-dim:#bfbb96; --ink-faint:#807c5c;
+    --accent:#ffd400; --accent-core:#d9b400; --accent-deep:#403600; --accent-faint:rgba(255,212,0,0.12); --accent-rgb:255,212,0;
+    --warn:#ff9f1a; --warn-rgb:255,159,26;
+    --danger:#ff3b2e; --danger-rgb:255,59,46;
+  }
+  html[data-theme="minas-janela"]{
+    /* Campo Minado, claro -- Windows 95: área de trabalho verde-azulada
+       com janelas cinza de bordas em relevo e barra de título azul-marinho. */
+    --void:#008080; --stone-900:#c0c0c0; --stone-800:#c0c0c0; --stone-700:#dfdfdf; --stone-line:#808080;
+    --ink:#000000; --ink-dim:#404040; --ink-faint:#6a6a6a;
+    --accent:#000080; --accent-core:#000060; --accent-deep:#d4d0c8; --accent-faint:rgba(0,0,128,0.12); --accent-rgb:0,0,128;
+    --warn:#808000; --warn-rgb:128,128,0;
+    --danger:#c00000; --danger-rgb:192,0,0;
+  }
+  html[data-theme="frogger-noite"]{
+    /* Frogger, escuro -- travessia noturna: rio sob a lua, azul-petróleo
+       profundo e verde-menta de sapo como destaque. */
+    --void:#050d14; --stone-900:#08141d; --stone-800:#0c1c28; --stone-700:#12293a; --stone-line:#1b3d52;
+    --ink:#dff7f1; --ink-dim:#8fc9bf; --ink-faint:#4f8a82;
+    --accent:#3ef0c4; --accent-core:#20c9a0; --accent-deep:#0c3a30; --accent-faint:rgba(62,240,196,0.12); --accent-rgb:62,240,196;
+    --warn:#ffd25a; --warn-rgb:255,210,90;
+    --danger:#ff5a7a; --danger-rgb:255,90,122;
+  }
+  html[data-theme="frogger-nenufar"]{
+    /* Frogger, claro -- lago de nenúfares em aquarela: verdes e azuis
+       lavados com rosa de flor de vitória-régia como destaque. */
+    --void:#eef6f1; --stone-900:#e3f0ea; --stone-800:#d6e8e1; --stone-700:#c6ddd4; --stone-line:#a9c9bd;
+    --ink:#1f3a33; --ink-dim:#46695f; --ink-faint:#7a9a90;
+    --accent:#d9548c; --accent-core:#bd3a72; --accent-deep:#f8d7e5; --accent-faint:rgba(217,84,140,0.12); --accent-rgb:217,84,140;
+    --warn:#e0a82e; --warn-rgb:224,168,46;
+    --danger:#c0392b; --danger-rgb:192,57,43;
+  }
+  html[data-theme="farkle-cassino"]{
+    /* Farkle, escuro -- cassino de veludo: bordô profundo com ouro. */
+    --void:#12060a; --stone-900:#1b0a10; --stone-800:#26101a; --stone-700:#341725; --stone-line:#5a2a3c;
+    --ink:#f6e9d2; --ink-dim:#d4b98c; --ink-faint:#977c58;
+    --accent:#f5c542; --accent-core:#d4a937; --accent-deep:#4a3a0a; --accent-faint:rgba(245,197,66,0.13); --accent-rgb:245,197,66;
+    --warn:#ff8a5a; --warn-rgb:255,138,90;
+    --danger:#ff4d6a; --danger-rgb:255,77,106;
+  }
+  html[data-theme="farkle-taverna"]{
+    /* Farkle, claro -- taverna: tábuas de carvalho claro, tinta marrom e um
+       verde-azulado de verdete como destaque. */
+    --void:#efe0bd; --stone-900:#e6d3a8; --stone-800:#dcc594; --stone-700:#cfb27c; --stone-line:#a98a55;
+    --ink:#33261a; --ink-dim:#5e4630; --ink-faint:#8c7352;
+    --accent:#2a6f6a; --accent-core:#1f5753; --accent-deep:#cfe5e0; --accent-faint:rgba(42,111,106,0.12); --accent-rgb:42,111,106;
+    --warn:#b8741a; --warn-rgb:184,116,26;
+    --danger:#a8321f; --danger-rgb:168,50,31;
+  }
+
   *{box-sizing:border-box; margin:0; padding:0;}
 
   /* troca de tema suave -- só nas cores (background/border/texto/sombra),
@@ -1734,6 +1788,386 @@
     html[data-theme="invaders-gibi"] :is(body, .wrap)::before, html[data-theme="invaders-gibi"] :is(body, .wrap)::after,
     html[data-theme="asteroids-vetor"] .title .dot, html[data-theme="asteroids-carta"] .title .dot, html[data-theme="dino-jurassico"] .title .dot,
     html[data-theme="dino-offline"] .title .dot, html[data-theme="invaders-alien"] .title .dot, html[data-theme="invaders-gibi"] .title .dot{ animation:none !important; }
+  }
+
+  /* ================================================================
+     CAMPO MINADO / FROGGER / FARKLE -- 6 temas especiais novos.
+     Mesmo método dos anteriores: cenas em elementos fixos animados só
+     com transform/translate/opacity, arte em SVG data-URI gerada por
+     script e uma "skin de UI" (fonte, botão, aba, cartão).
+     ================================================================ */
+
+  /* ---------- Campo Minado / Zona de Perigo ---------- */
+  html[data-theme="minas-perigo"] body{
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 0%, rgba(255,212,0,0.07), transparent 65%),
+      radial-gradient(ellipse 140% 100% at 50% 50%, transparent 55%, rgba(0,0,0,0.5) 100%),
+      var(--void);
+    background-attachment: fixed;
+  }
+  /* fita de perigo amarela e preta rolando no topo da tela */
+  html[data-theme="minas-perigo"] body::before{
+    content:""; position:fixed; top:0; left:0; right:-91px; bottom:auto; height:16px; pointer-events:none; mix-blend-mode:normal; opacity:0.75;
+    background: repeating-linear-gradient(135deg, #ffd400 0 16px, #111 16px 32px);
+    animation: hazard-scroll 5s linear infinite;
+  }
+  @keyframes hazard-scroll{ from{ transform:translateX(0); } to{ transform:translateX(-45.25px); } }
+  /* holofote varrendo o campo, saindo do canto de cima */
+  html[data-theme="minas-perigo"] body::after{
+    content:""; position:fixed; top:0; left:0; right:auto; bottom:auto; width:90vmax; height:90vmax; pointer-events:none; transform-origin:0 0;
+    background: conic-gradient(from 100deg at 0 0, transparent 0deg, rgba(255,212,0,0.16) 6deg, rgba(255,212,0,0.07) 16deg, transparent 22deg);
+    animation: searchlight 11s ease-in-out infinite alternate;
+  }
+  @keyframes searchlight{ from{ transform:rotate(-8deg); } to{ transform:rotate(30deg); } }
+  /* radar de minas no canto: anéis + 3 pontos vermelhos fixos, varredura girando por cima */
+  html[data-theme="minas-perigo"] .wrap::before{
+    content:""; position:fixed; left:20px; bottom:20px; width:118px; height:118px; border-radius:50%; pointer-events:none; z-index:0; opacity:0.8;
+    background:
+      radial-gradient(circle 3.5px at 68% 28%, #ff3b2e 90%, transparent 100%),
+      radial-gradient(circle 3.5px at 34% 62%, #ff3b2e 90%, transparent 100%),
+      radial-gradient(circle 3.5px at 74% 70%, #ff3b2e 90%, transparent 100%),
+      repeating-radial-gradient(circle at 50% 50%, transparent 0 19px, rgba(255,212,0,0.28) 19px 20px),
+      radial-gradient(circle, rgba(255,212,0,0.05), rgba(255,212,0,0.02) 70%, transparent);
+    box-shadow: 0 0 0 2px rgba(255,212,0,0.45);
+  }
+  html[data-theme="minas-perigo"] .wrap::after{
+    content:""; position:fixed; left:20px; bottom:20px; width:118px; height:118px; border-radius:50%; pointer-events:none; z-index:0; opacity:0.85;
+    background: conic-gradient(from 0deg, rgba(255,212,0,0.55), rgba(255,212,0,0) 62deg, transparent);
+    animation: radar-sweep 4.2s linear infinite;
+  }
+  @keyframes radar-sweep{ to{ transform:rotate(360deg); } }
+  html[data-theme="minas-perigo"] .title .dot{ width:12px; height:11px; border-radius:0; box-shadow:none; clip-path: polygon(50% 0, 100% 100%, 0 100%); animation: dot-blip 0.9s steps(2) infinite; }
+
+  /* ---------- Campo Minado / Janela 95 ---------- */
+  html[data-theme="minas-janela"] body{ background: var(--void); background-attachment: fixed; }
+  /* barra de tarefas ("Iniciar") colada embaixo da tela */
+  html[data-theme="minas-janela"] body::after{
+    content:"⊞  Iniciar"; position:fixed; left:0; right:0; bottom:0; top:auto; height:30px; display:flex; align-items:center; padding-left:14px; pointer-events:none; z-index:0;
+    background:#c0c0c0; border-top:2px solid #fff; box-shadow: inset 0 1px 0 #dfdfdf;
+    font-family:'Pixelify Sans', sans-serif; font-size:15px; font-weight:700; letter-spacing:0.02em; color:#000; opacity:1;
+  }
+  html[data-theme="minas-janela"] body::before{ content:none; }
+  /* relógio da bandeja */
+  html[data-theme="minas-janela"] .wrap::after{
+    content:"12:34"; position:fixed; right:8px; bottom:4px; height:22px; padding:0 10px; display:flex; align-items:center; pointer-events:none; z-index:31;
+    font-family:'Pixelify Sans', sans-serif; font-size:13px; color:#000; border:1px solid; border-color:#808080 #fff #fff #808080;
+  }
+  /* uma mina quicando pela área de trabalho, igual protetor de tela */
+  html[data-theme="minas-janela"] .wrap::before{
+    content:""; position:fixed; left:0; top:0; width:32px; height:32px; pointer-events:none; z-index:0; opacity:0.55;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'32'%20height%3D'32'%20viewBox%3D'0%200%2032%2032'%3E%3Ccircle%20cx%3D'16'%20cy%3D'16'%20r%3D'9'%20fill%3D'%23111'%2F%3E%3Cline%20x1%3D'24.0'%20y1%3D'16.0'%20x2%3D'30.5'%20y2%3D'16.0'%20stroke%3D'%23111'%20stroke-width%3D'3'%20stroke-linecap%3D'round'%2F%3E%3Cline%20x1%3D'21.7'%20y1%3D'21.7'%20x2%3D'26.3'%20y2%3D'26.3'%20stroke%3D'%23111'%20stroke-width%3D'3'%20stroke-linecap%3D'round'%2F%3E%3Cline%20x1%3D'16.0'%20y1%3D'24.0'%20x2%3D'16.0'%20y2%3D'30.5'%20stroke%3D'%23111'%20stroke-width%3D'3'%20stroke-linecap%3D'round'%2F%3E%3Cline%20x1%3D'10.3'%20y1%3D'21.7'%20x2%3D'5.7'%20y2%3D'26.3'%20stroke%3D'%23111'%20stroke-width%3D'3'%20stroke-linecap%3D'round'%2F%3E%3Cline%20x1%3D'8.0'%20y1%3D'16.0'%20x2%3D'1.5'%20y2%3D'16.0'%20stroke%3D'%23111'%20stroke-width%3D'3'%20stroke-linecap%3D'round'%2F%3E%3Cline%20x1%3D'10.3'%20y1%3D'10.3'%20x2%3D'5.7'%20y2%3D'5.7'%20stroke%3D'%23111'%20stroke-width%3D'3'%20stroke-linecap%3D'round'%2F%3E%3Cline%20x1%3D'16.0'%20y1%3D'8.0'%20x2%3D'16.0'%20y2%3D'1.5'%20stroke%3D'%23111'%20stroke-width%3D'3'%20stroke-linecap%3D'round'%2F%3E%3Cline%20x1%3D'21.7'%20y1%3D'10.3'%20x2%3D'26.3'%20y2%3D'5.7'%20stroke%3D'%23111'%20stroke-width%3D'3'%20stroke-linecap%3D'round'%2F%3E%3Ccircle%20cx%3D'12.5'%20cy%3D'12.5'%20r%3D'2.6'%20fill%3D'%23fff'%20fill-opacity%3D'.85'%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+    animation: dvd-x 23s linear infinite alternate, dvd-y 17s linear infinite alternate;
+  }
+  @keyframes dvd-x{ from{ translate:0 0; } to{ translate:calc(100vw - 32px) 0; } }
+  @keyframes dvd-y{ from{ transform:translateY(0); } to{ transform:translateY(calc(100vh - 64px)); } }
+  html[data-theme="minas-janela"] .title .dot{ width:9px; height:9px; border-radius:0; box-shadow:none; background:#fff; animation:none; }
+
+  /* ---------- Frogger / Travessia Noturna ---------- */
+  html[data-theme="frogger-noite"] body{
+    background:
+      radial-gradient(circle at 80% 11%, #fff4c2 0 22px, rgba(255,244,194,0.22) 23px 74px, transparent 130px),
+      linear-gradient(180deg, #050d14 0%, #08222e 58%, #0a2a38 100%);
+    background-attachment: fixed;
+  }
+  /* ondinhas do rio correndo pela metade de baixo */
+  html[data-theme="frogger-noite"] body::before{
+    content:""; position:fixed; left:0; right:-400px; bottom:0; top:auto; height:56vh; pointer-events:none; mix-blend-mode:normal; opacity:0.55;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'400'%20height%3D'400'%20viewBox%3D'0%200%20400%20400'%3E%3Cellipse%20cx%3D'30.1'%20cy%3D'163.6'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'30.1'%20cy%3D'163.6'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'30.1'%20cy%3D'163.6'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'430.1'%20cy%3D'163.6'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'430.1'%20cy%3D'163.6'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'430.1'%20cy%3D'163.6'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'363.1'%20cy%3D'303.6'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'363.1'%20cy%3D'303.6'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'363.1'%20cy%3D'303.6'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'-36.9'%20cy%3D'303.6'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'-36.9'%20cy%3D'303.6'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'-36.9'%20cy%3D'303.6'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'316.8'%20cy%3D'362.3'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'316.8'%20cy%3D'362.3'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'316.8'%20cy%3D'362.3'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'316.8'%20cy%3D'-37.7'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'316.8'%20cy%3D'-37.7'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'316.8'%20cy%3D'-37.7'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'345.8'%20cy%3D'313.4'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'345.8'%20cy%3D'313.4'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'345.8'%20cy%3D'313.4'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'-54.2'%20cy%3D'313.4'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'-54.2'%20cy%3D'313.4'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'-54.2'%20cy%3D'313.4'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'319.4'%20cy%3D'139.6'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'319.4'%20cy%3D'139.6'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'319.4'%20cy%3D'139.6'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'276.0'%20cy%3D'130.7'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'276.0'%20cy%3D'130.7'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'276.0'%20cy%3D'130.7'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'53.7'%20cy%3D'171.9'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'53.7'%20cy%3D'171.9'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'53.7'%20cy%3D'171.9'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'453.7'%20cy%3D'171.9'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'453.7'%20cy%3D'171.9'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'453.7'%20cy%3D'171.9'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'95.3'%20cy%3D'274.0'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'95.3'%20cy%3D'274.0'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'95.3'%20cy%3D'274.0'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'205.8'%20cy%3D'137.3'%20rx%3D'14'%20ry%3D'5'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.4'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'205.8'%20cy%3D'137.3'%20rx%3D'28'%20ry%3D'10'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.3'%20stroke-width%3D'1.2'%2F%3E%3Cellipse%20cx%3D'205.8'%20cy%3D'137.3'%20rx%3D'42'%20ry%3D'15'%20fill%3D'none'%20stroke%3D'%233ef0c4'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1.2'%2F%3E%3C%2Fsvg%3E") 0 0 / 400px 400px repeat;
+    -webkit-mask-image: linear-gradient(to bottom, transparent, #000 40%); mask-image: linear-gradient(to bottom, transparent, #000 40%);
+    animation: ripple-drift 60s linear infinite;
+  }
+  @keyframes ripple-drift{ from{ transform:translateX(0); } to{ transform:translateX(-400px); } }
+  /* vaga-lumes subindo da margem (mesma arte do Terrário) */
+  html[data-theme="frogger-noite"] body::after{
+    content:""; position:fixed; top:0; bottom:-300px; left:0; right:0; pointer-events:none; opacity:0.85;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'300'%20height%3D'300'%20viewBox%3D'0%200%20300%20300'%3E%3Cdefs%3E%3CradialGradient%20id%3D'g'%3E%3Cstop%20offset%3D'0'%20stop-color%3D'%238cff9e'%20stop-opacity%3D'0.95'%2F%3E%3Cstop%20offset%3D'0.25'%20stop-color%3D'%238cff9e'%20stop-opacity%3D'0.4'%2F%3E%3Cstop%20offset%3D'1'%20stop-color%3D'%238cff9e'%20stop-opacity%3D'0'%2F%3E%3C%2FradialGradient%3E%3C%2Fdefs%3E%3Ccircle%20cx%3D'270'%20cy%3D'168'%20r%3D'10.6'%20fill%3D'url(%23g)'%2F%3E%3Ccircle%20cx%3D'270'%20cy%3D'168'%20r%3D'1.4'%20fill%3D'%23fffbe0'%2F%3E%3Ccircle%20cx%3D'58'%20cy%3D'61'%20r%3D'10.8'%20fill%3D'url(%23g)'%2F%3E%3Ccircle%20cx%3D'58'%20cy%3D'61'%20r%3D'1.4'%20fill%3D'%23fffbe0'%2F%3E%3Ccircle%20cx%3D'200'%20cy%3D'95'%20r%3D'10.1'%20fill%3D'url(%23g)'%2F%3E%3Ccircle%20cx%3D'200'%20cy%3D'95'%20r%3D'1.4'%20fill%3D'%23fffbe0'%2F%3E%3Ccircle%20cx%3D'115'%20cy%3D'249'%20r%3D'8.4'%20fill%3D'url(%23g)'%2F%3E%3Ccircle%20cx%3D'115'%20cy%3D'249'%20r%3D'1.4'%20fill%3D'%23fffbe0'%2F%3E%3Ccircle%20cx%3D'152'%20cy%3D'80'%20r%3D'6.5'%20fill%3D'url(%23g)'%2F%3E%3Ccircle%20cx%3D'152'%20cy%3D'80'%20r%3D'1.4'%20fill%3D'%23fffbe0'%2F%3E%3Ccircle%20cx%3D'228'%20cy%3D'247'%20r%3D'7.3'%20fill%3D'url(%23g)'%2F%3E%3Ccircle%20cx%3D'228'%20cy%3D'247'%20r%3D'1.4'%20fill%3D'%23fffbe0'%2F%3E%3C%2Fsvg%3E") 90px 40px / 300px 300px repeat;
+    animation: firefly-rise-b 100s linear infinite, firefly-sway 8s ease-in-out infinite alternate, firefly-twinkle 3.4s ease-in-out infinite;
+  }
+  /* o sapo atravessando a tela aos pulinhos (arco a cada pulo) */
+  html[data-theme="frogger-noite"] .wrap::before{
+    content:""; position:fixed; left:0; bottom:16vh; width:40px; height:30px; pointer-events:none; z-index:0; opacity:0.9;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'40'%20height%3D'30'%20viewBox%3D'0%200%2040%2030'%3E%3Cellipse%20cx%3D'12'%20cy%3D'22'%20rx%3D'6'%20ry%3D'4'%20fill%3D'%233ef0c4'%2F%3E%3Cellipse%20cx%3D'28'%20cy%3D'22'%20rx%3D'6'%20ry%3D'4'%20fill%3D'%233ef0c4'%2F%3E%3Cellipse%20cx%3D'20'%20cy%3D'17'%20rx%3D'11'%20ry%3D'8'%20fill%3D'%233ef0c4'%2F%3E%3Cellipse%20cx%3D'20'%20cy%3D'19'%20rx%3D'6'%20ry%3D'4.5'%20fill%3D'%23d9fff3'%20fill-opacity%3D'.6'%2F%3E%3Ccircle%20cx%3D'14'%20cy%3D'9'%20r%3D'4.2'%20fill%3D'%233ef0c4'%2F%3E%3Ccircle%20cx%3D'26'%20cy%3D'9'%20r%3D'4.2'%20fill%3D'%233ef0c4'%2F%3E%3Ccircle%20cx%3D'14'%20cy%3D'8.6'%20r%3D'2.6'%20fill%3D'%23fff'%2F%3E%3Ccircle%20cx%3D'26'%20cy%3D'8.6'%20r%3D'2.6'%20fill%3D'%23fff'%2F%3E%3Ccircle%20cx%3D'14.6'%20cy%3D'8.8'%20r%3D'1.2'%20fill%3D'%23111'%2F%3E%3Ccircle%20cx%3D'26.6'%20cy%3D'8.8'%20r%3D'1.2'%20fill%3D'%23111'%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+    animation: frog-cross 26s linear infinite, frog-hop 1.5s infinite;
+  }
+  @keyframes frog-cross{ from{ translate:-70px 0; } to{ translate:calc(100vw + 40px) 0; } }
+  @keyframes frog-hop{
+    0%,100%{ transform:translateY(0) scale(1.1, 0.85); animation-timing-function:cubic-bezier(.2,.7,.4,1); }
+    12%{ transform:translateY(0) scale(0.92, 1.12); }
+    50%{ transform:translateY(-38px) scale(0.95, 1.08) rotate(-6deg); animation-timing-function:cubic-bezier(.6,0,.8,.3); }
+    88%{ transform:translateY(0) scale(1, 1); }
+  }
+  /* um tronco à deriva, no sentido contrário */
+  html[data-theme="frogger-noite"] .wrap::after{
+    content:""; position:fixed; left:0; bottom:5vh; width:150px; height:24px; pointer-events:none; z-index:0; opacity:0.75;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'150'%20height%3D'24'%20viewBox%3D'0%200%20150%2024'%3E%3Crect%20x%3D'2'%20y%3D'3'%20width%3D'146'%20height%3D'18'%20rx%3D'9'%20fill%3D'%234a3320'%2F%3E%3Crect%20x%3D'8'%20y%3D'6'%20width%3D'134'%20height%3D'3'%20rx%3D'1.5'%20fill%3D'%236b4a2f'%2F%3E%3Ccircle%20cx%3D'28'%20cy%3D'13'%20r%3D'4'%20fill%3D'none'%20stroke%3D'%232e1f12'%20stroke-width%3D'1.2'%20stroke-opacity%3D'.7'%2F%3E%3Ccircle%20cx%3D'62'%20cy%3D'13'%20r%3D'4'%20fill%3D'none'%20stroke%3D'%232e1f12'%20stroke-width%3D'1.2'%20stroke-opacity%3D'.7'%2F%3E%3Ccircle%20cx%3D'96'%20cy%3D'13'%20r%3D'4'%20fill%3D'none'%20stroke%3D'%232e1f12'%20stroke-width%3D'1.2'%20stroke-opacity%3D'.7'%2F%3E%3Ccircle%20cx%3D'130'%20cy%3D'13'%20r%3D'4'%20fill%3D'none'%20stroke%3D'%232e1f12'%20stroke-width%3D'1.2'%20stroke-opacity%3D'.7'%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+    animation: log-drift 52s linear infinite, log-bob 3.2s ease-in-out infinite alternate;
+  }
+  @keyframes log-drift{ from{ translate:calc(100vw + 160px) 0; } to{ translate:-200px 0; } }
+  @keyframes log-bob{ from{ transform:translateY(-2px) rotate(-1.2deg); } to{ transform:translateY(3px) rotate(1.2deg); } }
+  html[data-theme="frogger-noite"] .title .dot{ animation: dot-ripple 2.2s ease-out infinite; }
+  @keyframes dot-ripple{ 0%{ box-shadow:0 0 0 0 rgba(62,240,196,0.7), 0 0 8px 1px var(--accent); } 100%{ box-shadow:0 0 0 12px rgba(62,240,196,0), 0 0 8px 1px var(--accent); } }
+
+  /* ---------- Frogger / Lago de Nenúfares ---------- */
+  html[data-theme="frogger-nenufar"] body{
+    background:
+      radial-gradient(ellipse 60% 40% at 15% 20%, rgba(150,210,225,0.45), transparent 70%),
+      radial-gradient(ellipse 55% 45% at 85% 75%, rgba(255,200,220,0.35), transparent 70%),
+      radial-gradient(ellipse 70% 50% at 50% 100%, rgba(170,220,190,0.45), transparent 70%),
+      var(--void);
+    background-attachment: fixed;
+  }
+  /* vitórias-régias com flor rosa à deriva */
+  html[data-theme="frogger-nenufar"] body::before{
+    content:""; position:fixed; top:-520px; left:-520px; right:0; bottom:0; pointer-events:none; mix-blend-mode:normal; opacity:0.6;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'520'%20height%3D'520'%20viewBox%3D'0%200%20520%20520'%3E%3Cpath%20d%3D'M90.0%20100.0%20L77.0%2068.6%20A34%2034%200%201%201%2088.6%2066.0%20Z'%20fill%3D'%236cae6a'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M90.0%20100.0%20L119.5%2092.0'%20stroke%3D'%233f7d46'%20stroke-opacity%3D'.45'%20stroke-width%3D'1'%2F%3E%3Ccircle%20cx%3D'96.8'%20cy%3D'94.9'%20r%3D'7.5'%20fill%3D'%23d9548c'%20fill-opacity%3D'.8'%2F%3E%3Ccircle%20cx%3D'96.8'%20cy%3D'94.9'%20r%3D'3.1'%20fill%3D'%23ffe3ee'%2F%3E%3Cpath%20d%3D'M300.0%2070.0%20L293.1%2044.9%20A26%2026%200%201%201%20302.1%2044.1%20Z'%20fill%3D'%236cae6a'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M300.0%2070.0%20L323.2%2066.7'%20stroke%3D'%233f7d46'%20stroke-opacity%3D'.45'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M440.0%20200.0%20L469.0%20224.5%20A38%2038%200%201%201%20458.9%20233.0%20Z'%20fill%3D'%236cae6a'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M440.0%20200.0%20L414.7%20223.1'%20stroke%3D'%233f7d46'%20stroke-opacity%3D'.45'%20stroke-width%3D'1'%2F%3E%3Ccircle%20cx%3D'447.6'%20cy%3D'194.3'%20r%3D'8.4'%20fill%3D'%23d9548c'%20fill-opacity%3D'.8'%2F%3E%3Ccircle%20cx%3D'447.6'%20cy%3D'194.3'%20r%3D'3.4'%20fill%3D'%23ffe3ee'%2F%3E%3Cpath%20d%3D'M180.0%20280.0%20L196.4%20302.7%20A28%2028%200%201%201%20187.6%20307.0%20Z'%20fill%3D'%236cae6a'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M180.0%20280.0%20L157.8%20292.0'%20stroke%3D'%233f7d46'%20stroke-opacity%3D'.45'%20stroke-width%3D'1'%2F%3E%3Ccircle%20cx%3D'185.6'%20cy%3D'275.8'%20r%3D'6.2'%20fill%3D'%23d9548c'%20fill-opacity%3D'.8'%2F%3E%3Ccircle%20cx%3D'185.6'%20cy%3D'275.8'%20r%3D'2.5'%20fill%3D'%23ffe3ee'%2F%3E%3Cpath%20d%3D'M350.0%20400.0%20L370.2%20424.8%20A32%2032%200%201%201%20360.4%20430.2%20Z'%20fill%3D'%236cae6a'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M350.0%20400.0%20L325.5%20415.1'%20stroke%3D'%233f7d46'%20stroke-opacity%3D'.45'%20stroke-width%3D'1'%2F%3E%3Ccircle%20cx%3D'356.4'%20cy%3D'395.2'%20r%3D'7.0'%20fill%3D'%23d9548c'%20fill-opacity%3D'.8'%2F%3E%3Ccircle%20cx%3D'356.4'%20cy%3D'395.2'%20r%3D'2.9'%20fill%3D'%23ffe3ee'%2F%3E%3Cpath%20d%3D'M70.0%20440.0%20L85.2%20458.6%20A24%2024%200%201%201%2077.9%20462.7%20Z'%20fill%3D'%236cae6a'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M70.0%20440.0%20L51.6%20451.4'%20stroke%3D'%233f7d46'%20stroke-opacity%3D'.45'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M480.0%20480.0%20L469.5%20463.0%20A20%2020%200%201%201%20475.9%20460.4%20Z'%20fill%3D'%236cae6a'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M480.0%20480.0%20L496.4%20472.6'%20stroke%3D'%233f7d46'%20stroke-opacity%3D'.45'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M-40.0%20480.0%20L-57.7%20470.7%20A20%2020%200%201%201%20-53.5%20465.2%20Z'%20fill%3D'%236cae6a'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M-40.0%20480.0%20L-29.7%20465.3'%20stroke%3D'%233f7d46'%20stroke-opacity%3D'.45'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M480.0%20-40.0%20L478.2%20-59.9%20A20%2020%200%201%201%20485.2%20-59.3%20Z'%20fill%3D'%236cae6a'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M480.0%20-40.0%20L498.0%20-39.3'%20stroke%3D'%233f7d46'%20stroke-opacity%3D'.45'%20stroke-width%3D'1'%2F%3E%3C%2Fsvg%3E") 0 0 / 520px 520px repeat;
+    animation: board-drift 160s linear infinite;
+  }
+  html[data-theme="frogger-nenufar"] body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:1;
+    background: radial-gradient(ellipse 140% 100% at 50% 50%, transparent 55%, rgba(60,100,90,0.2) 100%);
+  }
+  /* libélula cruzando, batendo asa */
+  html[data-theme="frogger-nenufar"] .wrap::before{
+    content:""; position:fixed; left:0; top:30%; width:44px; height:24px; pointer-events:none; z-index:0; opacity:0.9;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'88'%20height%3D'24'%20viewBox%3D'0%200%2088%2024'%3E%3Crect%20x%3D'6'%20y%3D'11'%20width%3D'30'%20height%3D'2.4'%20rx%3D'1.2'%20fill%3D'%232f7d8c'%2F%3E%3Ccircle%20cx%3D'36'%20cy%3D'12.2'%20r%3D'3'%20fill%3D'%232f7d8c'%2F%3E%3Cellipse%20cx%3D'18'%20cy%3D'3'%20rx%3D'9'%20ry%3D'3'%20fill%3D'%23bfe9f2'%20fill-opacity%3D'.8'%20stroke%3D'%232f7d8c'%20stroke-width%3D'.6'%2F%3E%3Cellipse%20cx%3D'26'%20cy%3D'4'%20rx%3D'8'%20ry%3D'2.6'%20fill%3D'%23bfe9f2'%20fill-opacity%3D'.8'%20stroke%3D'%232f7d8c'%20stroke-width%3D'.6'%2F%3E%3Crect%20x%3D'50'%20y%3D'11'%20width%3D'30'%20height%3D'2.4'%20rx%3D'1.2'%20fill%3D'%232f7d8c'%2F%3E%3Ccircle%20cx%3D'80'%20cy%3D'12.2'%20r%3D'3'%20fill%3D'%232f7d8c'%2F%3E%3Cellipse%20cx%3D'62'%20cy%3D'15'%20rx%3D'9'%20ry%3D'3'%20fill%3D'%23bfe9f2'%20fill-opacity%3D'.8'%20stroke%3D'%232f7d8c'%20stroke-width%3D'.6'%2F%3E%3Cellipse%20cx%3D'70'%20cy%3D'14'%20rx%3D'8'%20ry%3D'2.6'%20fill%3D'%23bfe9f2'%20fill-opacity%3D'.8'%20stroke%3D'%232f7d8c'%20stroke-width%3D'.6'%2F%3E%3C%2Fsvg%3E") 0 0 / 88px 24px no-repeat;
+    animation: dfly-flap 0.14s steps(1) infinite, dfly-cross 24s linear infinite, dfly-bob 2.6s ease-in-out infinite alternate;
+  }
+  @keyframes dfly-flap{ 0%{ background-position:0 0; } 50%{ background-position:-44px 0; } }
+  @keyframes dfly-cross{ from{ translate:-70px 0; } to{ translate:calc(100vw + 40px) 0; } }
+  @keyframes dfly-bob{ from{ transform:translateY(-34px) rotate(-5deg); } to{ transform:translateY(34px) rotate(5deg); } }
+  /* sapinho respirando em cima da vitória-régia no canto */
+  html[data-theme="frogger-nenufar"] .wrap::after{
+    content:""; position:fixed; left:18px; bottom:16px; width:80px; height:52px; pointer-events:none; z-index:0; opacity:0.95;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'80'%20height%3D'52'%20viewBox%3D'0%200%2080%2052'%3E%3Cellipse%20cx%3D'40'%20cy%3D'42'%20rx%3D'34'%20ry%3D'9'%20fill%3D'%236cae6a'%20fill-opacity%3D'.85'%2F%3E%3Cpath%20d%3D'M40%2042%20L74%2036'%20stroke%3D'%233f7d46'%20stroke-width%3D'1.2'%20stroke-opacity%3D'.6'%2F%3E%3Cg%20transform%3D'translate(20%206)'%3E%3Cellipse%20cx%3D'12'%20cy%3D'22'%20rx%3D'6'%20ry%3D'4'%20fill%3D'%232f9d57'%2F%3E%3Cellipse%20cx%3D'28'%20cy%3D'22'%20rx%3D'6'%20ry%3D'4'%20fill%3D'%232f9d57'%2F%3E%3Cellipse%20cx%3D'20'%20cy%3D'17'%20rx%3D'11'%20ry%3D'8'%20fill%3D'%232f9d57'%2F%3E%3Cellipse%20cx%3D'20'%20cy%3D'19'%20rx%3D'6'%20ry%3D'4.5'%20fill%3D'%23e8fbe8'%20fill-opacity%3D'.6'%2F%3E%3Ccircle%20cx%3D'14'%20cy%3D'9'%20r%3D'4.2'%20fill%3D'%232f9d57'%2F%3E%3Ccircle%20cx%3D'26'%20cy%3D'9'%20r%3D'4.2'%20fill%3D'%232f9d57'%2F%3E%3Ccircle%20cx%3D'14'%20cy%3D'8.6'%20r%3D'2.6'%20fill%3D'%23fff'%2F%3E%3Ccircle%20cx%3D'26'%20cy%3D'8.6'%20r%3D'2.6'%20fill%3D'%23fff'%2F%3E%3Ccircle%20cx%3D'14.6'%20cy%3D'8.8'%20r%3D'1.2'%20fill%3D'%23111'%2F%3E%3Ccircle%20cx%3D'26.6'%20cy%3D'8.8'%20r%3D'1.2'%20fill%3D'%23111'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") center / contain no-repeat; transform-origin:50% 100%;
+    animation: frog-breathe 3.4s ease-in-out infinite alternate;
+  }
+  @keyframes frog-breathe{ from{ transform:scale(1, 0.96); } to{ transform:scale(1, 1.04) translateY(-1px); } }
+  html[data-theme="frogger-nenufar"] .title .dot{ border-radius:50% 0 50% 50%; box-shadow:none; transform:rotate(-45deg); animation: dot-bloom 2.6s ease-in-out infinite; }
+  @keyframes dot-bloom{ 0%,100%{ transform:rotate(-45deg) scale(1); } 50%{ transform:rotate(-45deg) scale(1.35); } }
+
+  /* ---------- Farkle / Cassino Veludo ---------- */
+  html[data-theme="farkle-cassino"] body{
+    background:
+      radial-gradient(ellipse 80% 55% at 50% -10%, rgba(255,214,120,0.22), transparent 65%),
+      radial-gradient(ellipse 140% 100% at 50% 50%, transparent 50%, rgba(0,0,0,0.55) 100%),
+      linear-gradient(180deg, #1a0810, #12060a);
+    background-attachment: fixed;
+  }
+  /* naipes de ouro à deriva (bem sutis, em cima do veludo) */
+  html[data-theme="farkle-cassino"] body::before{
+    content:""; position:fixed; top:-300px; left:-300px; right:0; bottom:0; pointer-events:none; mix-blend-mode:normal; opacity:0.09;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'300'%20height%3D'300'%20viewBox%3D'0%200%20300%20300'%3E%3Cpath%20transform%3D'translate(50%2060)%20scale(1)'%20d%3D'M0%20-14%20C-26%206%20-14%2022%200%208%20C14%2022%2026%206%200%20-14Z%20M-3%208%20L-6%2022%20L6%2022%20L3%208Z'%20fill%3D'%23f5c542'%2F%3E%3Cpath%20transform%3D'translate(200%2050)%20scale(1)'%20d%3D'M0%208%20C-14%20-8%20-26%206%200%2024%20C26%206%2014%20-8%200%208Z'%20fill%3D'%23f5c542'%2F%3E%3Cg%20transform%3D'translate(250%20180)%20scale(0.9)'%20fill%3D'%23f5c542'%3E%3Ccircle%20cx%3D'0'%20cy%3D'-8'%20r%3D'7'%2F%3E%3Ccircle%20cx%3D'-8'%20cy%3D'4'%20r%3D'7'%2F%3E%3Ccircle%20cx%3D'8'%20cy%3D'4'%20r%3D'7'%2F%3E%3Cpath%20d%3D'M-3%206%20L-6%2022%20L6%2022%20L3%206Z'%2F%3E%3C%2Fg%3E%3Cpath%20transform%3D'translate(90%20190)%20scale(1)'%20d%3D'M0%20-16%20L12%200%20L0%2016%20L-12%200Z'%20fill%3D'%23f5c542'%2F%3E%3Cpath%20transform%3D'translate(160%20250)%20scale(0.8)'%20d%3D'M0%20-14%20C-26%206%20-14%2022%200%208%20C14%2022%2026%206%200%20-14Z%20M-3%208%20L-6%2022%20L6%2022%20L3%208Z'%20fill%3D'%23f5c542'%2F%3E%3Cpath%20transform%3D'translate(20%20150)%20scale(0.8)'%20d%3D'M0%208%20C-14%20-8%20-26%206%200%2024%20C26%206%2014%20-8%200%208Z'%20fill%3D'%23f5c542'%2F%3E%3C%2Fsvg%3E") 0 0 / 300px 300px repeat;
+    animation: suits-drift 130s linear infinite;
+  }
+  @keyframes suits-drift{ from{ transform:translate(0,0); } to{ transform:translate(300px,300px); } }
+  /* pó de ouro cintilando */
+  html[data-theme="farkle-cassino"] body::after{
+    content:""; position:fixed; inset:0; pointer-events:none;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'360'%20height%3D'360'%20viewBox%3D'0%200%20360%20360'%3E%3Cpath%20d%3D'M20.2%20269.6%20m0%20-3.9%20l1.0%202.9%20l2.9%201.0%20l-2.9%201.0%20l-1.0%202.9%20l-1.0%20-2.9%20l-2.9%20-1.0%20l2.9%20-1.0Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.6'%2F%3E%3Cpath%20d%3D'M273.8%20340.6%20m0%20-2.3%20l0.6%201.7%20l1.7%200.6%20l-1.7%200.6%20l-0.6%201.7%20l-0.6%20-1.7%20l-1.7%20-0.6%20l1.7%20-0.6Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.5'%2F%3E%3Cpath%20d%3D'M337.7%204.6%20m0%20-2.9%20l0.7%202.2%20l2.2%200.7%20l-2.2%200.7%20l-0.7%202.2%20l-0.7%20-2.2%20l-2.2%20-0.7%20l2.2%20-0.7Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.7'%2F%3E%3Cpath%20d%3D'M46.3%20102.4%20m0%20-4.3%20l1.1%203.3%20l3.3%201.1%20l-3.3%201.1%20l-1.1%203.3%20l-1.1%20-3.3%20l-3.3%20-1.1%20l3.3%20-1.1Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.7'%2F%3E%3Cpath%20d%3D'M256.4%20352.8%20m0%20-4.1%20l1.0%203.1%20l3.1%201.0%20l-3.1%201.0%20l-1.0%203.1%20l-1.0%20-3.1%20l-3.1%20-1.0%20l3.1%20-1.0Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.9'%2F%3E%3Cpath%20d%3D'M65.2%20321.4%20m0%20-2.4%20l0.6%201.8%20l1.8%200.6%20l-1.8%200.6%20l-0.6%201.8%20l-0.6%20-1.8%20l-1.8%20-0.6%20l1.8%20-0.6Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.6'%2F%3E%3Cpath%20d%3D'M269.6%2097.6%20m0%20-3.2%20l0.8%202.4%20l2.4%200.8%20l-2.4%200.8%20l-0.8%202.4%20l-0.8%20-2.4%20l-2.4%20-0.8%20l2.4%20-0.8Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.8'%2F%3E%3Cpath%20d%3D'M341.0%20289.4%20m0%20-3.9%20l1.0%202.9%20l2.9%201.0%20l-2.9%201.0%20l-1.0%202.9%20l-1.0%20-2.9%20l-2.9%20-1.0%20l2.9%20-1.0Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.6'%2F%3E%3Cpath%20d%3D'M32.7%20246.8%20m0%20-3.0%20l0.7%202.2%20l2.2%200.7%20l-2.2%200.7%20l-0.7%202.2%20l-0.7%20-2.2%20l-2.2%20-0.7%20l2.2%20-0.7Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.5'%2F%3E%3Cpath%20d%3D'M162.8%2091.1%20m0%20-1.8%20l0.5%201.4%20l1.4%200.5%20l-1.4%200.5%20l-0.5%201.4%20l-0.5%20-1.4%20l-1.4%20-0.5%20l1.4%20-0.5Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.9'%2F%3E%3Cpath%20d%3D'M309.0%208.5%20m0%20-3.6%20l0.9%202.7%20l2.7%200.9%20l-2.7%200.9%20l-0.9%202.7%20l-0.9%20-2.7%20l-2.7%20-0.9%20l2.7%20-0.9Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.7'%2F%3E%3Cpath%20d%3D'M129.7%20167.9%20m0%20-3.7%20l0.9%202.8%20l2.8%200.9%20l-2.8%200.9%20l-0.9%202.8%20l-0.9%20-2.8%20l-2.8%20-0.9%20l2.8%20-0.9Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.8'%2F%3E%3Cpath%20d%3D'M208.9%2019.2%20m0%20-1.7%20l0.4%201.3%20l1.3%200.4%20l-1.3%200.4%20l-0.4%201.3%20l-0.4%20-1.3%20l-1.3%20-0.4%20l1.3%20-0.4Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.5'%2F%3E%3Cpath%20d%3D'M338.6%2050.4%20m0%20-3.2%20l0.8%202.4%20l2.4%200.8%20l-2.4%200.8%20l-0.8%202.4%20l-0.8%20-2.4%20l-2.4%20-0.8%20l2.4%20-0.8Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.8'%2F%3E%3Cpath%20d%3D'M215.3%20292.1%20m0%20-2.2%20l0.6%201.7%20l1.7%200.6%20l-1.7%200.6%20l-0.6%201.7%20l-0.6%20-1.7%20l-1.7%20-0.6%20l1.7%20-0.6Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.5'%2F%3E%3Cpath%20d%3D'M352.0%20155.3%20m0%20-3.7%20l0.9%202.8%20l2.8%200.9%20l-2.8%200.9%20l-0.9%202.8%20l-0.9%20-2.8%20l-2.8%20-0.9%20l2.8%20-0.9Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.7'%2F%3E%3Cpath%20d%3D'M141.0%2015.9%20m0%20-3.2%20l0.8%202.4%20l2.4%200.8%20l-2.4%200.8%20l-0.8%202.4%20l-0.8%20-2.4%20l-2.4%20-0.8%20l2.4%20-0.8Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.5'%2F%3E%3Cpath%20d%3D'M322.3%20180.7%20m0%20-3.5%20l0.9%202.6%20l2.6%200.9%20l-2.6%200.9%20l-0.9%202.6%20l-0.9%20-2.6%20l-2.6%20-0.9%20l2.6%20-0.9Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.4'%2F%3E%3Cpath%20d%3D'M10.6%2066.5%20m0%20-1.7%20l0.4%201.3%20l1.3%200.4%20l-1.3%200.4%20l-0.4%201.3%20l-0.4%20-1.3%20l-1.3%20-0.4%20l1.3%20-0.4Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.8'%2F%3E%3Cpath%20d%3D'M108.9%20157.6%20m0%20-2.5%20l0.6%201.9%20l1.9%200.6%20l-1.9%200.6%20l-0.6%201.9%20l-0.6%20-1.9%20l-1.9%20-0.6%20l1.9%20-0.6Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.9'%2F%3E%3Cpath%20d%3D'M328.5%20157.6%20m0%20-2.6%20l0.6%201.9%20l1.9%200.6%20l-1.9%200.6%20l-0.6%201.9%20l-0.6%20-1.9%20l-1.9%20-0.6%20l1.9%20-0.6Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.5'%2F%3E%3Cpath%20d%3D'M265.7%20187.3%20m0%20-3.5%20l0.9%202.6%20l2.6%200.9%20l-2.6%200.9%20l-0.9%202.6%20l-0.9%20-2.6%20l-2.6%20-0.9%20l2.6%20-0.9Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.7'%2F%3E%3Cpath%20d%3D'M198.2%20260.2%20m0%20-3.1%20l0.8%202.3%20l2.3%200.8%20l-2.3%200.8%20l-0.8%202.3%20l-0.8%20-2.3%20l-2.3%20-0.8%20l2.3%20-0.8Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.6'%2F%3E%3Cpath%20d%3D'M263.0%2092.9%20m0%20-2.6%20l0.6%201.9%20l1.9%200.6%20l-1.9%200.6%20l-0.6%201.9%20l-0.6%20-1.9%20l-1.9%20-0.6%20l1.9%20-0.6Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.5'%2F%3E%3Cpath%20d%3D'M36.7%2036.9%20m0%20-4.4%20l1.1%203.3%20l3.3%201.1%20l-3.3%201.1%20l-1.1%203.3%20l-1.1%20-3.3%20l-3.3%20-1.1%20l3.3%20-1.1Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.6'%2F%3E%3Cpath%20d%3D'M150.0%206.9%20m0%20-3.9%20l1.0%203.0%20l3.0%201.0%20l-3.0%201.0%20l-1.0%203.0%20l-1.0%20-3.0%20l-3.0%20-1.0%20l3.0%20-1.0Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.6'%2F%3E%3Cpath%20d%3D'M58.9%20336.7%20m0%20-3.7%20l0.9%202.7%20l2.7%200.9%20l-2.7%200.9%20l-0.9%202.7%20l-0.9%20-2.7%20l-2.7%20-0.9%20l2.7%20-0.9Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.9'%2F%3E%3Cpath%20d%3D'M176.2%2017.6%20m0%20-4.1%20l1.0%203.1%20l3.1%201.0%20l-3.1%201.0%20l-1.0%203.1%20l-1.0%20-3.1%20l-3.1%20-1.0%20l3.1%20-1.0Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.4'%2F%3E%3Cpath%20d%3D'M70.0%2061.8%20m0%20-3.5%20l0.9%202.6%20l2.6%200.9%20l-2.6%200.9%20l-0.9%202.6%20l-0.9%20-2.6%20l-2.6%20-0.9%20l2.6%20-0.9Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.8'%2F%3E%3Cpath%20d%3D'M113.6%20273.4%20m0%20-1.8%20l0.5%201.4%20l1.4%200.5%20l-1.4%200.5%20l-0.5%201.4%20l-0.5%20-1.4%20l-1.4%20-0.5%20l1.4%20-0.5Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.8'%2F%3E%3Cpath%20d%3D'M121.4%2010.5%20m0%20-2.1%20l0.5%201.5%20l1.5%200.5%20l-1.5%200.5%20l-0.5%201.5%20l-0.5%20-1.5%20l-1.5%20-0.5%20l1.5%20-0.5Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.4'%2F%3E%3Cpath%20d%3D'M60.2%2068.4%20m0%20-2.7%20l0.7%202.1%20l2.1%200.7%20l-2.1%200.7%20l-0.7%202.1%20l-0.7%20-2.1%20l-2.1%20-0.7%20l2.1%20-0.7Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.4'%2F%3E%3Cpath%20d%3D'M70.3%20252.5%20m0%20-3.8%20l1.0%202.9%20l2.9%201.0%20l-2.9%201.0%20l-1.0%202.9%20l-1.0%20-2.9%20l-2.9%20-1.0%20l2.9%20-1.0Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.7'%2F%3E%3Cpath%20d%3D'M58.1%20192.1%20m0%20-4.2%20l1.0%203.1%20l3.1%201.0%20l-3.1%201.0%20l-1.0%203.1%20l-1.0%20-3.1%20l-3.1%20-1.0%20l3.1%20-1.0Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.9'%2F%3E%3Cpath%20d%3D'M58.8%20348.7%20m0%20-2.5%20l0.6%201.9%20l1.9%200.6%20l-1.9%200.6%20l-0.6%201.9%20l-0.6%20-1.9%20l-1.9%20-0.6%20l1.9%20-0.6Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.7'%2F%3E%3Cpath%20d%3D'M304.9%20296.2%20m0%20-3.9%20l1.0%202.9%20l2.9%201.0%20l-2.9%201.0%20l-1.0%202.9%20l-1.0%20-2.9%20l-2.9%20-1.0%20l2.9%20-1.0Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.6'%2F%3E%3Cpath%20d%3D'M280.5%20234.1%20m0%20-2.5%20l0.6%201.9%20l1.9%200.6%20l-1.9%200.6%20l-0.6%201.9%20l-0.6%20-1.9%20l-1.9%20-0.6%20l1.9%20-0.6Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.9'%2F%3E%3Cpath%20d%3D'M135.1%20194.2%20m0%20-4.3%20l1.1%203.3%20l3.3%201.1%20l-3.3%201.1%20l-1.1%203.3%20l-1.1%20-3.3%20l-3.3%20-1.1%20l3.3%20-1.1Z'%20fill%3D'%23f5c542'%20fill-opacity%3D'0.5'%2F%3E%3C%2Fsvg%3E") 0 0 / 360px 360px repeat;
+    animation: gold-twinkle 4.4s ease-in-out infinite alternate;
+  }
+  @keyframes gold-twinkle{ from{ opacity:0.3; } to{ opacity:0.85; } }
+  /* ficha de cassino girando em 3D no canto */
+  html[data-theme="farkle-cassino"] .wrap::before{
+    content:""; position:fixed; right:22px; bottom:22px; width:84px; height:84px; pointer-events:none; z-index:0; opacity:0.8;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'90'%20height%3D'90'%20viewBox%3D'0%200%2090%2090'%3E%3Ccircle%20cx%3D'45'%20cy%3D'45'%20r%3D'42'%20fill%3D'%238a0f2a'%2F%3E%3Ccircle%20cx%3D'45'%20cy%3D'45'%20r%3D'42'%20fill%3D'none'%20stroke%3D'%23f5c542'%20stroke-width%3D'3'%2F%3E%3Crect%20x%3D'76.0'%20y%3D'42.0'%20width%3D'10'%20height%3D'6'%20fill%3D'%23fff'%20transform%3D'rotate(0%2081.0%2045.0)'%2F%3E%3Crect%20x%3D'65.5'%20y%3D'67.5'%20width%3D'10'%20height%3D'6'%20fill%3D'%23fff'%20transform%3D'rotate(45%2070.5%2070.5)'%2F%3E%3Crect%20x%3D'40.0'%20y%3D'78.0'%20width%3D'10'%20height%3D'6'%20fill%3D'%23fff'%20transform%3D'rotate(90%2045.0%2081.0)'%2F%3E%3Crect%20x%3D'14.5'%20y%3D'67.5'%20width%3D'10'%20height%3D'6'%20fill%3D'%23fff'%20transform%3D'rotate(135%2019.5%2070.5)'%2F%3E%3Crect%20x%3D'4.0'%20y%3D'42.0'%20width%3D'10'%20height%3D'6'%20fill%3D'%23fff'%20transform%3D'rotate(180%209.0%2045.0)'%2F%3E%3Crect%20x%3D'14.5'%20y%3D'16.5'%20width%3D'10'%20height%3D'6'%20fill%3D'%23fff'%20transform%3D'rotate(225%2019.5%2019.5)'%2F%3E%3Crect%20x%3D'40.0'%20y%3D'6.0'%20width%3D'10'%20height%3D'6'%20fill%3D'%23fff'%20transform%3D'rotate(270%2045.0%209.0)'%2F%3E%3Crect%20x%3D'65.5'%20y%3D'16.5'%20width%3D'10'%20height%3D'6'%20fill%3D'%23fff'%20transform%3D'rotate(315%2070.5%2019.5)'%2F%3E%3Ccircle%20cx%3D'45'%20cy%3D'45'%20r%3D'26'%20fill%3D'%23b3122a'%20stroke%3D'%23f5c542'%20stroke-width%3D'2'%2F%3E%3Ccircle%20cx%3D'45'%20cy%3D'45'%20r%3D'18'%20fill%3D'none'%20stroke%3D'%23f5c542'%20stroke-width%3D'1.2'%20stroke-dasharray%3D'3%203'%2F%3E%3Ctext%20x%3D'45'%20y%3D'51'%20text-anchor%3D'middle'%20font-family%3D'Georgia%2Cserif'%20font-size%3D'18'%20font-weight%3D'bold'%20fill%3D'%23f5c542'%3E%24%3C%2Ftext%3E%3C%2Fsvg%3E") center / contain no-repeat;
+    animation: chip-flip 7s ease-in-out infinite;
+  }
+  @keyframes chip-flip{ 0%,100%{ transform:perspective(300px) rotateY(0deg); } 50%{ transform:perspective(300px) rotateY(360deg); } }
+  /* um dado de verdade atravessando a tela quicando e girando */
+  html[data-theme="farkle-cassino"] .wrap::after{
+    content:""; position:fixed; left:0; bottom:10vh; width:44px; height:44px; pointer-events:none; z-index:0; opacity:0.85;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'48'%20height%3D'48'%20viewBox%3D'0%200%2048%2048'%3E%3Crect%20x%3D'3'%20y%3D'3'%20width%3D'42'%20height%3D'42'%20rx%3D'9'%20fill%3D'%23f6efe0'%20stroke%3D'%23d4a937'%20stroke-width%3D'2.5'%2F%3E%3Crect%20x%3D'7'%20y%3D'6'%20width%3D'34'%20height%3D'11'%20rx%3D'6'%20fill%3D'%23fff'%20fill-opacity%3D'.35'%2F%3E%3Ccircle%20cx%3D'14'%20cy%3D'14'%20r%3D'3.8'%20fill%3D'%23161212'%2F%3E%3Ccircle%20cx%3D'34'%20cy%3D'14'%20r%3D'3.8'%20fill%3D'%23161212'%2F%3E%3Ccircle%20cx%3D'24'%20cy%3D'24'%20r%3D'3.8'%20fill%3D'%23b3122a'%2F%3E%3Ccircle%20cx%3D'14'%20cy%3D'34'%20r%3D'3.8'%20fill%3D'%23161212'%2F%3E%3Ccircle%20cx%3D'34'%20cy%3D'34'%20r%3D'3.8'%20fill%3D'%23161212'%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+    animation: die-cross 22s linear infinite, die-bounce 1.4s infinite, die-tumble 2.8s linear infinite;
+  }
+  @keyframes die-cross{ from{ translate:-80px 0; } to{ translate:calc(100vw + 40px) 0; } }
+  @keyframes die-bounce{
+    0%,100%{ transform:translateY(0); animation-timing-function:cubic-bezier(.2,.7,.4,1); }
+    50%{ transform:translateY(-44px); animation-timing-function:cubic-bezier(.6,0,.8,.3); }
+  }
+  @keyframes die-tumble{ from{ rotate:0deg; } to{ rotate:720deg; } }
+  html[data-theme="farkle-cassino"] .title .dot{ background: radial-gradient(circle at 35% 30%, #fff3b0, var(--accent) 55%, #b88a1a); animation: dot-gold 2.2s ease-in-out infinite; }
+  @keyframes dot-gold{ 0%,100%{ transform:scale(1); } 50%{ transform:scale(1.3); } }
+
+  /* ---------- Farkle / Taverna ---------- */
+  html[data-theme="farkle-taverna"] body{
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'420'%20height%3D'280'%20viewBox%3D'0%200%20420%20280'%3E%3Crect%20x%3D'0'%20y%3D'0.0'%20width%3D'420'%20height%3D'56.0'%20fill%3D'%23e6d3a8'%2F%3E%3Crect%20x%3D'0'%20y%3D'54.0'%20width%3D'420'%20height%3D'2'%20fill%3D'%23a98a55'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M0%2034.0%20Q30%2032.7%2060%2034.2%20Q90%2031.4%20120%2032.8%20Q150%2035.8%20180%2035.3%20Q210%2036.9%20240%2033.1%20Q270%2032.1%20300%2033.2%20Q330%2032.6%20360%2035.0%20Q390%2035.0%20420%2034.1%20Q450%2038.0%20480%2035.8'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%2045.6%20Q30%2041.7%2060%2046.8%20Q90%2043.6%20120%2046.7%20Q150%2045.4%20180%2044.1%20Q210%2048.8%20240%2047.0%20Q270%2041.9%20300%2043.9%20Q330%2043.5%20360%2047.5%20Q390%2046.7%20420%2047.3%20Q450%2041.9%20480%2047.3'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%2020.3%20Q30%2023.0%2060%2022.2%20Q90%2019.6%20120%2021.5%20Q150%2019.0%20180%2020.4%20Q210%2024.3%20240%2021.0%20Q270%2018.3%20300%2018.5%20Q330%2019.3%20360%2022.2%20Q390%2017.8%20420%2020.7%20Q450%2020.3%20480%2020.3'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%2035.7%20Q30%2035.4%2060%2035.9%20Q90%2038.4%20120%2034.8%20Q150%2039.3%20180%2034.1%20Q210%2032.8%20240%2033.8%20Q270%2033.0%20300%2034.0%20Q330%2039.5%20360%2036.4%20Q390%2039.4%20420%2034.9%20Q450%2038.5%20480%2034.8'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%207.5%20Q30%209.2%2060%208.8%20Q90%204.2%20120%206.0%20Q150%2011.4%20180%209.1%20Q210%206.8%20240%206.7%20Q270%204.0%20300%209.4%20Q330%2010.5%20360%206.9%20Q390%206.1%20420%208.8%20Q450%209.7%20480%208.5'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%2045.6%20Q30%2041.9%2060%2047.0%20Q90%2049.4%20120%2043.7%20Q150%2044.6%20180%2046.1%20Q210%2048.4%20240%2044.1%20Q270%2044.1%20300%2045.8%20Q330%2049.2%20360%2045.4%20Q390%2048.5%20420%2044.8%20Q450%2041.6%20480%2046.0'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%2019.6%20Q30%2020.7%2060%2018.6%20Q90%2023.3%20120%2019.5%20Q150%2019.6%20180%2019.8%20Q210%2020.2%20240%2018.3%20Q270%2023.6%20300%2017.7%20Q330%2019.9%20360%2019.9%20Q390%2020.0%20420%2021.1%20Q450%2019.2%20480%2021.5'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cellipse%20cx%3D'219.1'%20cy%3D'28.0'%20rx%3D'7'%20ry%3D'4'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'.3'%2F%3E%3Crect%20x%3D'0'%20y%3D'56.0'%20width%3D'420'%20height%3D'56.0'%20fill%3D'%23e0cb9c'%2F%3E%3Crect%20x%3D'0'%20y%3D'110.0'%20width%3D'420'%20height%3D'2'%20fill%3D'%23a98a55'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M0%2074.9%20Q30%2071.5%2060%2075.7%20Q90%2077.4%20120%2074.0%20Q150%2075.5%20180%2075.7%20Q210%2071.8%20240%2075.0%20Q270%2077.5%20300%2076.4%20Q330%2075.9%20360%2076.5%20Q390%2073.1%20420%2074.3%20Q450%2077.5%20480%2074.1'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%2085.0%20Q30%2086.4%2060%2086.0%20Q90%2081.9%20120%2084.0%20Q150%2086.4%20180%2085.5%20Q210%2082.5%20240%2083.5%20Q270%2083.6%20300%2085.1%20Q330%2088.3%20360%2084.8%20Q390%2082.7%20420%2083.7%20Q450%2084.3%20480%2085.2'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%2065.0%20Q30%2068.0%2060%2065.2%20Q90%2066.9%20120%2066.6%20Q150%2065.4%20180%2063.7%20Q210%2068.0%20240%2063.8%20Q270%2061.9%20300%2064.9%20Q330%2067.6%20360%2064.8%20Q390%2062.3%20420%2064.9%20Q450%2061.8%20480%2063.8'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20103.9%20Q30%20104.9%2060%20102.9%20Q90%20102.8%20120%20103.5%20Q150%20105.0%20180%20105.7%20Q210%20106.1%20240%20102.4%20Q270%20104.8%20300%20103.8%20Q330%20105.4%20360%20104.0%20Q390%20107.2%20420%20104.3%20Q450%20107.8%20480%20102.0'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%2098.9%20Q30%20101.5%2060%2099.5%20Q90%2099.1%20120%2098.8%20Q150%20102.2%20180%2097.0%20Q210%2096.3%20240%2098.2%20Q270%2097.1%20300%2099.7%20Q330%2095.2%20360%2097.3%20Q390%2099.8%20420%20100.5%20Q450%2097.0%20480%20100.8'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%2093.1%20Q30%2091.6%2060%2095.0%20Q90%2095.9%20120%2094.4%20Q150%2094.7%20180%2091.2%20Q210%2089.8%20240%2091.5%20Q270%2093.1%20300%2092.9%20Q330%2091.1%20360%2091.6%20Q390%2094.9%20420%2092.6%20Q450%2091.2%20480%2092.6'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%2064.0%20Q30%2062.2%2060%2065.6%20Q90%2064.6%20120%2064.7%20Q150%2061.4%20180%2062.3%20Q210%2064.7%20240%2065.0%20Q270%2062.6%20300%2063.2%20Q330%2061.3%20360%2064.9%20Q390%2061.5%20420%2064.1%20Q450%2065.5%20480%2065.7'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cellipse%20cx%3D'161.2'%20cy%3D'84.0'%20rx%3D'7'%20ry%3D'4'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'.3'%2F%3E%3Crect%20x%3D'0'%20y%3D'112.0'%20width%3D'420'%20height%3D'56.0'%20fill%3D'%23e9d8b0'%2F%3E%3Crect%20x%3D'0'%20y%3D'166.0'%20width%3D'420'%20height%3D'2'%20fill%3D'%23a98a55'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M0%20137.4%20Q30%20135.3%2060%20135.7%20Q90%20134.2%20120%20136.2%20Q150%20137.2%20180%20135.7%20Q210%20138.4%20240%20136.6%20Q270%20140.2%20300%20139.4%20Q330%20137.1%20360%20135.5%20Q390%20140.7%20420%20138.3%20Q450%20136.6%20480%20136.1'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20124.9%20Q30%20126.2%2060%20123.3%20Q90%20125.9%20120%20124.3%20Q150%20128.4%20180%20125.3%20Q210%20123.4%20240%20124.4%20Q270%20123.5%20300%20126.1%20Q330%20121.1%20360%20123.6%20Q390%20124.8%20420%20125.0%20Q450%20127.3%20480%20124.0'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20142.9%20Q30%20144.2%2060%20142.6%20Q90%20140.9%20120%20141.7%20Q150%20143.5%20180%20143.7%20Q210%20141.9%20240%20141.6%20Q270%20142.0%20300%20142.0%20Q330%20139.4%20360%20144.5%20Q390%20140.6%20420%20142.0%20Q450%20141.0%20480%20143.1'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20128.8%20Q30%20130.7%2060%20128.9%20Q90%20128.8%20120%20129.6%20Q150%20129.2%20180%20130.6%20Q210%20125.0%20240%20128.7%20Q270%20128.4%20300%20127.1%20Q330%20125.3%20360%20129.8%20Q390%20127.0%20420%20127.7%20Q450%20126.5%20480%20129.1'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20151.7%20Q30%20151.8%2060%20151.9%20Q90%20155.4%20120%20150.3%20Q150%20148.7%20180%20153.4%20Q210%20154.5%20240%20151.6%20Q270%20151.5%20300%20152.7%20Q330%20150.4%20360%20152.1%20Q390%20150.6%20420%20150.5%20Q450%20148.6%20480%20150.9'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20146.5%20Q30%20143.8%2060%20144.8%20Q90%20144.0%20120%20146.5%20Q150%20144.8%20180%20146.4%20Q210%20145.9%20240%20144.6%20Q270%20144.7%20300%20146.7%20Q330%20147.0%20360%20146.4%20Q390%20149.6%20420%20144.9%20Q450%20147.2%20480%20146.8'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20131.1%20Q30%20131.2%2060%20129.6%20Q90%20130.2%20120%20130.8%20Q150%20129.2%20180%20131.7%20Q210%20133.1%20240%20129.5%20Q270%20129.5%20300%20131.9%20Q330%20134.7%20360%20130.5%20Q390%20133.8%20420%20132.5%20Q450%20128.1%20480%20131.8'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cellipse%20cx%3D'331.7'%20cy%3D'140.0'%20rx%3D'7'%20ry%3D'4'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'.3'%2F%3E%3Crect%20x%3D'0'%20y%3D'168.0'%20width%3D'420'%20height%3D'56.0'%20fill%3D'%23dcc592'%2F%3E%3Crect%20x%3D'0'%20y%3D'222.0'%20width%3D'420'%20height%3D'2'%20fill%3D'%23a98a55'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M0%20191.1%20Q30%20189.4%2060%20190.5%20Q90%20194.1%20120%20190.3%20Q150%20194.0%20180%20192.6%20Q210%20192.1%20240%20190.8%20Q270%20190.3%20300%20193.0%20Q330%20188.5%20360%20192.3%20Q390%20192.6%20420%20190.4%20Q450%20193.9%20480%20191.3'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20180.1%20Q30%20177.2%2060%20181.7%20Q90%20178.1%20120%20179.8%20Q150%20181.4%20180%20180.1%20Q210%20180.1%20240%20180.6%20Q270%20182.4%20300%20178.2%20Q330%20182.9%20360%20180.6%20Q390%20178.1%20420%20182.1%20Q450%20183.3%20480%20181.5'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20206.9%20Q30%20207.0%2060%20208.5%20Q90%20210.2%20120%20208.4%20Q150%20208.5%20180%20206.1%20Q210%20206.5%20240%20207.1%20Q270%20205.3%20300%20205.3%20Q330%20203.3%20360%20206.5%20Q390%20208.1%20420%20207.7%20Q450%20210.7%20480%20206.1'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20181.3%20Q30%20181.4%2060%20180.2%20Q90%20181.6%20120%20182.8%20Q150%20179.3%20180%20180.6%20Q210%20177.9%20240%20180.2%20Q270%20180.6%20300%20181.2%20Q330%20179.7%20360%20182.8%20Q390%20179.4%20420%20182.3%20Q450%20181.4%20480%20181.4'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20201.5%20Q30%20201.9%2060%20201.4%20Q90%20202.7%20120%20203.0%20Q150%20202.1%20180%20202.6%20Q210%20198.2%20240%20203.1%20Q270%20199.3%20300%20200.3%20Q330%20199.2%20360%20200.8%20Q390%20201.0%20420%20200.3%20Q450%20201.4%20480%20201.6'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20202.3%20Q30%20201.3%2060%20203.1%20Q90%20199.0%20120%20202.4%20Q150%20206.0%20180%20201.4%20Q210%20205.7%20240%20200.4%20Q270%20199.4%20300%20201.1%20Q330%20203.6%20360%20201.2%20Q390%20203.4%20420%20204.1%20Q450%20205.3%20480%20202.4'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20204.2%20Q30%20206.3%2060%20205.2%20Q90%20200.9%20120%20204.5%20Q150%20200.4%20180%20205.6%20Q210%20200.8%20240%20203.5%20Q270%20202.2%20300%20203.2%20Q330%20201.5%20360%20202.9%20Q390%20207.7%20420%20202.6%20Q450%20205.3%20480%20205.1'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cellipse%20cx%3D'274.2'%20cy%3D'196.0'%20rx%3D'7'%20ry%3D'4'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'.3'%2F%3E%3Crect%20x%3D'0'%20y%3D'224.0'%20width%3D'420'%20height%3D'56.0'%20fill%3D'%23e3cfa2'%2F%3E%3Crect%20x%3D'0'%20y%3D'278.0'%20width%3D'420'%20height%3D'2'%20fill%3D'%23a98a55'%20fill-opacity%3D'.55'%2F%3E%3Cpath%20d%3D'M0%20258.0%20Q30%20259.4%2060%20257.2%20Q90%20255.0%20120%20258.5%20Q150%20254.2%20180%20258.2%20Q210%20255.6%20240%20259.2%20Q270%20259.1%20300%20257.4%20Q330%20262.0%20360%20258.0%20Q390%20254.3%20420%20257.6%20Q450%20256.4%20480%20257.8'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20233.9%20Q30%20231.5%2060%20234.3%20Q90%20237.8%20120%20233.1%20Q150%20230.9%20180%20233.6%20Q210%20231.1%20240%20233.7%20Q270%20230.3%20300%20233.5%20Q330%20235.6%20360%20234.4%20Q390%20233.8%20420%20232.2%20Q450%20232.7%20480%20234.6'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20270.1%20Q30%20271.3%2060%20270.4%20Q90%20271.7%20120%20271.9%20Q150%20271.4%20180%20268.6%20Q210%20273.3%20240%20269.4%20Q270%20272.7%20300%20270.0%20Q330%20272.8%20360%20271.1%20Q390%20269.8%20420%20270.7%20Q450%20273.7%20480%20270.1'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20260.7%20Q30%20264.2%2060%20261.3%20Q90%20261.7%20120%20260.4%20Q150%20263.8%20180%20262.2%20Q210%20259.1%20240%20261.5%20Q270%20258.3%20300%20260.2%20Q330%20259.0%20360%20259.5%20Q390%20260.2%20420%20258.9%20Q450%20262.9%20480%20258.8'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20263.7%20Q30%20266.8%2060%20263.3%20Q90%20263.0%20120%20262.0%20Q150%20260.4%20180%20262.2%20Q210%20261.1%20240%20261.9%20Q270%20266.7%20300%20263.9%20Q330%20261.9%20360%20263.7%20Q390%20266.8%20420%20262.9%20Q450%20265.2%20480%20265.4'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.1'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20236.9%20Q30%20233.5%2060%20235.0%20Q90%20238.2%20120%20237.1%20Q150%20235.9%20180%20235.4%20Q210%20234.5%20240%20237.4%20Q270%20234.8%20300%20236.5%20Q330%20240.2%20360%20237.8%20Q390%20238.1%20420%20236.8%20Q450%20236.1%20480%20238.2'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cpath%20d%3D'M0%20269.9%20Q30%20270.5%2060%20267.9%20Q90%20269.7%20120%20269.0%20Q150%20273.4%20180%20269.5%20Q210%20268.5%20240%20269.4%20Q270%20271.1%20300%20268.1%20Q330%20273.5%20360%20269.0%20Q390%20270.3%20420%20270.0%20Q450%20267.7%20480%20271.0'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'0.2'%20stroke-width%3D'1'%2F%3E%3Cellipse%20cx%3D'78.1'%20cy%3D'252.0'%20rx%3D'7'%20ry%3D'4'%20fill%3D'none'%20stroke%3D'%238a6a3c'%20stroke-opacity%3D'.3'%2F%3E%3C%2Fsvg%3E") 0 0 / 420px 280px repeat, var(--void);
+    background-attachment: fixed;
+  }
+  /* luz de vela tremendo no canto de cima */
+  html[data-theme="farkle-taverna"] body::before{
+    content:""; position:fixed; inset:0; pointer-events:none; mix-blend-mode:multiply; opacity:1;
+    background: radial-gradient(circle 520px at 12% 6%, rgba(255,190,90,0.4), transparent 70%);
+    animation: candle-light 3.4s steps(1) infinite;
+  }
+  @keyframes candle-light{ 0%,100%{ opacity:0.9; } 20%{ opacity:1; } 45%{ opacity:0.78; } 70%{ opacity:0.95; } }
+  html[data-theme="farkle-taverna"] body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; opacity:1;
+    background: radial-gradient(ellipse 140% 100% at 50% 50%, transparent 45%, rgba(60,36,12,0.4) 100%);
+  }
+  /* dado de osso rolando pela mesa */
+  html[data-theme="farkle-taverna"] .wrap::before{
+    content:""; position:fixed; left:0; bottom:14px; width:46px; height:46px; pointer-events:none; z-index:0; opacity:0.9;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'48'%20height%3D'48'%20viewBox%3D'0%200%2048%2048'%3E%3Crect%20x%3D'3'%20y%3D'3'%20width%3D'42'%20height%3D'42'%20rx%3D'9'%20fill%3D'%23f3e9d0'%20stroke%3D'%238a6a3c'%20stroke-width%3D'2.5'%2F%3E%3Crect%20x%3D'7'%20y%3D'6'%20width%3D'34'%20height%3D'11'%20rx%3D'6'%20fill%3D'%23fff'%20fill-opacity%3D'.35'%2F%3E%3Ccircle%20cx%3D'14'%20cy%3D'14'%20r%3D'3.8'%20fill%3D'%2333261a'%2F%3E%3Ccircle%20cx%3D'34'%20cy%3D'14'%20r%3D'3.8'%20fill%3D'%2333261a'%2F%3E%3Ccircle%20cx%3D'24'%20cy%3D'24'%20r%3D'3.8'%20fill%3D'%23b33a1a'%2F%3E%3Ccircle%20cx%3D'14'%20cy%3D'34'%20r%3D'3.8'%20fill%3D'%2333261a'%2F%3E%3Ccircle%20cx%3D'34'%20cy%3D'34'%20r%3D'3.8'%20fill%3D'%2333261a'%2F%3E%3C%2Fsvg%3E") center / contain no-repeat;
+    animation: die-cross 20s linear infinite, die-tumble 1.9s linear infinite;
+  }
+  /* vela acesa no canto */
+  html[data-theme="farkle-taverna"] .wrap::after{
+    content:""; position:fixed; right:30px; bottom:18px; width:16px; height:78px; pointer-events:none; z-index:0;
+    background:
+      radial-gradient(ellipse 5px 10px at 50% 11px, #fff1b8 0 40%, #ffb13a 41% 70%, transparent 72%) 0 0 / 100% 100% no-repeat,
+      linear-gradient(90deg, #efe3c0, #cdbd94) 0 28px / 100% 50px no-repeat;
+    border-radius:3px; box-shadow: 0 -10px 46px 14px rgba(255,170,60,0.3);
+    animation: candle-flicker 0.4s steps(1) infinite;
+  }
+  @keyframes candle-flicker{ 0%{ box-shadow:0 -10px 46px 14px rgba(255,170,60,0.3); } 33%{ box-shadow:0 -10px 52px 18px rgba(255,170,60,0.4); } 66%{ box-shadow:0 -10px 42px 11px rgba(255,170,60,0.24); } }
+  html[data-theme="farkle-taverna"] .title .dot{ background:#ff9a2a; animation: dot-star 0.9s steps(2) infinite; }
+
+  /* ================================================================
+     SKINS DE UI dos 6 temas novos
+     ================================================================ */
+  html[data-theme="minas-perigo"], html[data-theme="minas-janela"], html[data-theme="frogger-noite"],
+  html[data-theme="frogger-nenufar"], html[data-theme="farkle-cassino"], html[data-theme="farkle-taverna"]{
+    font-synthesis:none; scrollbar-color: var(--accent-core) var(--stone-900);
+  }
+  html[data-theme="minas-perigo"] ::selection, html[data-theme="minas-janela"] ::selection, html[data-theme="frogger-noite"] ::selection,
+  html[data-theme="frogger-nenufar"] ::selection, html[data-theme="farkle-cassino"] ::selection, html[data-theme="farkle-taverna"] ::selection{
+    background: var(--accent); color: var(--void);
+  }
+  html[data-theme="minas-janela"] ::selection{ color:#fff; }
+
+  /* --- Zona de Perigo: estêncil militar, placa de aço com fita --- */
+  html[data-theme="minas-perigo"] :is(.title, .tab-btn, .btn, .theme-group-label, .log-panel-head){ font-family:'Black Ops One', sans-serif; font-weight:400; }
+  html[data-theme="minas-perigo"] .title{ font-size:27px; letter-spacing:0.06em; color: var(--accent); text-shadow: 0 0 14px rgba(var(--accent-rgb),0.4); text-transform:uppercase; }
+  html[data-theme="minas-perigo"] .tab-btn{ font-size:12px; letter-spacing:0.1em; }
+  html[data-theme="minas-perigo"] .tab-btn.active{ background: var(--accent); color:#111; text-shadow:none; }
+  html[data-theme="minas-perigo"] .tab-btn.active::after{ display:none; }
+  html[data-theme="minas-perigo"] .btn{ font-size:12px; letter-spacing:0.08em; border-radius:2px; border:2px solid #111; padding:9px 16px; color:#111; background: var(--accent); box-shadow: 0 3px 0 #8a7300; }
+  html[data-theme="minas-perigo"] .btn:hover{ background:#ffe14d; box-shadow: 0 3px 0 #8a7300, 0 0 16px rgba(var(--accent-rgb),0.5); }
+  html[data-theme="minas-perigo"] .btn:active{ transform:translateY(2px); box-shadow: 0 1px 0 #8a7300; }
+  html[data-theme="minas-perigo"] .btn-ghost{ background: var(--stone-800); color: var(--ink-dim); border:2px dashed var(--ink-faint); box-shadow:none; }
+  html[data-theme="minas-perigo"] .btn-ghost:hover{ color: var(--accent); border-color: var(--accent); background: var(--stone-700); }
+  html[data-theme="minas-perigo"] :is(.slot-card, .container-card){
+    border-radius:2px; border:1px solid var(--stone-line);
+    background:
+      radial-gradient(circle 2.5px at 7px 7px, #6b6b58 90%, transparent 100%),
+      radial-gradient(circle 2.5px at calc(100% - 7px) 7px, #6b6b58 90%, transparent 100%),
+      radial-gradient(circle 2.5px at 7px calc(100% - 7px), #6b6b58 90%, transparent 100%),
+      radial-gradient(circle 2.5px at calc(100% - 7px) calc(100% - 7px), #6b6b58 90%, transparent 100%),
+      linear-gradient(160deg, var(--stone-800), var(--stone-900));
+  }
+  html[data-theme="minas-perigo"] .container-card{
+    border-left:6px solid transparent;
+    background:
+      repeating-linear-gradient(135deg, var(--accent) 0 6px, #111 6px 12px) 0 0 / 6px 100% no-repeat border-box,
+      radial-gradient(circle 2.5px at calc(100% - 7px) 7px, #6b6b58 90%, transparent 100%),
+      radial-gradient(circle 2.5px at calc(100% - 7px) calc(100% - 7px), #6b6b58 90%, transparent 100%),
+      linear-gradient(160deg, var(--stone-800), var(--stone-900));
+    background-origin: border-box, padding-box, padding-box, padding-box;
+  }
+  html[data-theme="minas-perigo"] .item-card{ border-radius:2px; }
+  html[data-theme="minas-perigo"] .tabs{ border-radius:2px; }
+
+  /* --- Janela 95: barra de título azul, bordas em relevo, pixel font --- */
+  html[data-theme="minas-janela"] :is(.title, .tab-btn, .btn, .theme-group-label, .log-panel-head){ font-family:'Pixelify Sans', sans-serif; font-weight:600; }
+  html[data-theme="minas-janela"] .header{ padding:5px 10px; background: linear-gradient(90deg, #000080, #1084d0); border-bottom:none; margin-bottom:14px; border:2px solid; border-color:#fff #404040 #404040 #fff; }
+  html[data-theme="minas-janela"] .title{ font-size:20px; letter-spacing:0.02em; color:#fff; text-shadow:none; }
+  html[data-theme="minas-janela"] .header .id{ color:#bfe9ff; }
+  html[data-theme="minas-janela"] .tab-btn{ font-size:14px; letter-spacing:0.02em; color:#000; }
+  html[data-theme="minas-janela"] .tab-btn.active{ background:#dfdfdf; color:#000; text-shadow:none; }
+  html[data-theme="minas-janela"] .tab-btn.active::after{ display:none; }
+  html[data-theme="minas-janela"] .btn{
+    font-size:14px; letter-spacing:0.02em; border-radius:0; border:none; padding:7px 16px; color:#000; background:#c0c0c0;
+    box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+  }
+  html[data-theme="minas-janela"] .btn:hover{ background:#c8c8c8; box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf; }
+  html[data-theme="minas-janela"] .btn:active{ box-shadow: inset 1px 1px #000, inset -1px -1px #fff, inset 2px 2px #808080, inset -2px -2px #dfdfdf; padding:8px 15px 6px 17px; }
+  html[data-theme="minas-janela"] .btn-ghost{ color:#404040; }
+  html[data-theme="minas-janela"] :is(.slot-card, .container-card, .item-card, .tabs, .empty-state){
+    border-radius:0; border:none; background:#c0c0c0;
+    box-shadow: inset -1px -1px #000, inset 1px 1px #fff, inset -2px -2px #808080, inset 2px 2px #dfdfdf;
+  }
+  html[data-theme="minas-janela"] .container-card{ border-left:none; background: linear-gradient(90deg, #000080 0 5px, transparent 5px), #c0c0c0; }
+  html[data-theme="minas-janela"] .slot-card::before{ display:none; }
+  html[data-theme="minas-janela"] :is(.field input, .slot-select, .transfer-select){ border-radius:0; background:#fff; border:2px solid; border-color:#808080 #fff #fff #808080; color:#000; }
+
+  /* --- Travessia Noturna: técnico/neon fino sobre o rio --- */
+  html[data-theme="frogger-noite"] :is(.title, .tab-btn, .btn, .theme-group-label, .log-panel-head){ font-family:'Chakra Petch', sans-serif; font-weight:600; }
+  html[data-theme="frogger-noite"] .title{ font-size:25px; letter-spacing:0.08em; color: var(--ink); text-shadow: 0 0 12px rgba(var(--accent-rgb),0.55); }
+  html[data-theme="frogger-noite"] .tab-btn{ font-size:13px; letter-spacing:0.1em; }
+  html[data-theme="frogger-noite"] .btn{ font-size:13px; letter-spacing:0.1em; border-radius:999px; border:1.5px solid var(--accent); color: var(--accent); background: rgba(var(--accent-rgb),0.08); padding:8px 20px; box-shadow: 0 0 12px rgba(var(--accent-rgb),0.2); }
+  html[data-theme="frogger-noite"] .btn:hover{ background: rgba(var(--accent-rgb),0.22); box-shadow: 0 0 20px rgba(var(--accent-rgb),0.5); }
+  html[data-theme="frogger-noite"] .btn-ghost{ border-color: var(--stone-line); color: var(--ink-dim); box-shadow:none; background:transparent; }
+  html[data-theme="frogger-noite"] :is(.slot-card, .container-card){ border-radius:14px; border-color: var(--stone-line); box-shadow: inset 0 1px 0 rgba(62,240,196,0.12), 0 8px 22px rgba(0,0,0,0.3); }
+  html[data-theme="frogger-noite"] .container-card{ border-left:4px solid var(--accent); }
+  html[data-theme="frogger-noite"] .item-card{ border-radius:10px; }
+  html[data-theme="frogger-noite"] .tabs{ border-radius:14px; }
+
+  /* --- Lago de Nenúfares: manuscrito a aquarela --- */
+  html[data-theme="frogger-nenufar"] :is(.title, .tab-btn, .btn, .theme-group-label, .log-panel-head){ font-family:'Caveat', cursive; font-weight:700; }
+  html[data-theme="frogger-nenufar"] .title{ font-size:36px; letter-spacing:0.01em; line-height:1; color: var(--accent-core); text-shadow: 1px 2px 0 rgba(255,255,255,0.8); }
+  html[data-theme="frogger-nenufar"] .tab-btn{ font-size:19px; letter-spacing:0.02em; }
+  html[data-theme="frogger-nenufar"] .btn{ font-size:19px; letter-spacing:0.02em; border-radius:18px; border:1.5px solid var(--accent-core); color:#fff; background: linear-gradient(180deg, #e8749f, var(--accent)); padding:5px 20px; box-shadow: 0 3px 10px rgba(217,84,140,0.3); }
+  html[data-theme="frogger-nenufar"] .btn:hover{ background: linear-gradient(180deg, #f08cb2, #e0608f); box-shadow: 0 4px 14px rgba(217,84,140,0.45); }
+  html[data-theme="frogger-nenufar"] .btn-ghost{ background: rgba(255,255,255,0.6); color: var(--ink-dim); border-color: var(--stone-line); box-shadow:none; }
+  html[data-theme="frogger-nenufar"] :is(.slot-card, .container-card){ border-radius:16px; border-color: var(--stone-line); background: linear-gradient(160deg, rgba(255,255,255,0.75), rgba(214,232,225,0.8)); box-shadow: 0 6px 18px rgba(70,105,95,0.15); }
+  html[data-theme="frogger-nenufar"] .container-card{ border-left:5px solid var(--accent); }
+  html[data-theme="frogger-nenufar"] .item-card{ border-radius:12px; }
+  html[data-theme="frogger-nenufar"] .tabs{ border-radius:16px; }
+
+  /* --- Cassino Veludo: Cinzel dourada, moldura dupla de ouro --- */
+  html[data-theme="farkle-cassino"] :is(.title, .tab-btn, .btn, .theme-group-label, .log-panel-head){ font-family:'Cinzel', serif; font-weight:700; }
+  html[data-theme="farkle-cassino"] .title{ font-size:25px; letter-spacing:0.12em; color: var(--accent); text-shadow: 0 0 16px rgba(var(--accent-rgb),0.45), 0 2px 0 #6a4a08; }
+  html[data-theme="farkle-cassino"] .tab-btn{ font-size:12px; letter-spacing:0.14em; }
+  html[data-theme="farkle-cassino"] .btn{
+    font-size:12px; letter-spacing:0.12em; border-radius:999px; border:1px solid #8a6a12; color:#2a1a00; padding:9px 20px;
+    background: linear-gradient(180deg, #f9dc7a, #d4a937); box-shadow: 0 2px 0 #8a6a12, 0 0 14px rgba(var(--accent-rgb),0.25);
+  }
+  html[data-theme="farkle-cassino"] .btn:hover{ background: linear-gradient(180deg, #fde38f, #e0b840); box-shadow: 0 2px 0 #8a6a12, 0 0 22px rgba(var(--accent-rgb),0.5); }
+  html[data-theme="farkle-cassino"] .btn-ghost{ background: transparent; color: var(--ink-dim); border:1px solid var(--stone-line); box-shadow:none; }
+  html[data-theme="farkle-cassino"] .btn-ghost:hover{ color: var(--accent); border-color: var(--accent-core); }
+  html[data-theme="farkle-cassino"] :is(.slot-card, .container-card){
+    border-radius:6px; border:1px solid rgba(var(--accent-rgb),0.4);
+    box-shadow: inset 0 0 0 3px var(--stone-900), inset 0 0 0 4px rgba(var(--accent-rgb),0.3), 0 8px 22px rgba(0,0,0,0.35);
+  }
+  html[data-theme="farkle-cassino"] .container-card{ border-left:4px solid var(--accent); }
+  html[data-theme="farkle-cassino"] .item-card{ border-radius:5px; }
+  html[data-theme="farkle-cassino"] .tabs{ border-radius:6px; border-color: rgba(var(--accent-rgb),0.4); }
+
+  /* --- Taverna: MedievalSharp, couro costurado --- */
+  html[data-theme="farkle-taverna"] :is(.title, .tab-btn, .btn, .theme-group-label, .log-panel-head){ font-family:'MedievalSharp', serif; font-weight:400; }
+  html[data-theme="farkle-taverna"] .title{ font-size:28px; letter-spacing:0.04em; color:#4a2a14; text-shadow: 1px 1px 0 rgba(255,244,214,0.85); }
+  html[data-theme="farkle-taverna"] .tab-btn{ font-size:14px; letter-spacing:0.06em; }
+  html[data-theme="farkle-taverna"] .btn{
+    font-size:14px; letter-spacing:0.05em; border-radius:4px; border:2px solid #4a2a14; color:#f6e6c6; padding:8px 18px;
+    background: linear-gradient(180deg, #8a5632, #6b3f22); box-shadow: 0 3px 0 #3a1f0e;
+    outline:1px dashed rgba(240,210,160,0.6); outline-offset:-5px;
+  }
+  html[data-theme="farkle-taverna"] .btn:hover{ background: linear-gradient(180deg, #9a6238, #7a4828); }
+  html[data-theme="farkle-taverna"] .btn:active{ transform:translateY(2px); box-shadow: 0 1px 0 #3a1f0e; }
+  html[data-theme="farkle-taverna"] .btn-ghost{ background: var(--stone-800); color: var(--ink-dim); border-color: var(--stone-line); box-shadow:none; outline:none; }
+  html[data-theme="farkle-taverna"] :is(.slot-card, .container-card){
+    border-radius:4px; border:2px solid #8a6a3c; background: linear-gradient(160deg, #eadab4, #dcc594);
+    box-shadow: inset 0 0 0 3px #e6d3a8, inset 0 0 0 4px rgba(138,106,60,0.5), 0 4px 10px rgba(60,36,12,0.2);
+  }
+  html[data-theme="farkle-taverna"] .container-card{ border-left:6px solid var(--accent); }
+  html[data-theme="farkle-taverna"] .item-card{ border-radius:3px; }
+  html[data-theme="farkle-taverna"] .tabs{ border-radius:4px; border:2px solid #8a6a3c; }
+
+  /* celular: fontes novas são mais largas -- abas mais apertadas */
+  @media (max-width:520px){
+    html[data-theme="minas-perigo"] .tab-btn, html[data-theme="minas-janela"] .tab-btn, html[data-theme="frogger-noite"] .tab-btn,
+    html[data-theme="frogger-nenufar"] .tab-btn, html[data-theme="farkle-cassino"] .tab-btn, html[data-theme="farkle-taverna"] .tab-btn{ padding:12px 4px; letter-spacing:0.02em; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    html[data-theme="minas-perigo"] :is(body, .wrap)::before, html[data-theme="minas-perigo"] :is(body, .wrap)::after,
+    html[data-theme="minas-janela"] :is(body, .wrap)::before, html[data-theme="minas-janela"] :is(body, .wrap)::after,
+    html[data-theme="frogger-noite"] :is(body, .wrap)::before, html[data-theme="frogger-noite"] :is(body, .wrap)::after,
+    html[data-theme="frogger-nenufar"] :is(body, .wrap)::before, html[data-theme="frogger-nenufar"] :is(body, .wrap)::after,
+    html[data-theme="farkle-cassino"] :is(body, .wrap)::before, html[data-theme="farkle-cassino"] :is(body, .wrap)::after,
+    html[data-theme="farkle-taverna"] :is(body, .wrap)::before, html[data-theme="farkle-taverna"] :is(body, .wrap)::after,
+    html[data-theme="minas-perigo"] .title .dot, html[data-theme="frogger-noite"] .title .dot, html[data-theme="frogger-nenufar"] .title .dot,
+    html[data-theme="farkle-cassino"] .title .dot, html[data-theme="farkle-taverna"] .title .dot{ animation:none !important; }
   }
 
   /* ---------- SELETOR DE TEMA ---------- */
