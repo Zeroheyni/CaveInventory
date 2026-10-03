@@ -35,6 +35,58 @@ function tone(freq, duration, type, volume) {
   }
 }
 
+// varredura de frequência (laser, pulo, queda) -- o tone() acima só toca nota fixa
+function sweep(f0, f1, duration, type, volume) {
+  const audio = getCtx();
+  if (!audio) return;
+  try {
+    const osc = audio.createOscillator();
+    const gain = audio.createGain();
+    osc.type = type;
+    osc.frequency.setValueAtTime(f0, audio.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(Math.max(20, f1), audio.currentTime + duration);
+    gain.gain.setValueAtTime(volume, audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + duration);
+    osc.connect(gain);
+    gain.connect(audio.destination);
+    osc.start();
+    osc.stop(audio.currentTime + duration);
+  } catch (err) {
+    // sem áudio -- jogo continua mudo
+  }
+}
+
+// ruído filtrado (explosão, propulsor): buffer de ruído branco + passa-baixa
+// cujo corte desce durante o som
+let noiseBuffer = null;
+function noiseBurst(duration, volume, cutoffStart, cutoffEnd) {
+  const audio = getCtx();
+  if (!audio) return;
+  try {
+    if (!noiseBuffer) {
+      noiseBuffer = audio.createBuffer(1, audio.sampleRate, audio.sampleRate);
+      const data = noiseBuffer.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+    }
+    const src = audio.createBufferSource();
+    src.buffer = noiseBuffer;
+    const filter = audio.createBiquadFilter();
+    filter.type = 'lowpass';
+    filter.frequency.setValueAtTime(cutoffStart, audio.currentTime);
+    filter.frequency.exponentialRampToValueAtTime(Math.max(40, cutoffEnd), audio.currentTime + duration);
+    const gain = audio.createGain();
+    gain.gain.setValueAtTime(volume, audio.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audio.currentTime + duration);
+    src.connect(filter);
+    filter.connect(gain);
+    gain.connect(audio.destination);
+    src.start();
+    src.stop(audio.currentTime + duration);
+  } catch (err) {
+    // sem áudio -- jogo continua mudo
+  }
+}
+
 export const sfx = {
   eat: () => tone(660, 0.07, 'square', 0.12),
   move: () => tone(180, 0.02, 'square', 0.03),
@@ -73,6 +125,30 @@ export const sfx = {
   // seguida no mesmo ponto (a bola também acelera, o som acompanha), e
   // um arpejinho subindo quando você ganha o ponto.
   paddleHit: (rally) => tone(330 + Math.min(rally, 12) * 38, 0.05, 'square', 0.11),
+  // Asteroids / Dino / Invaders
+  laser: (isUfo) => sweep(isUfo ? 520 : 1100, isUfo ? 180 : 260, 0.1, 'square', 0.06),
+  boom: (size) => noiseBurst(0.14 + size * 0.09, 0.16, 1500 + size * 300, 120),
+  thrust: () => noiseBurst(0.07, 0.035, 520, 160),
+  hyper: () => sweep(200, 1400, 0.22, 'sine', 0.09),
+  shipDie: () => {
+    sweep(420, 50, 0.6, 'sawtooth', 0.11);
+    noiseBurst(0.55, 0.2, 1800, 90);
+  },
+  ufo: (small) => tone(small ? 760 : 460, 0.07, 'sine', 0.05),
+  ufoHit: () => {
+    noiseBurst(0.25, 0.16, 1600, 140);
+    [400, 600, 900].forEach((f, i) => setTimeout(() => tone(f, 0.07, 'triangle', 0.1), i * 55));
+  },
+  extraLife: () => {
+    [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.1, 'triangle', 0.12), i * 70));
+  },
+  jump: () => sweep(280, 640, 0.13, 'square', 0.08),
+  milestone: () => {
+    tone(880, 0.07, 'square', 0.09);
+    setTimeout(() => tone(1175, 0.1, 'square', 0.09), 80);
+  },
+  march: (i) => tone([110, 98, 87, 82][i % 4], 0.08, 'square', 0.1),
+  invaderDie: () => sweep(520, 110, 0.14, 'square', 0.09),
   pointWon: () => {
     [523, 659, 784].forEach((f, i) => setTimeout(() => tone(f, 0.09, 'triangle', 0.12), i * 70));
   },

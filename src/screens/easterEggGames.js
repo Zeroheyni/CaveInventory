@@ -11,6 +11,9 @@ import { createFlappyGame } from '../games/flappy.js';
 import { createGame2048, BOARD_PIXEL_SIZE as SIZE_2048 } from '../games/2048.js';
 import { createBreakoutGame } from '../games/breakout.js';
 import { createPongGame } from '../games/pong.js';
+import { createAsteroidsGame } from '../games/asteroids.js';
+import { createDinoGame } from '../games/dino.js';
+import { createInvadersGame } from '../games/invaders.js';
 
 const GAMES = {
   snake: { label: 'Cobrinha', icon: '🐍', factory: createSnakeGame, width: 360, height: 360, hasPreview: false },
@@ -21,6 +24,9 @@ const GAMES = {
   // de ping-pong de verdade, os dois não podiam ter o mesmo emoji.
   breakout: { label: 'Breakout', icon: '💥', factory: createBreakoutGame, width: 240, height: 320, hasPreview: false },
   pong: { label: 'Pong', icon: '🏓', factory: createPongGame, width: 360, height: 270, hasPreview: false },
+  asteroids: { label: 'Asteroids', icon: '☄️', factory: createAsteroidsGame, width: 400, height: 400, hasPreview: false },
+  dino: { label: 'Dino', icon: '🦖', factory: createDinoGame, width: 560, height: 200, hasPreview: false },
+  invaders: { label: 'Space Invaders', icon: '👾', factory: createInvadersGame, width: 360, height: 420, hasPreview: false },
 };
 
 // chamado quando o overlay fecha -- pra tela de baixo (character.js/
@@ -230,6 +236,9 @@ export function renderEasterEggOverlay({ campaign, profile, onClose }) {
                   ${selectedGame === '2048' ? '⌨ setas ou WASD pra deslizar as peças' : ''}
                   ${selectedGame === 'breakout' ? '⌨ ◄ ► ou A/D pra mover a raquete' : ''}
                   ${selectedGame === 'pong' ? '⌨ ↑ ↓ ou W/S · ou arraste o mouse/dedo na quadra' : ''}
+                  ${selectedGame === 'asteroids' ? '⌨ ◄ ► gira · ↑ acelera · espaço atira · H hiperespaço (arriscado!)' : ''}
+                  ${selectedGame === 'dino' ? '⌨ espaço/↑ pula (segure = mais alto) · ↓ abaixa · ou clique/toque na tela' : ''}
+                  ${selectedGame === 'invaders' ? '⌨ ◄ ► ou A/D move · espaço atira · ou arraste o mouse/dedo (clique/toque atira)' : ''}
                 </div>
               </div>
               ${

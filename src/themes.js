@@ -4,7 +4,7 @@
 // importa `renderFichaScreen` de ficha.js, então ficha.js importar de
 // volta `THEMES`/`themeSwatchHtml` de character.js criaria um import
 // circular. Módulo próprio, sem depender de nenhuma tela.
-export const GAME_THEME_LABELS = { snake: 'Cobrinha', tetris: 'Tetris', flappy: 'Flappy Bird', '2048': '2048', breakout: 'Breakout', pong: 'Pong' };
+export const GAME_THEME_LABELS = { snake: 'Cobrinha', tetris: 'Tetris', flappy: 'Flappy Bird', '2048': '2048', breakout: 'Breakout', pong: 'Pong', asteroids: 'Asteroids', dino: 'Dino', invaders: 'Space Invaders' };
 
 // html de UM swatch do seletor de tema -- compartilhado entre
 // character.js, masterCampaignHub.js e ficha.js (tema por NPC) pra não
@@ -83,5 +83,11 @@ export const THEMES = [
   {id:'breakout-neon', label:'Fliperama Neon', group:'especial', accent:'#ff2e88', void:'#0a0612', unlockGame:'breakout'},
   {id:'breakout-confeitaria', label:'Confeitaria Pastel', group:'especial', accent:'#ff5c9e', void:'#fff3f8', unlockGame:'breakout'},
   {id:'pong-mesa', label:'Mesa Noturna', group:'especial', accent:'#ff9f43', void:'#04110e', unlockGame:'pong'},
-  {id:'pong-caderno', label:'Caderno de Rabisco', group:'especial', accent:'#2f5fd0', void:'#fbf6e9', unlockGame:'pong'}
+  {id:'pong-caderno', label:'Caderno de Rabisco', group:'especial', accent:'#2f5fd0', void:'#fbf6e9', unlockGame:'pong'},
+  {id:'asteroids-vetor', label:'Radar Vetorial', group:'especial', accent:'#d7e6ff', void:'#03060d', unlockGame:'asteroids'},
+  {id:'asteroids-carta', label:'Carta Celeste', group:'especial', accent:'#a8431f', void:'#f3e7cf', unlockGame:'asteroids'},
+  {id:'dino-jurassico', label:'Era Jurássica', group:'especial', accent:'#ff5a2e', void:'#120806', unlockGame:'dino'},
+  {id:'dino-offline', label:'Sem Internet', group:'especial', accent:'#535353', void:'#f7f7f7', unlockGame:'dino'},
+  {id:'invaders-alien', label:'Invasão Alienígena', group:'especial', accent:'#b6ff3c', void:'#0d0420', unlockGame:'invaders'},
+  {id:'invaders-gibi', label:'Gibi Retrô', group:'especial', accent:'#e0402a', void:'#fff6dc', unlockGame:'invaders'}
 ];

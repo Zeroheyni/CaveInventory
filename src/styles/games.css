@@ -20,7 +20,7 @@
 
 .ee-title{ font-family: var(--font-display); font-size:14px; letter-spacing:0.08em; color: var(--ink); text-align:center; }
 
-.ee-game-tabs{ display:flex; gap:8px; }
+.ee-game-tabs{ display:flex; flex-wrap:wrap; justify-content:center; gap:8px; max-width:560px; }
 .ee-game-tab{
   font-family: var(--font-mono); font-size:12px; padding:8px 14px; border-radius:8px;
   border:1px solid var(--stone-line); background: var(--stone-900); color: var(--ink-dim); cursor:pointer; transition: all 0.15s ease;
@@ -31,7 +31,7 @@
 .ee-play-area{ display:flex; gap:14px; align-items:flex-start; }
 .ee-canvas-col{ display:flex; flex-direction:column; align-items:center; gap:8px; }
 #ee-canvas{
-  border:3px solid var(--accent-core); border-radius:8px; image-rendering: pixelated;
+  border:3px solid var(--accent-core); border-radius:8px; image-rendering: pixelated; max-width:100%; height:auto;
   background: var(--stone-900); box-shadow: 0 0 0 1px var(--accent-faint), 0 0 22px var(--accent-faint);
 }
 .ee-hint{ font-size:10.5px; color: var(--ink-faint); text-align:center; }
