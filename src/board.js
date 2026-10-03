@@ -141,6 +141,46 @@ export async function updateWalls(updates) {
   if (failed) throw failed.error;
 }
 
+// ---------------------------------------------------------------
+// Luzes (db/060) -- presas a um token (token_id) ou fixas no cenário
+// (token_id null + x/y). Raio em % da largura do palco. Ver
+// boardLighting.js (render) e LIGHT_PRESETS (tipos).
+// ---------------------------------------------------------------
+export async function listBoardLights(boardId) {
+  const { data, error } = await supabase.from('board_lights').select('*').eq('board_id', boardId).order('created_at');
+  if (error) throw error;
+  return data;
+}
+
+// fields: { token_id? | x,y, kind, radius, dim_radius, color, angle, direction, intensity, flicker, pulse, enabled }
+export async function insertLight(boardId, campaignId, fields) {
+  const { data, error } = await supabase
+    .from('board_lights')
+    .insert({ ...fields, board_id: boardId, campaign_id: campaignId })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function updateLight(id, fields) {
+  const { error } = await supabase.from('board_lights').update(fields).eq('id', id);
+  if (error) throw error;
+}
+
+export async function deleteLight(id) {
+  const { error } = await supabase.from('board_lights').delete().eq('id', id);
+  if (error) throw error;
+}
+
+// o jogador acende/apaga a PRÓPRIA luz e a lanterna lembra a direção
+// (a RLS não restringe coluna: a função só deixa mexer nesses dois campos,
+// e só em luz presa a token de personagem dele)
+export async function updateMyLight(lightId, { enabled = null, direction = null } = {}) {
+  const { error } = await supabase.rpc('update_my_light', { p_light_id: lightId, p_enabled: enabled, p_direction: direction });
+  if (error) throw error;
+}
+
 // ajustes do tabuleiro (colisão, iluminação, escuridão...) -- só o mestre
 export async function updateBoardSettings(boardId, fields) {
   const { error } = await supabase.from('boards').update(fields).eq('id', boardId);

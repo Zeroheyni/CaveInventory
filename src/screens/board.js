@@ -47,11 +47,17 @@ import {
   deleteWalls,
   updateWalls,
   updateBoardSettings,
+  listBoardLights,
+  insertLight,
+  updateLight,
+  deleteLight,
+  updateMyLight,
 } from '../board.js';
 import { renderBoardHud, mountDrawer } from './boardHud.js';
 import { blockingWalls, resolveMove, toWorld, toPct } from '../boardGeometry.js';
 import { wallsLayerHtml, createWallEditor } from '../boardWalls.js';
 import { mountSceneryPanel } from '../boardScenery.js';
+import { createLighting, LIGHT_PRESETS } from '../boardLighting.js';
 
 // throttle do que é mandado por Broadcast (Fase 3) -- cursor e preview
 // de arrasto/redimensionar não precisam (nem devem) mandar uma
@@ -197,6 +203,242 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   };
   const wallEditor = createWallEditor(wallHost);
 
+  // ---- ILUMINAÇÃO (db/060): luz presa a token ou fixa no cenário; o canvas
+  // de escuridão/brilho vive em boardLighting.js (polígono de visibilidade
+  // contra as paredes, por isso a luz não atravessa parede) ----
+  let lights = [];
+  let sceneryTab = 'paredes';
+  let viewAsPlayer = false; // mestre "vê como jogador" (testar a escuridão)
+  let editLightId = null; // luz com o editor aberto no painel
+  let lightsReloadTimer = null;
+  const lighting = createLighting({
+    stage: () => $('board-stage'),
+    board: () => currentBoard(),
+    aspect: () => stageAspect(),
+    walls: () => walls,
+    wallsVersion: () => wallsVersion,
+    tokens: () => tokens,
+    lights: () => lights,
+    isMaster: () => isMaster,
+    viewAsPlayer: () => viewAsPlayer,
+    characterId: () => characterId,
+  });
+
+  const LIGHT_FIELDS = ['kind', 'radius', 'dim_radius', 'color', 'angle', 'flicker', 'pulse', 'intensity'];
+  const presetFields = (kind) => {
+    const p = LIGHT_PRESETS[kind] || LIGHT_PRESETS.custom;
+    const out = { kind: LIGHT_PRESETS[kind] ? kind : 'custom' };
+    LIGHT_FIELDS.forEach((k) => {
+      if (k !== 'kind') out[k] = p[k];
+    });
+    return out;
+  };
+  const lightOfToken = (tokenId) => lights.find((l) => l.token_id === tokenId) || null;
+  const canToggleLight = (l) => {
+    if (isMaster) return true;
+    const t = l.token_id && tokens.find((x) => x.id === l.token_id);
+    return !!(t && t.character_id && t.character_id === characterId);
+  };
+
+  async function reloadLights() {
+    if (!viewBoardId) return;
+    try {
+      lights = await listBoardLights(viewBoardId);
+    } catch (_) {
+      // sem a tabela (migration não aplicada) ou rede: segue sem luzes
+    }
+    lightsChanged(true);
+  }
+  // luz mudou (ou token que carrega): redesenha escuridão, marcadores e painel
+  function lightsChanged(fullMarkers = false) {
+    lighting.update();
+    if (fullMarkers) renderLightMarkers();
+    refreshScenery();
+  }
+
+  function fixedLightMarkersHtml() {
+    if (!isMaster) return '';
+    return lights
+      .filter((l) => !l.token_id)
+      .map((l) => {
+        const p = LIGHT_PRESETS[l.kind] || LIGHT_PRESETS.custom;
+        return `<div class="board-light-marker ${l.enabled ? 'on' : 'off'}" data-light-marker="${l.id}" style="left:${l.x}%; top:${l.y}%; border-color:${escapeHtml(l.color)};" title="${escapeHtml(p.label)} (arraste pra mover)">${p.icon}</div>`;
+      })
+      .join('');
+  }
+  function renderLightMarkers() {
+    const layer = $('board-light-markers');
+    if (!layer) return;
+    layer.innerHTML = fixedLightMarkersHtml();
+    wireLightMarkers();
+  }
+
+  // arrasto de uma luz fixa (só mestre)
+  let markerDrag = null;
+  function wireLightMarkers() {
+    app.querySelectorAll('[data-light-marker]').forEach((el) => {
+      el.addEventListener('pointerdown', (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const stageEl = $('board-stage');
+        if (!stageEl) return;
+        try {
+          el.setPointerCapture(e.pointerId);
+        } catch (_) {
+          // sem captura, segue
+        }
+        markerDrag = { id: el.dataset.lightMarker, el, pointerId: e.pointerId, rect: stageEl.getBoundingClientRect(), moved: false };
+      });
+      el.addEventListener('pointermove', (e) => {
+        if (!markerDrag || e.pointerId !== markerDrag.pointerId) return;
+        const x = Math.max(0, Math.min(100, ((e.clientX - markerDrag.rect.left) / markerDrag.rect.width) * 100));
+        const y = Math.max(0, Math.min(100, ((e.clientY - markerDrag.rect.top) / markerDrag.rect.height) * 100));
+        const l = lights.find((q) => q.id === markerDrag.id);
+        if (!l) return;
+        l.x = x;
+        l.y = y;
+        markerDrag.moved = true;
+        markerDrag.el.style.left = x + '%';
+        markerDrag.el.style.top = y + '%';
+        lighting.update();
+      });
+      const end = async (e) => {
+        if (!markerDrag || e.pointerId !== markerDrag.pointerId) return;
+        const d = markerDrag;
+        markerDrag = null;
+        const l = lights.find((q) => q.id === d.id);
+        if (l && d.moved) {
+          try {
+            await updateLight(l.id, { x: l.x, y: l.y });
+          } catch (err) {
+            error = err.message;
+            render();
+          }
+        } else if (l && !d.moved) {
+          editLightId = l.id;
+          sceneryTab = 'luzes';
+          refreshScenery();
+        }
+      };
+      el.addEventListener('pointerup', end);
+      el.addEventListener('pointercancel', end);
+    });
+  }
+
+  // liga/desliga uma luz (mestre em qualquer uma; jogador só na própria, via RPC)
+  async function toggleLight(id) {
+    const l = lights.find((x) => x.id === id);
+    if (!l || !canToggleLight(l)) return;
+    const next = !l.enabled;
+    l.enabled = next;
+    lightsChanged(true);
+    refreshTokenLightButtons();
+    try {
+      if (isMaster) await updateLight(id, { enabled: next });
+      else await updateMyLight(id, { enabled: next });
+    } catch (err) {
+      l.enabled = !next;
+      error = err.message;
+      render();
+    }
+  }
+  function refreshTokenLightButtons() {
+    app.querySelectorAll('[data-token-light]').forEach((btn) => {
+      const l = lightOfToken(btn.dataset.tokenLight);
+      btn.classList.toggle('on', !!(l && l.enabled));
+    });
+  }
+
+  // preset de luz num token (mestre): cria, troca o tipo ou remove ('' = sem luz)
+  async function setTokenLight(tokenId, kind) {
+    const existing = lightOfToken(tokenId);
+    try {
+      if (!kind) {
+        if (existing) {
+          lights = lights.filter((l) => l.id !== existing.id);
+          lightsChanged(true);
+          await deleteLight(existing.id);
+        }
+      } else if (existing) {
+        const fields = presetFields(kind);
+        Object.assign(existing, fields);
+        lightsChanged(true);
+        await updateLight(existing.id, fields);
+      } else {
+        const created = await insertLight(viewBoardId, campaignId, { token_id: tokenId, enabled: true, ...presetFields(kind) });
+        lights = lights.concat(created);
+        lightsChanged(true);
+      }
+    } catch (err) {
+      error = err.message;
+    }
+    render();
+  }
+
+  async function addFixedLight(kind) {
+    try {
+      const created = await insertLight(viewBoardId, campaignId, { x: 50, y: 50, enabled: true, ...presetFields(kind) });
+      lights = lights.concat(created);
+      editLightId = created.id;
+      lightsChanged(true);
+    } catch (err) {
+      error = err.message;
+      render();
+    }
+  }
+
+  // sliders do editor: 'input' só mexe local e redesenha (sem refazer o painel,
+  // senão o slider some do dedo); 'change' grava
+  function liveLightField(id, fields) {
+    const l = lights.find((x) => x.id === id);
+    if (!l) return;
+    Object.assign(l, fields);
+    lighting.update();
+  }
+  async function saveLightFields(id, fields) {
+    const l = lights.find((x) => x.id === id);
+    if (!l) return;
+    Object.assign(l, fields);
+    lightsChanged(true);
+    try {
+      await updateLight(id, fields);
+    } catch (err) {
+      error = err.message;
+      render();
+    }
+  }
+  async function removeLight(id) {
+    const l = lights.find((x) => x.id === id);
+    if (!l) return;
+    lights = lights.filter((x) => x.id !== id);
+    if (editLightId === id) editLightId = null;
+    lightsChanged(true);
+    render();
+    try {
+      await deleteLight(id);
+    } catch (err) {
+      error = err.message;
+      reloadLights();
+    }
+  }
+
+  // a lanterna lembra pra onde apontava (o mestre grava direto; o dono, via RPC)
+  async function persistFacing(token) {
+    const l = lightOfToken(token.id);
+    if (!l || l.angle >= 359.5) return;
+    const ang = lighting.getFacing(token.id);
+    if (ang === null || ang === undefined) return;
+    const deg = Math.round((((ang * 180) / Math.PI) % 360 + 360) % 360);
+    if (l.direction !== null && l.direction !== undefined && Math.abs(l.direction - deg) < 4) return;
+    l.direction = deg;
+    try {
+      if (isMaster) await updateLight(l.id, { direction: deg });
+      else await updateMyLight(l.id, { direction: deg });
+    } catch (_) {
+      // direção é só conforto -- ignora erro
+    }
+  }
+
   function showWallsLayer() {
     const b = currentBoard();
     return isMaster || !!(b && b.show_walls_to_players);
@@ -205,6 +447,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   // redesenha só a camada de paredes (sem render() geral)
   function wallsChanged() {
     wallsVersion += 1;
+    lighting.update();
     const layer = $('board-walls-layer');
     if (layer) {
       layer.innerHTML = showWallsLayer()
@@ -322,12 +565,14 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       error = err.message;
     }
     render();
+    refreshScenery();
   }
   const sceneryApi = {
     state() {
       const b = currentBoard() || {};
       return {
-        tab: 'paredes',
+        tab: sceneryTab,
+        ...lightingState(),
         tool: wallTool || 'mover',
         collision: b.collision_enabled !== false,
         showWalls: !!b.show_walls_to_players,
@@ -367,6 +612,51 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       wallEditor.removeWalls(walls.map((w) => w.id));
     },
   };
+
+  // estado do painel de luz/ambiente + ações (mescladas no sceneryApi)
+  function lightingState() {
+    const b = currentBoard() || {};
+    return {
+      lighting: !!b.lighting_enabled,
+      ambient: b.ambient ?? 0.92,
+      fogMode: b.fog_mode || 'escuro',
+      ambientColor: b.ambient_color || '#05060d',
+      viewAsPlayer,
+      editLightId,
+      lights: lights.map((l) => {
+        const t = l.token_id && tokens.find((x) => x.id === l.token_id);
+        return { ...l, ownerLabel: l.token_id ? (t ? t.label || 'token' : 'token removido') : 'luz fixa' };
+      }),
+    };
+  }
+  Object.assign(sceneryApi, {
+    setTab(t) {
+      sceneryTab = t;
+      if (t !== 'paredes' && wallTool) setWallTool(null);
+      refreshScenery();
+    },
+    setLighting: (v) => patchBoard({ lighting_enabled: !!v }),
+    setAmbient: (v) => patchBoard({ ambient: Math.max(0, Math.min(1, Number(v))) }),
+    setFogMode: (v) => patchBoard({ fog_mode: v === 'neblina' ? 'neblina' : 'escuro' }),
+    setAmbientColor: (v) => patchBoard({ ambient_color: v }),
+    setViewAsPlayer(v) {
+      viewAsPlayer = !!v;
+      lighting.update();
+      refreshScenery();
+    },
+    addFixedLight,
+    toggleLight,
+    editLight(id) {
+      editLightId = editLightId === id ? null : id;
+      refreshScenery();
+    },
+    liveLight: liveLightField,
+    saveLight: saveLightFields,
+    applyPreset(id, kind) {
+      saveLightFields(id, presetFields(kind));
+    },
+    deleteLight: removeLight,
+  });
 
   // ---- PALCO + zoom/pan (base de paredes e iluminação) ----
   // x/y/size dos tokens são % do PALCO (.board-stage), que tem a proporção
@@ -484,6 +774,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     // controles dos tokens (×, ⚙, alça, popover, cursores) não crescem/encolhem com o zoom
     stage.style.setProperty('--inv-zoom', String(1 / z));
     stage.style.visibility = stageReady() ? '' : 'hidden';
+    lighting.resize();
   }
 
   // zoom em torno de um ponto da tela (o ponto sob o cursor fica parado)
@@ -636,8 +927,11 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     remoteCursors.clear();
     loadView(boardId);
     walls = [];
+    lights = [];
     wallTool = null;
     selectedWallId = null;
+    editLightId = null;
+    viewAsPlayer = false;
     wallEditor.clearHistory();
     render();
     ensureStageDims();
@@ -652,6 +946,11 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     } catch (_) {
       walls = []; // migration db/060 ainda não aplicada: tabuleiro funciona sem paredes
     }
+    try {
+      lights = await listBoardLights(boardId);
+    } catch (_) {
+      lights = [];
+    }
     render();
     resubscribeTokens();
     startCursorPruneTimer();
@@ -665,9 +964,11 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     }
     panPointers.clear();
     wallEditor.detach();
+    lighting.stop();
     wallTool = null;
     selectedWallId = null;
     walls = [];
+    lights = [];
     viewBoardId = null;
     tokens = [];
     remoteCursors.clear();
@@ -704,6 +1005,10 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       onWalls: () => {
         clearTimeout(wallsReloadTimer);
         wallsReloadTimer = setTimeout(reloadWalls, 300);
+      },
+      onLights: () => {
+        clearTimeout(lightsReloadTimer);
+        lightsReloadTimer = setTimeout(reloadLights, 300);
       },
     });
   }
@@ -798,6 +1103,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
           el.style.left = x + '%';
           el.style.top = y + '%';
         }
+        lighting.update();
       }
     }
     if (payload.size !== undefined) {
@@ -1094,6 +1400,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       token.x = x;
       token.y = y;
     }
+    lighting.update();
     maybeBroadcastDrag(dragTokenId, { x, y });
   }
 
@@ -1113,6 +1420,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
         error = err.message;
         render();
       }
+      persistFacing(token);
     }
   }
 
@@ -1193,8 +1501,17 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
         ${isMaster ? `<button type="button" class="board-token-edit-btn" data-token-edit-open="${t.id}" title="editar aparência">⚙</button>` : ''}
         ${movable ? `<button type="button" class="board-token-del" data-token-del="${t.id}" title="tirar do tabuleiro">×</button>` : ''}
         ${movable ? `<div class="board-token-resize" data-token-resize="${t.id}" title="redimensionar"></div>` : ''}
+        ${tokenLightButtonHtml(t)}
         ${tokenEditPopoverHtml(t)}
       </div>`;
+  }
+
+  // botão de acender/apagar a luz do token (mestre em qualquer um, dono só no dele)
+  function tokenLightButtonHtml(t) {
+    const l = lightOfToken(t.id);
+    if (!l || !canToggleLight(l)) return '';
+    const p = LIGHT_PRESETS[l.kind] || LIGHT_PRESETS.custom;
+    return `<button type="button" class="board-token-light-btn ${l.enabled ? 'on' : ''}" data-token-light="${t.id}" title="${l.enabled ? 'apagar' : 'acender'} ${escapeHtml(p.label.toLowerCase())}">${p.icon}</button>`;
   }
 
   // popover de aparência (Fase 2, só mestre) -- cor/formato/camada pra
@@ -1228,6 +1545,13 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
                </div>`
             : ''
         }
+        <div class="board-token-edit-row">
+          <label>luz</label>
+          <div class="board-token-shape-toggle">
+            <button type="button" class="${!lightOfToken(t.id) ? 'active' : ''}" data-edit-light="${t.id}" data-light-kind="" title="sem luz">∅</button>
+            ${['tocha', 'lanterna', 'magia', 'vela', 'visao'].map((k) => `<button type="button" class="${(lightOfToken(t.id) || {}).kind === k ? 'active' : ''}" data-edit-light="${t.id}" data-light-kind="${k}" title="${LIGHT_PRESETS[k].label}">${LIGHT_PRESETS[k].icon}</button>`).join('')}
+          </div>
+        </div>
         <button type="button" class="board-token-edit-close" data-edit-close="1">fechar</button>
       </div>`;
   }
@@ -1351,6 +1675,8 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
         <div class="board-area ${isMaster && wallTool ? 'walls-editing' : ''}" id="board-area">
           <div class="board-stage" id="board-stage" style="${bg ? `background-image:url('${escapeHtml(bg)}');` : ''}">
             ${tokens.map(tokenHtml).join('')}
+            <div class="board-light-layer" id="board-light-layer"><canvas class="board-dark"></canvas><canvas class="board-glow"></canvas><canvas class="board-gray"></canvas></div>
+            <div class="board-light-markers" id="board-light-markers">${fixedLightMarkersHtml()}</div>
             <div class="board-walls-layer" id="board-walls-layer">${showWallsLayer() ? wallsLayerHtml(visibleWalls(), { selectedId: selectedWallId, editing: wallTool === 'editar', doorButtons: isMaster }) : ''}</div>
             <div class="board-cursor-layer" id="board-cursor-layer"></div>
           </div>
@@ -1367,7 +1693,9 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     applyView();
     ensureStageDims();
     wireDoorButtons();
+    wireLightMarkers();
     syncWallCapture();
+    lighting.attach($('board-light-layer'));
     // o board-area acabou de ser reconstruído do zero (innerHTML) --
     // redesenha os cursores que eu já conhecia na camada nova, senão
     // eles ficam "invisíveis" até a próxima mensagem de Broadcast
@@ -1540,6 +1868,22 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       input.addEventListener('change', () => {
         const file = input.files && input.files[0];
         if (file) handleEditImageChange(input.dataset.editImage, file);
+      });
+    });
+
+    app.querySelectorAll('[data-token-light]').forEach((btn) => {
+      btn.addEventListener('pointerdown', (e) => e.stopPropagation());
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const l = lightOfToken(btn.dataset.tokenLight);
+        if (l) toggleLight(l.id);
+      });
+    });
+    app.querySelectorAll('[data-edit-light]').forEach((btn) => {
+      btn.addEventListener('pointerdown', (e) => e.stopPropagation());
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        setTokenLight(btn.dataset.editLight, btn.dataset.lightKind);
       });
     });
 

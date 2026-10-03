@@ -216,7 +216,7 @@
 /* camada inteira sem ponteiro: só os botões de porta clicam. As linhas são SVG em % do
    palco (viewBox 0-100, preserveAspectRatio none) com vector-effect non-scaling-stroke:
    a espessura vem em px de tela e a escala inversa do zoom mantém ela constante. */
-.board-walls-layer{ position:absolute; inset:0; z-index:500; pointer-events:none; }
+.board-walls-layer{ position:absolute; inset:0; z-index:560; pointer-events:none; }
 .board-walls-svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
 .bw{ fill:none; vector-effect:non-scaling-stroke; stroke-linecap:round; stroke-width:calc(3px * var(--inv-zoom, 1)); }
 .bw-parede{ stroke:#ff8a3d; }
@@ -289,6 +289,52 @@
 }
 .scn-count{ margin-left:auto; color: var(--ink-faint); font-size:10.5px; }
 .scn-selected{ background: var(--accent-faint); border:1px solid var(--accent-core); border-radius:8px; padding:9px; }
+
+/* ---------- Iluminação (db/060) ---------- */
+/* ordem no palco: tokens < escuridão (520) < marcadores de luz (580) < paredes (560) < captura (600) < cursores (1000) */
+.board-light-layer{ position:absolute; inset:0; z-index:520; pointer-events:none; }
+.board-light-layer canvas{ position:absolute; inset:0; width:100%; height:100%; display:block; }
+.board-dark{ filter: blur(1.1px); }
+.board-glow{ mix-blend-mode: screen; opacity:0.9; }
+.board-gray{ mix-blend-mode: saturation; }
+/* token fora da luz some pro jogador (o dele nunca) */
+.board-token{ transition: opacity 0.3s ease; }
+.board-token[data-unseen]{ opacity:0; pointer-events:none; }
+.board-light-markers{ position:absolute; inset:0; z-index:580; pointer-events:none; }
+.board-light-marker{
+  position:absolute; transform:translate(-50%,-50%); scale:var(--inv-zoom, 1); pointer-events:auto; cursor:grab;
+  width:28px; height:28px; border-radius:50%; border:2px solid #ffd27a; background:rgba(0,0,0,0.65);
+  display:flex; align-items:center; justify-content:center; font-size:14px; line-height:1; box-shadow:0 0 12px rgba(255,210,122,0.5);
+}
+.board-light-marker.off{ opacity:0.45; box-shadow:none; }
+.board-light-marker:active{ cursor:grabbing; }
+.board-token-light-btn{
+  position:absolute; bottom:-4px; left:-4px; width:17px; height:17px; border-radius:50%; border:1px solid var(--void);
+  background: var(--stone-700); font-size:9px; line-height:1; cursor:pointer; display:flex; align-items:center; justify-content:center;
+  opacity:0.6; filter:grayscale(1); z-index:5; scale: var(--inv-zoom, 1); transition: all 0.15s ease; padding:0;
+}
+.board-token-light-btn.on{ opacity:1; filter:none; background:#5a4310; box-shadow:0 0 8px rgba(255,200,90,0.7); }
+.board-token-light-btn:hover{ opacity:1; }
+
+/* abas e editor de luz do painel Cenário */
+.scn-tabs{ display:flex; gap:4px; }
+.scn-tab{
+  flex:1; padding:7px 4px; border-radius:7px; border:1px solid var(--stone-line); background: var(--stone-800);
+  color: var(--ink-faint); font-size:10.5px; cursor:pointer; transition: all 0.15s ease;
+}
+.scn-tab:hover{ color: var(--ink); border-color: var(--accent-core); }
+.scn-tab.active{ color: var(--accent); border-color: var(--accent); background: var(--accent-faint); }
+.scn-light{ display:flex; flex-direction:column; gap:8px; padding:6px 0; border-bottom:1px solid var(--stone-line); }
+.scn-light:last-child{ border-bottom:none; }
+.scn-light.open{ background: var(--accent-faint); border-radius:8px; padding:8px; border:1px solid var(--accent-core); }
+.scn-light-row{ display:flex; align-items:center; gap:7px; }
+.scn-light-name{ flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.scn-light-name small{ color: var(--ink-faint); }
+.scn-light-editor{ display:flex; flex-direction:column; gap:7px; }
+.scn-slider{ display:grid; grid-template-columns:78px 1fr 46px; align-items:center; gap:8px; font-size:10.5px; color: var(--ink-dim); }
+.scn-slider input[type="range"]{ width:100%; accent-color: var(--accent); }
+.scn-slider input[type="color"]{ width:34px; height:24px; padding:0; border:1px solid var(--stone-line); border-radius:4px; background:none; cursor:pointer; }
+.scn-slider output{ text-align:right; color: var(--ink-faint); font-size:10px; }
 
 /* ---------- Fase 3: cursor colorido de cada um, ao vivo ---------- */
 /* pointer-events:none na camada inteira -- cursor remoto é só visual,
