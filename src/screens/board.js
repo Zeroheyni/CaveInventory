@@ -40,8 +40,18 @@ import {
   subscribeCampaignBoards,
   broadcastCursor,
   broadcastDrag,
+  readImageSize,
+  updateBoardDims,
+  listBoardWalls,
+  insertWalls,
+  deleteWalls,
+  updateWalls,
+  updateBoardSettings,
 } from '../board.js';
-import { renderBoardHud } from './boardHud.js';
+import { renderBoardHud, mountDrawer } from './boardHud.js';
+import { blockingWalls, resolveMove, toWorld, toPct } from '../boardGeometry.js';
+import { wallsLayerHtml, createWallEditor } from '../boardWalls.js';
+import { mountSceneryPanel } from '../boardScenery.js';
 
 // throttle do que é mandado por Broadcast (Fase 3) -- cursor e preview
 // de arrasto/redimensionar não precisam (nem devem) mandar uma
@@ -110,6 +120,454 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   let resizeBoardRect = null;
   let resizeEl = null;
 
+  // ---- PAREDES (db/060): desenhadas pelo mestre, bloqueiam o arrasto dos
+  // tokens (e, na Fase 2, a luz). Dados em % do palco, igual aos tokens.
+  // O editor (boardWalls.js) e o painel (boardScenery.js) só falam com o
+  // banco por aqui. ----
+  const WALL_TOOL_DEFS = {
+    parede: { mode: 'line', kind: 'parede' },
+    retangulo: { mode: 'rect', kind: 'parede' },
+    porta: { mode: 'line', kind: 'porta' },
+    janela: { mode: 'line', kind: 'janela' },
+    invisivel: { mode: 'line', kind: 'invisivel' },
+    editar: { mode: 'edit' },
+    apagar: { mode: 'erase' },
+  };
+  let walls = [];
+  let wallTool = null; // chave de WALL_TOOL_DEFS; null = "mover" (arrasta tokens/mapa normalmente)
+  let selectedWallId = null;
+  let wallGrid = 0; // passo da grade de encaixe em % (0 = sem)
+  let wallsVersion = 0; // sobe a cada mudança -- invalida o cache de colisão
+  let moveWallsCache = { version: -1, aspect: 0, list: [] };
+  let wallsReloadTimer = null;
+  let sceneryPanel = null;
+  let dragLastX = 0; // última posição VÁLIDA do token arrastado (colisão varre desse ponto até o ponteiro)
+  let dragLastY = 0;
+
+  const wallHost = {
+    stage: () => $('board-stage'),
+    aspect: () => stageAspect(),
+    walls: () => walls,
+    tool: () => (wallTool ? WALL_TOOL_DEFS[wallTool] || null : null),
+    grid: () => wallGrid,
+    async add(rows) {
+      try {
+        const created = await insertWalls(viewBoardId, campaignId, rows);
+        walls = walls.concat(created);
+        wallsChanged();
+        return created;
+      } catch (err) {
+        error = err.message;
+        render();
+        throw err;
+      }
+    },
+    async remove(ids) {
+      walls = walls.filter((w) => !ids.includes(w.id));
+      if (ids.includes(selectedWallId)) selectedWallId = null;
+      wallsChanged();
+      try {
+        await deleteWalls(ids);
+      } catch (err) {
+        error = err.message;
+        reloadWalls();
+        throw err;
+      }
+    },
+    async update(updates) {
+      updates.forEach((u) => {
+        const w = walls.find((x) => x.id === u.id);
+        if (w) Object.assign(w, u.fields);
+      });
+      wallsChanged();
+      try {
+        await updateWalls(updates);
+      } catch (err) {
+        error = err.message;
+        reloadWalls();
+        throw err;
+      }
+    },
+    select(id) {
+      selectedWallId = id;
+    },
+    selected: () => selectedWallId,
+    redraw: () => wallsChanged(),
+    changed: () => refreshScenery(),
+  };
+  const wallEditor = createWallEditor(wallHost);
+
+  function showWallsLayer() {
+    const b = currentBoard();
+    return isMaster || !!(b && b.show_walls_to_players);
+  }
+
+  // redesenha só a camada de paredes (sem render() geral)
+  function wallsChanged() {
+    wallsVersion += 1;
+    const layer = $('board-walls-layer');
+    if (layer) {
+      layer.innerHTML = showWallsLayer()
+        ? wallsLayerHtml(visibleWalls(), { selectedId: selectedWallId, editing: wallTool === 'editar', doorButtons: isMaster })
+        : '';
+      wireDoorButtons();
+    }
+    refreshScenery();
+  }
+  // jogador só vê parede "de verdade" (a invisível some, ela só bloqueia)
+  function visibleWalls() {
+    return isMaster ? walls : walls.filter((w) => w.kind !== 'invisivel');
+  }
+
+  function moveWallsFor(aspect) {
+    if (moveWallsCache.version !== wallsVersion || moveWallsCache.aspect !== aspect) {
+      moveWallsCache = { version: wallsVersion, aspect, list: blockingWalls(walls, 'move', aspect) };
+    }
+    return moveWallsCache.list;
+  }
+
+  // posição final do token arrastado depois da colisão ("parar e deslizar").
+  // Vale só no cliente (modelo de confiança de mesa de amigos): o mestre
+  // ignora segurando Shift e o tabuleiro tem um interruptor de colisão.
+  function resolveTokenMove(token, tx, ty, ignore) {
+    const b = currentBoard();
+    const free = () => {
+      dragLastX = tx;
+      dragLastY = ty;
+      return { x: tx, y: ty };
+    };
+    if (ignore || !b || !b.collision_enabled || !walls.length) return free();
+    const aspect = stageAspect();
+    const list = moveWallsFor(aspect);
+    if (!list.length) return free();
+    const r = ((token.size / 100) * aspect) / 2;
+    const res = resolveMove(toWorld(dragLastX, dragLastY, aspect), toWorld(tx, ty, aspect), r, list);
+    const p = toPct(res.x, res.y, aspect);
+    dragLastX = Math.max(0, Math.min(100, p.x));
+    dragLastY = Math.max(0, Math.min(100, p.y));
+    return { x: dragLastX, y: dragLastY };
+  }
+
+  async function reloadWalls() {
+    if (!viewBoardId) return;
+    try {
+      walls = await listBoardWalls(viewBoardId);
+    } catch (_) {
+      // sem a tabela (migration não aplicada) ou rede: tabuleiro segue sem paredes
+    }
+    wallsChanged();
+  }
+
+  async function toggleDoor(id) {
+    const w = walls.find((x) => x.id === id);
+    if (!w) return;
+    try {
+      await wallHost.update([{ id, fields: { door_open: !w.door_open } }]);
+    } catch (_) {
+      // erro já exibido
+    }
+  }
+  function wireDoorButtons() {
+    app.querySelectorAll('[data-door-toggle]').forEach((btn) => {
+      btn.addEventListener('pointerdown', (e) => e.stopPropagation());
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleDoor(btn.dataset.doorToggle);
+      });
+    });
+  }
+
+  // o elemento que captura o ponteiro enquanto uma ferramenta de parede está ativa
+  function syncWallCapture() {
+    const stage = $('board-stage');
+    if (!stage) return;
+    const existing = $('board-wall-capture');
+    const want = isMaster && wallTool && WALL_TOOL_DEFS[wallTool];
+    if (!want) {
+      if (existing) existing.remove();
+      wallEditor.detach();
+      return;
+    }
+    let cap = existing;
+    if (!cap) {
+      cap = document.createElement('div');
+      cap.className = 'board-wall-capture';
+      cap.id = 'board-wall-capture';
+      stage.appendChild(cap);
+    }
+    cap.dataset.tool = wallTool;
+    wallEditor.attach(cap);
+  }
+
+  // ---- painel Cenário (drawer do mestre) ----
+  function refreshScenery() {
+    if (sceneryPanel) sceneryPanel.refresh();
+  }
+  function setWallTool(key) {
+    wallTool = key && key !== 'mover' && WALL_TOOL_DEFS[key] ? key : null;
+    wallEditor.reset();
+    if (wallTool !== 'editar') selectedWallId = null;
+    const area = $('board-area');
+    if (area) area.classList.toggle('walls-editing', !!wallTool);
+    syncWallCapture();
+    wallsChanged();
+  }
+  async function patchBoard(fields) {
+    const b = currentBoard();
+    if (!b) return;
+    Object.assign(b, fields);
+    try {
+      await updateBoardSettings(b.id, fields);
+    } catch (err) {
+      error = err.message;
+    }
+    render();
+  }
+  const sceneryApi = {
+    state() {
+      const b = currentBoard() || {};
+      return {
+        tab: 'paredes',
+        tool: wallTool || 'mover',
+        collision: b.collision_enabled !== false,
+        showWalls: !!b.show_walls_to_players,
+        grid: wallGrid,
+        wallCount: walls.length,
+        selected: walls.find((w) => w.id === selectedWallId) || null,
+        canUndo: wallEditor.canUndo(),
+        canRedo: wallEditor.canRedo(),
+      };
+    },
+    setTool: setWallTool,
+    setCollision: (v) => patchBoard({ collision_enabled: !!v }),
+    setShowWalls: (v) => patchBoard({ show_walls_to_players: !!v }),
+    setGrid(n) {
+      wallGrid = Number(n) || 0;
+      refreshScenery();
+    },
+    undo: () => wallEditor.undo(),
+    redo: () => wallEditor.redo(),
+    selectedKind(kind) {
+      const w = walls.find((x) => x.id === selectedWallId);
+      if (!w) return;
+      const d = wallEditor.defaults(kind);
+      wallEditor.updateWalls([
+        { id: w.id, before: { kind: w.kind, blocks_move: w.blocks_move, blocks_light: w.blocks_light }, after: { kind, blocks_move: d.blocks_move, blocks_light: d.blocks_light } },
+      ]);
+    },
+    selectedFlag(flag, value) {
+      const w = walls.find((x) => x.id === selectedWallId);
+      if (!w) return;
+      wallEditor.updateWalls([{ id: w.id, before: { [flag]: w[flag] }, after: { [flag]: !!value } }]);
+    },
+    deleteSelected() {
+      if (selectedWallId) wallEditor.removeWalls([selectedWallId]);
+    },
+    clearAll() {
+      wallEditor.removeWalls(walls.map((w) => w.id));
+    },
+  };
+
+  // ---- PALCO + zoom/pan (base de paredes e iluminação) ----
+  // x/y/size dos tokens são % do PALCO (.board-stage), que tem a proporção
+  // da imagem do mapa e é encaixado (contain) na tela -- igual pra todo
+  // mundo, em qualquer aparelho. Antes eram % da tela inteira com a imagem
+  // em `cover`, o que cortava o mapa de um jeito diferente em cada tela.
+  // Zoom/pan são LOCAIS (cada um olha como quiser, nada vai pro banco nem
+  // pro Broadcast); ficam em localStorage por tabuleiro.
+  // view = { z: zoom, fx/fy: ponto do palco (0-1) que está no centro da tela }
+  // -- em fração, não em px, pra sobreviver a redimensionar a janela.
+  const ZOOM_MIN = 0.4;
+  const ZOOM_MAX = 8;
+  const FALLBACK_ASPECT = 16 / 9; // tabuleiro sem imagem
+  let view = { z: 1, fx: 0.5, fy: 0.5 };
+  const measuredDims = new Map(); // boardId -> { w, h } medido pela URL (boards antigos)
+  const panPointers = new Map(); // pointerId -> último { x, y } (1 dedo = pan, 2 = pinça)
+  let pinchLast = null;
+  let saveViewTimer = null;
+  let areaResizeObserver = null;
+
+  const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
+  const viewKey = (id) => 'board-view-' + id;
+
+  function loadView(boardId) {
+    view = { z: 1, fx: 0.5, fy: 0.5 };
+    try {
+      const raw = localStorage.getItem(viewKey(boardId));
+      if (!raw) return;
+      const v = JSON.parse(raw);
+      if (Number.isFinite(v.z) && Number.isFinite(v.fx) && Number.isFinite(v.fy)) {
+        view = { z: clamp(v.z, ZOOM_MIN, ZOOM_MAX), fx: clamp(v.fx, 0, 1), fy: clamp(v.fy, 0, 1) };
+      }
+    } catch (_) {
+      // storage bloqueado/corrompido -- começa do padrão
+    }
+  }
+  function saveViewSoon() {
+    clearTimeout(saveViewTimer);
+    saveViewTimer = setTimeout(() => {
+      try {
+        if (viewBoardId) localStorage.setItem(viewKey(viewBoardId), JSON.stringify(view));
+      } catch (_) {
+        // sem storage, só não lembra
+      }
+    }, 250);
+  }
+
+  function currentBoard() {
+    return boards.find((b) => b.id === viewBoardId) || null;
+  }
+  // tamanho natural da imagem do tabuleiro aberto (null = ainda não sei / sem imagem)
+  function stageDims() {
+    const b = currentBoard();
+    if (b && b.bg_width > 0 && b.bg_height > 0) return { w: b.bg_width, h: b.bg_height };
+    if (b && b.background_image_url && measuredDims.get(b.id)) return measuredDims.get(b.id);
+    return null;
+  }
+  function stageAspect() {
+    const d = stageDims();
+    return d ? d.w / d.h : FALLBACK_ASPECT;
+  }
+  // sem imagem = pronto (16:9); com imagem, só depois de saber o tamanho
+  function stageReady() {
+    const b = currentBoard();
+    return !(b && b.background_image_url) || !!stageDims();
+  }
+  // boards criados antes do palco não têm bg_width/bg_height: mede pela URL
+  // (e o mestre grava, pra ninguém precisar medir de novo)
+  function ensureStageDims() {
+    const b = currentBoard();
+    if (!b || !b.background_image_url || stageDims() || measuredDims.has(b.id)) return;
+    const id = b.id;
+    measuredDims.set(id, null);
+    readImageSize(b.background_image_url)
+      .then((d) => {
+        measuredDims.set(id, d);
+        if (isMaster) updateBoardDims(id, d.w, d.h).catch(() => {});
+      })
+      .catch(() => measuredDims.set(id, { w: 16, h: 9 }))
+      .finally(() => {
+        if (viewBoardId === id) applyView();
+      });
+  }
+
+  // tamanho do palco em px com zoom 1 (contain dentro da área) + retângulo da área
+  function stageBase() {
+    const area = $('board-area');
+    if (!area) return null;
+    const a = area.getBoundingClientRect();
+    if (!a.width || !a.height) return null;
+    const aspect = stageAspect();
+    let W;
+    let H;
+    if (a.width / a.height > aspect) {
+      H = a.height;
+      W = H * aspect;
+    } else {
+      W = a.width;
+      H = W / aspect;
+    }
+    return { a, W, H };
+  }
+
+  function applyView() {
+    const stage = $('board-stage');
+    const base = stageBase();
+    if (!stage || !base) return;
+    const { a, W, H } = base;
+    const z = view.z;
+    const tx = a.width / 2 - view.fx * W * z;
+    const ty = a.height / 2 - view.fy * H * z;
+    stage.style.width = W + 'px';
+    stage.style.height = H + 'px';
+    stage.style.transform = `translate(${tx}px, ${ty}px) scale(${z})`;
+    // controles dos tokens (×, ⚙, alça, popover, cursores) não crescem/encolhem com o zoom
+    stage.style.setProperty('--inv-zoom', String(1 / z));
+    stage.style.visibility = stageReady() ? '' : 'hidden';
+  }
+
+  // zoom em torno de um ponto da tela (o ponto sob o cursor fica parado)
+  function zoomAt(clientX, clientY, factor) {
+    const stage = $('board-stage');
+    const base = stageBase();
+    if (!stage || !base) return;
+    const s = stage.getBoundingClientRect();
+    const px = (clientX - s.left) / s.width;
+    const py = (clientY - s.top) / s.height;
+    const nz = clamp(view.z * factor, ZOOM_MIN, ZOOM_MAX);
+    view.fx = clamp(px - (clientX - base.a.left - base.a.width / 2) / (base.W * nz), 0, 1);
+    view.fy = clamp(py - (clientY - base.a.top - base.a.height / 2) / (base.H * nz), 0, 1);
+    view.z = nz;
+    applyView();
+    saveViewSoon();
+  }
+
+  function panByPixels(dx, dy) {
+    const base = stageBase();
+    if (!base) return;
+    view.fx = clamp(view.fx - dx / (base.W * view.z), 0, 1);
+    view.fy = clamp(view.fy - dy / (base.H * view.z), 0, 1);
+    applyView();
+    saveViewSoon();
+  }
+
+  function resetView() {
+    view = { z: 1, fx: 0.5, fy: 0.5 };
+    applyView();
+    saveViewSoon();
+  }
+
+  // pan/pinça só começam no "fundo" (nada de token, botão ou painel por baixo)
+  function isBackgroundTarget(e) {
+    if (e.target.closest('.board-wall-capture')) return e.button === 1; // ferramenta ativa: só o botão do meio arrasta o mapa
+    return !e.target.closest('.board-token, button, input, label, .board-add-token-picker, .board-zoom-ctl');
+  }
+  function onAreaPointerDown(e) {
+    if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 1) return;
+    if (!isBackgroundTarget(e)) return;
+    e.preventDefault();
+    const area = e.currentTarget;
+    try {
+      area.setPointerCapture(e.pointerId);
+    } catch (_) {
+      // ponteiro já liberado -- segue sem captura
+    }
+    panPointers.set(e.pointerId, { x: e.clientX, y: e.clientY });
+    if (panPointers.size === 2) {
+      const [p, q] = Array.from(panPointers.values());
+      pinchLast = { mid: { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }, dist: Math.hypot(p.x - q.x, p.y - q.y) };
+    }
+    area.classList.add('panning');
+  }
+  function onAreaPointerMoveView(e) {
+    const prev = panPointers.get(e.pointerId);
+    if (!prev) return;
+    const cur = { x: e.clientX, y: e.clientY };
+    if (panPointers.size === 1) {
+      panByPixels(cur.x - prev.x, cur.y - prev.y);
+      panPointers.set(e.pointerId, cur);
+      return;
+    }
+    panPointers.set(e.pointerId, cur);
+    const [p, q] = Array.from(panPointers.values());
+    const mid = { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 };
+    const dist = Math.hypot(p.x - q.x, p.y - q.y);
+    if (pinchLast && pinchLast.dist > 0 && dist > 0) {
+      panByPixels(mid.x - pinchLast.mid.x, mid.y - pinchLast.mid.y);
+      zoomAt(mid.x, mid.y, dist / pinchLast.dist);
+    }
+    pinchLast = { mid, dist };
+  }
+  function onAreaPointerUpView(e) {
+    if (!panPointers.delete(e.pointerId)) return;
+    if (panPointers.size < 2) pinchLast = null;
+    if (panPointers.size === 0) e.currentTarget.classList.remove('panning');
+  }
+  function onAreaWheel(e) {
+    e.preventDefault();
+    zoomAt(e.clientX, e.clientY, Math.exp(-e.deltaY * 0.0015));
+  }
+
   // ---- Fase 3: cursor colorido de cada um + preview de arrasto ao
   // vivo, via Realtime Broadcast (efêmero, nunca gravado no banco) ----
   const remoteCursors = new Map(); // userId -> { x, y, color, name, lastSeen }
@@ -126,6 +584,19 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   // trocam de visível/escondido junto com a tela cheia. Ver comentário
   // completo em boardHud.js.
   const hud = renderBoardHud(app.parentElement, { session, profile, campaign, characterId, characterName, isMaster });
+  // drawer "Cenário" (paredes, e depois luz) -- só mestre, empilhado abaixo do de Dados
+  if (isMaster && hud.root) {
+    mountDrawer(hud.root, {
+      side: 'left',
+      icon: '🧭',
+      label: '',
+      title: 'cenário: paredes e iluminação',
+      stack: 1,
+      mountBody(container) {
+        sceneryPanel = mountSceneryPanel(container, sceneryApi);
+      },
+    });
+  }
 
   async function load() {
     loading = true;
@@ -163,12 +634,23 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     addTokenOpen = false;
     tokens = [];
     remoteCursors.clear();
+    loadView(boardId);
+    walls = [];
+    wallTool = null;
+    selectedWallId = null;
+    wallEditor.clearHistory();
     render();
+    ensureStageDims();
     try {
       tokens = await listBoardTokens(boardId);
       error = '';
     } catch (err) {
       error = err.message;
+    }
+    try {
+      walls = await listBoardWalls(boardId);
+    } catch (_) {
+      walls = []; // migration db/060 ainda não aplicada: tabuleiro funciona sem paredes
     }
     render();
     resubscribeTokens();
@@ -177,6 +659,15 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   }
 
   function closeBoard() {
+    if (areaResizeObserver) {
+      areaResizeObserver.disconnect();
+      areaResizeObserver = null;
+    }
+    panPointers.clear();
+    wallEditor.detach();
+    wallTool = null;
+    selectedWallId = null;
+    walls = [];
     viewBoardId = null;
     tokens = [];
     remoteCursors.clear();
@@ -210,6 +701,10 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       },
       onCursor: handleRemoteCursor,
       onDrag: handleRemoteDrag,
+      onWalls: () => {
+        clearTimeout(wallsReloadTimer);
+        wallsReloadTimer = setTimeout(reloadWalls, 300);
+      },
     });
   }
 
@@ -389,7 +884,10 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     // se o ponteiro estiver sobre um token/alça/popover, o evento já
     // borbulha até aqui também (não precisa de listener separado) --
     // as coordenadas continuam relativas ao board-area inteiro.
-    const rect = e.currentTarget.getBoundingClientRect();
+    const stageEl = $('board-stage');
+    if (!stageEl) return;
+    const rect = stageEl.getBoundingClientRect();
+    if (!rect.width || !rect.height) return;
     const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100));
     const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100));
     maybeBroadcastCursor(x, y);
@@ -564,7 +1062,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     const tokenId = el.dataset.tokenId;
     const token = tokens.find((t) => t.id === tokenId);
     if (!token || !canMoveToken(token)) return;
-    const boardArea = $('board-area');
+    const boardArea = $('board-stage'); // palco: o retângulo dele já inclui zoom/pan
     if (!boardArea) return;
     e.preventDefault();
     dragTokenId = tokenId;
@@ -574,6 +1072,8 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     dragStartClientY = e.clientY;
     dragStartXPct = token.x;
     dragStartYPct = token.y;
+    dragLastX = token.x;
+    dragLastY = token.y;
     dragBoardRect = boardArea.getBoundingClientRect();
     el.setPointerCapture(e.pointerId);
     el.classList.add('dragging');
@@ -583,11 +1083,13 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     if (!dragTokenId || e.pointerId !== dragPointerId || !dragEl || !dragBoardRect) return;
     const deltaXPct = ((e.clientX - dragStartClientX) / dragBoardRect.width) * 100;
     const deltaYPct = ((e.clientY - dragStartClientY) / dragBoardRect.height) * 100;
-    const x = Math.max(0, Math.min(100, dragStartXPct + deltaXPct));
-    const y = Math.max(0, Math.min(100, dragStartYPct + deltaYPct));
+    const wantX = Math.max(0, Math.min(100, dragStartXPct + deltaXPct));
+    const wantY = Math.max(0, Math.min(100, dragStartYPct + deltaYPct));
+    const token = tokens.find((t) => t.id === dragTokenId);
+    // colisão com as paredes (o mestre ignora segurando Shift)
+    const { x, y } = token ? resolveTokenMove(token, wantX, wantY, isMaster && e.shiftKey) : { x: wantX, y: wantY };
     dragEl.style.left = x + '%';
     dragEl.style.top = y + '%';
-    const token = tokens.find((t) => t.id === dragTokenId);
     if (token) {
       token.x = x;
       token.y = y;
@@ -628,7 +1130,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     const tokenId = tokenEl && tokenEl.dataset.tokenId;
     const token = tokens.find((t) => t.id === tokenId);
     if (!token || !canMoveToken(token)) return;
-    const boardArea = $('board-area');
+    const boardArea = $('board-stage'); // palco: o retângulo dele já inclui zoom/pan
     if (!boardArea) return;
     e.preventDefault();
     resizeTokenId = tokenId;
@@ -846,14 +1348,26 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       <div class="board-fullscreen">
         <button type="button" class="board-back-btn" id="board-back-btn" title="sair do tabuleiro">←</button>
         ${error ? `<div class="board-error board-fullscreen-error">${escapeHtml(error)}</div>` : ''}
-        <div class="board-area" id="board-area" style="${bg ? `background-image:url('${escapeHtml(bg)}');` : ''}">
-          ${tokens.map(tokenHtml).join('')}
+        <div class="board-area ${isMaster && wallTool ? 'walls-editing' : ''}" id="board-area">
+          <div class="board-stage" id="board-stage" style="${bg ? `background-image:url('${escapeHtml(bg)}');` : ''}">
+            ${tokens.map(tokenHtml).join('')}
+            <div class="board-walls-layer" id="board-walls-layer">${showWallsLayer() ? wallsLayerHtml(visibleWalls(), { selectedId: selectedWallId, editing: wallTool === 'editar', doorButtons: isMaster }) : ''}</div>
+            <div class="board-cursor-layer" id="board-cursor-layer"></div>
+          </div>
           ${isMaster ? `<button type="button" class="board-add-token-fab" id="board-add-token-fab" title="adicionar token de personagem">+ token</button>` : ''}
           ${addTokenPickerHtml()}
-          <div class="board-cursor-layer" id="board-cursor-layer"></div>
+          <div class="board-zoom-ctl">
+            <button type="button" data-zoom="in" title="aproximar">+</button>
+            <button type="button" data-zoom="out" title="afastar">−</button>
+            <button type="button" data-zoom="reset" title="enquadrar o mapa">⤢</button>
+          </div>
         </div>
       </div>`;
     wireFullscreenEvents();
+    applyView();
+    ensureStageDims();
+    wireDoorButtons();
+    syncWallCapture();
     // o board-area acabou de ser reconstruído do zero (innerHTML) --
     // redesenha os cursores que eu já conhecia na camada nova, senão
     // eles ficam "invisíveis" até a próxima mensagem de Broadcast
@@ -1052,6 +1566,28 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     if (boardAreaEl) {
       boardAreaEl.addEventListener('pointermove', onBoardAreaPointerMove);
       boardAreaEl.addEventListener('pointerleave', onBoardAreaPointerLeave);
+      // zoom (roda/pinça) e pan (arrastar o fundo) -- locais
+      boardAreaEl.addEventListener('pointerdown', onAreaPointerDown);
+      boardAreaEl.addEventListener('pointermove', onAreaPointerMoveView);
+      boardAreaEl.addEventListener('pointerup', onAreaPointerUpView);
+      boardAreaEl.addEventListener('pointercancel', onAreaPointerUpView);
+      boardAreaEl.addEventListener('wheel', onAreaWheel, { passive: false });
+      boardAreaEl.querySelectorAll('[data-zoom]').forEach((btn) => {
+        btn.addEventListener('click', () => {
+          const mode = btn.dataset.zoom;
+          if (mode === 'reset') resetView();
+          else {
+            const r = boardAreaEl.getBoundingClientRect();
+            zoomAt(r.left + r.width / 2, r.top + r.height / 2, mode === 'in' ? 1.25 : 0.8);
+          }
+        });
+      });
+      // janela/tela mudou de tamanho: reencaixa o palco
+      if (areaResizeObserver) areaResizeObserver.disconnect();
+      if (typeof ResizeObserver !== 'undefined') {
+        areaResizeObserver = new ResizeObserver(() => applyView());
+        areaResizeObserver.observe(boardAreaEl);
+      }
     }
   }
 

@@ -164,6 +164,8 @@ export function renderBoardHud(mountParent, { session, profile, campaign, charac
   });
 
   return {
+    // raiz do HUD: o board.js monta o drawer "Cenário" (paredes/luz) aqui dentro
+    root,
     setVisible(v) {
       visible = !!v;
       root.style.display = visible ? '' : 'none';
@@ -183,9 +185,9 @@ export function renderBoardHud(mountParent, { session, profile, campaign, charac
 // (`mountBody`), e fica montado pra sempre depois (mesmo padrão de
 // "nunca desmonta" do resto do app) -- fechar só esconde via CSS.
 // ---------------------------------------------------------------
-function mountDrawer(root, { side, icon, label, title, mountBody }) {
+export function mountDrawer(root, { side, icon, label, title, mountBody, stack = 0 }) {
   const wrap = document.createElement('div');
-  wrap.className = `board-hud-drawer side-${side}`;
+  wrap.className = `board-hud-drawer side-${side}${stack ? ' stack-' + stack : ''}`;
   root.appendChild(wrap);
 
   const handle = document.createElement('button');

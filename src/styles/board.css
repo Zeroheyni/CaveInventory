@@ -74,8 +74,31 @@
 
 .board-area{
   position:absolute; inset:0; overflow:hidden; background-color: var(--stone-900);
-  background-size:cover; background-position:center; touch-action:none;
+  touch-action:none; cursor:grab;
 }
+.board-area.panning{ cursor:grabbing; }
+
+/* PALCO: tem a proporção da imagem do mapa (o JS calcula width/height em px e o
+   transform de zoom/pan). Tokens, cursores, paredes e luzes são filhos dele, então
+   left/top/width em % continuam valendo -- agora % do palco, igual em qualquer tela.
+   Sem will-change:transform de propósito: com ele o navegador estica o raster antigo
+   ao dar zoom e o mapa fica borrado. */
+.board-stage{
+  position:absolute; left:0; top:0; transform-origin:0 0; --inv-zoom:1;
+  background-size:100% 100%; background-repeat:no-repeat; background-color: var(--stone-800);
+  box-shadow:0 0 0 1px var(--stone-line), 0 10px 50px rgba(0,0,0,0.55);
+}
+
+/* zoom: + − e enquadrar, canto de baixo à esquerda */
+.board-zoom-ctl{
+  position:absolute; left:14px; bottom:14px; z-index:10; display:flex; flex-direction:column; gap:4px; cursor:default;
+}
+.board-zoom-ctl button{
+  width:30px; height:30px; border-radius:8px; border:1px solid var(--stone-line); background: var(--stone-900);
+  color: var(--ink-dim); font-size:15px; line-height:1; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.4);
+  display:flex; align-items:center; justify-content:center; transition: all 0.15s ease;
+}
+.board-zoom-ctl button:hover{ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); }
 
 .board-token{
   position:absolute; transform:translate(-50%,-50%); aspect-ratio:1/1; min-width:32px;
@@ -113,6 +136,13 @@
   transition: all 0.15s ease;
 }
 .board-token-resize:hover{ opacity:1; transform:scale(1.25); }
+
+/* o palco escala com o zoom; os controles (×, ⚙, alça, popover, rótulo do cursor) ganham a
+   escala inversa pra continuarem do mesmo tamanho na tela -- propriedade `scale` à parte, que
+   compõe com o transform dos :hover */
+.board-token-del, .board-token-edit-btn, .board-token-resize{ scale: var(--inv-zoom, 1); }
+.board-token-edit-popover{ scale: var(--inv-zoom, 1); transform-origin: top center; }
+.board-token{ border-width: calc(3px * var(--inv-zoom, 1)); }
 
 /* popover de editar aparência (Fase 2) -- filho do próprio token, por
    isso ancorado relativo a ele; se o token estiver perto da borda do
@@ -182,6 +212,84 @@
 }
 .board-add-token-option small{ color: var(--ink-faint); }
 
+/* ---------- Paredes (db/060) ---------- */
+/* camada inteira sem ponteiro: só os botões de porta clicam. As linhas são SVG em % do
+   palco (viewBox 0-100, preserveAspectRatio none) com vector-effect non-scaling-stroke:
+   a espessura vem em px de tela e a escala inversa do zoom mantém ela constante. */
+.board-walls-layer{ position:absolute; inset:0; z-index:500; pointer-events:none; }
+.board-walls-svg{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; }
+.bw{ fill:none; vector-effect:non-scaling-stroke; stroke-linecap:round; stroke-width:calc(3px * var(--inv-zoom, 1)); }
+.bw-parede{ stroke:#ff8a3d; }
+.bw-janela{ stroke:#5ad4ff; stroke-dasharray:7 5; }
+.bw-porta{ stroke:#d9a441; stroke-width:calc(4px * var(--inv-zoom, 1)); stroke-dasharray:9 3; }
+.bw-porta.open{ stroke:#6bdc8b; stroke-width:calc(2px * var(--inv-zoom, 1)); stroke-dasharray:2 6; }
+.bw-invisivel{ stroke:#b18cff; stroke-width:calc(2px * var(--inv-zoom, 1)); stroke-dasharray:1 5; }
+.bw.inert{ opacity:0.55; }
+.bw.sel{ stroke-width:calc(6px * var(--inv-zoom, 1)); filter:drop-shadow(0 0 4px #fff); }
+.board-door-btn{
+  position:absolute; transform:translate(-50%,-50%); scale:var(--inv-zoom, 1); pointer-events:auto; z-index:5;
+  width:24px; height:24px; border-radius:50%; border:1px solid #d9a441; background: var(--stone-900); font-size:12px; line-height:1;
+  display:flex; align-items:center; justify-content:center; cursor:pointer; box-shadow:0 2px 8px rgba(0,0,0,0.5); padding:0;
+}
+.board-door-btn.open{ border-color:#6bdc8b; }
+.board-door-btn:hover{ background: var(--accent-faint); }
+.board-wall-handle{
+  position:absolute; width:11px; height:11px; border-radius:50%; background:#fff; border:2px solid #ff8a3d;
+  transform:translate(-50%,-50%); scale:var(--inv-zoom, 1); pointer-events:none;
+}
+
+/* captura o ponteiro por cima de tudo enquanto uma ferramenta de parede está ativa
+   (tokens não arrastam nesse modo) */
+.board-wall-capture{ position:absolute; inset:0; z-index:600; cursor:crosshair; touch-action:none; }
+.board-area.walls-editing .board-token{ pointer-events:none; }
+.board-wall-capture[data-tool="apagar"]{ cursor:cell; }
+.board-wall-capture[data-tool="editar"]{ cursor:default; }
+.board-walls-preview{ position:absolute; inset:0; width:100%; height:100%; overflow:visible; pointer-events:none; }
+.bp{ fill:none; vector-effect:non-scaling-stroke; stroke-linecap:round; stroke-width:calc(3px * var(--inv-zoom, 1)); }
+.bp-draw{ stroke:#fff; stroke-dasharray:6 4; }
+.bp-erase{ stroke:#ff4d4d; stroke-width:calc(5px * var(--inv-zoom, 1)); }
+.board-wall-snapdot{
+  position:absolute; width:12px; height:12px; border-radius:50%; border:2px solid #fff; background:rgba(255,255,255,0.25);
+  transform:translate(-50%,-50%); scale:var(--inv-zoom, 1); pointer-events:none;
+}
+.board-wall-snapdot.on-point{ border-color:#6bdc8b; background:rgba(107,220,139,0.45); }
+
+/* ---------- painel Cenário (drawer do mestre) ---------- */
+.scenery-panel{ display:flex; flex-direction:column; gap:10px; padding:12px; min-width:250px; color: var(--ink); font-size:12px; }
+.scn-head{ font-family: var(--font-display); letter-spacing:0.08em; font-size:12px; color: var(--accent); }
+.scn-body{ display:flex; flex-direction:column; gap:12px; }
+.scn-section{ display:flex; flex-direction:column; gap:8px; padding-bottom:10px; border-bottom:1px solid var(--stone-line); }
+.scn-section:last-child{ border-bottom:none; }
+.scn-title{ font-size:10.5px; color: var(--ink-faint); letter-spacing:0.06em; text-transform:uppercase; }
+.scn-tools{ display:grid; grid-template-columns:repeat(4, 1fr); gap:5px; }
+.scn-tool{
+  display:flex; flex-direction:column; align-items:center; gap:2px; padding:7px 2px; border-radius:8px; cursor:pointer;
+  border:1px solid var(--stone-line); background: var(--stone-800); color: var(--ink-dim); transition: all 0.15s ease;
+}
+.scn-tool span{ font-size:17px; line-height:1; }
+.scn-tool small{ font-size:9.5px; }
+.scn-tool:hover{ border-color: var(--accent-core); color: var(--ink); }
+.scn-tool.active{ border-color: var(--accent); background: var(--accent-faint); color: var(--accent); box-shadow:0 0 10px var(--accent-faint); }
+.scn-hint{ font-size:10.5px; color: var(--ink-faint); line-height:1.45; }
+.scn-row{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+.scn-mini{
+  font-size:10.5px; padding:6px 9px; border-radius:6px; border:1px solid var(--stone-line); background: var(--stone-800);
+  color: var(--ink-dim); cursor:pointer; transition: all 0.15s ease;
+}
+.scn-mini:hover:not(:disabled){ color: var(--accent); border-color: var(--accent-core); }
+.scn-mini:disabled{ opacity:0.4; cursor:default; }
+.scn-mini.active{ color: var(--accent); border-color: var(--accent); background: var(--accent-faint); }
+.scn-mini.danger:hover{ color: var(--danger); border-color: var(--danger); }
+.scn-kinds{ display:flex; gap:5px; flex-wrap:wrap; }
+.scn-check{ display:flex; align-items:center; gap:7px; cursor:pointer; line-height:1.3; }
+.scn-check small{ color: var(--ink-faint); }
+.scn-inline{ display:flex; align-items:center; gap:6px; color: var(--ink-faint); }
+.scn-inline select{
+  background: var(--stone-800); border:1px solid var(--stone-line); color: var(--ink); border-radius:5px; padding:4px 6px; font-size:11px;
+}
+.scn-count{ margin-left:auto; color: var(--ink-faint); font-size:10.5px; }
+.scn-selected{ background: var(--accent-faint); border:1px solid var(--accent-core); border-radius:8px; padding:9px; }
+
 /* ---------- Fase 3: cursor colorido de cada um, ao vivo ---------- */
 /* pointer-events:none na camada inteira -- cursor remoto é só visual,
    nunca deve atrapalhar clique/arrasto em nada por baixo. z-index bem
@@ -192,6 +300,7 @@
   position:absolute; transform:translate(-3px,-3px); display:flex; flex-direction:column; align-items:flex-start; gap:2px;
   transition: left 0.09s linear, top 0.09s linear; will-change: left, top;
 }
+.board-cursor{ scale: var(--inv-zoom, 1); transform-origin: 0 0; }
 .board-cursor svg{ filter: drop-shadow(0 1px 3px rgba(0,0,0,0.7)); flex-shrink:0; }
 .board-cursor-label{
   font-family: var(--font-mono); font-size:10px; padding:2px 6px; border-radius:4px; margin-left:14px;
@@ -485,6 +594,8 @@
 .board-hud-drawer{ position:fixed; top:104px; pointer-events:none; }
 .board-hud-drawer.side-left{ left:0; }
 .board-hud-drawer.side-right{ right:0; }
+/* segunda alça empilhada na mesma lateral (Cenário, abaixo de Dados) */
+.board-hud-drawer.stack-1{ top:176px; }
 
 .board-hud-drawer-handle{
   position:relative; z-index:2; pointer-events:auto;

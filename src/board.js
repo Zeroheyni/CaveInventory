@@ -41,6 +41,32 @@ export async function setActiveBoard(campaignId, boardId) {
 // inconsistente aqui) -- sempre nome de arquivo novo. Bucket
 // `avatars` reaproveitado: a policy de INSERT já dá ao mestre upload
 // livre em qualquer prefixo, então não precisa de bucket/policy novo.
+// tamanho natural de uma imagem (arquivo ou URL) -- o "palco" do tabuleiro
+// usa a proporção dela (ver board.js, Fase 0 de paredes/iluminação).
+export function readImageSize(source) {
+  return new Promise((resolve, reject) => {
+    const isFile = typeof source !== 'string';
+    const url = isFile ? URL.createObjectURL(source) : source;
+    const img = new Image();
+    img.onload = () => {
+      if (isFile) URL.revokeObjectURL(url);
+      if (img.naturalWidth > 0 && img.naturalHeight > 0) resolve({ w: img.naturalWidth, h: img.naturalHeight });
+      else reject(new Error('imagem sem tamanho'));
+    };
+    img.onerror = () => {
+      if (isFile) URL.revokeObjectURL(url);
+      reject(new Error('não consegui ler a imagem'));
+    };
+    img.src = url;
+  });
+}
+
+// grava o tamanho natural (boards antigos só ganham isso quando o mestre abre)
+export async function updateBoardDims(boardId, w, h) {
+  const { error } = await supabase.from('boards').update({ bg_width: w, bg_height: h }).eq('id', boardId);
+  if (error) throw error;
+}
+
 export async function uploadBoardBackground(boardId, file) {
   const ext = (file.name.split('.').pop() || 'png').toLowerCase().replace(/[^a-z0-9]/g, '') || 'png';
   const path = `boards/${boardId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
@@ -48,9 +74,77 @@ export async function uploadBoardBackground(boardId, file) {
   if (uploadError) throw uploadError;
   const { data } = supabase.storage.from('avatars').getPublicUrl(path);
   const url = data.publicUrl;
-  const { error } = await supabase.from('boards').update({ background_image_url: url }).eq('id', boardId);
+  const payload = { background_image_url: url, bg_width: null, bg_height: null };
+  try {
+    const dims = await readImageSize(file);
+    payload.bg_width = dims.w;
+    payload.bg_height = dims.h;
+  } catch (_) {
+    // sem medida: o board.js mede pela URL ao abrir
+  }
+  const { error } = await supabase.from('boards').update(payload).eq('id', boardId);
   if (error) throw error;
   return url;
+}
+
+// ---------------------------------------------------------------
+// Paredes (db/060) -- segmentos desenhados pelo mestre. Coordenadas
+// em % do palco (igual aos tokens). Ver boardWalls.js (editor) e
+// boardGeometry.js (colisão/luz).
+// ---------------------------------------------------------------
+
+// o que cada tipo de parede bloqueia por padrão (o mestre pode ajustar
+// as flags de uma parede específica depois)
+export const WALL_KIND_DEFAULTS = {
+  parede: { blocks_move: true, blocks_light: true },
+  janela: { blocks_move: true, blocks_light: false },
+  porta: { blocks_move: true, blocks_light: true },
+  invisivel: { blocks_move: true, blocks_light: false },
+};
+
+export async function listBoardWalls(boardId) {
+  const { data, error } = await supabase.from('board_walls').select('*').eq('board_id', boardId).order('created_at');
+  if (error) throw error;
+  return data;
+}
+
+// rows: [{ x1, y1, x2, y2, kind, blocks_move?, blocks_light?, door_open? }]
+export async function insertWalls(boardId, campaignId, rows) {
+  if (!rows.length) return [];
+  const payload = rows.map((r) => ({
+    board_id: boardId,
+    campaign_id: campaignId,
+    x1: r.x1,
+    y1: r.y1,
+    x2: r.x2,
+    y2: r.y2,
+    kind: r.kind || 'parede',
+    blocks_move: r.blocks_move ?? WALL_KIND_DEFAULTS[r.kind || 'parede'].blocks_move,
+    blocks_light: r.blocks_light ?? WALL_KIND_DEFAULTS[r.kind || 'parede'].blocks_light,
+    door_open: !!r.door_open,
+  }));
+  const { data, error } = await supabase.from('board_walls').insert(payload).select();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteWalls(ids) {
+  if (!ids.length) return;
+  const { error } = await supabase.from('board_walls').delete().in('id', ids);
+  if (error) throw error;
+}
+
+// updates: [{ id, fields }] -- um update por parede (campos diferentes por linha)
+export async function updateWalls(updates) {
+  const results = await Promise.all(updates.map((u) => supabase.from('board_walls').update(u.fields).eq('id', u.id)));
+  const failed = results.find((r) => r.error);
+  if (failed) throw failed.error;
+}
+
+// ajustes do tabuleiro (colisão, iluminação, escuridão...) -- só o mestre
+export async function updateBoardSettings(boardId, fields) {
+  const { error } = await supabase.from('boards').update(fields).eq('id', boardId);
+  if (error) throw error;
 }
 
 export async function listBoardTokens(boardId) {
@@ -163,10 +257,16 @@ export async function deleteToken(tokenId) {
 // onCursor/onDrag são opcionais -- quem só quer ouvir mudança
 // persistida (ex: nenhum caso hoje, mas deixa a função flexível)
 // simplesmente não passa.
-export function subscribeBoard(boardId, { onChange, onCursor, onDrag } = {}) {
+export function subscribeBoard(boardId, { onChange, onCursor, onDrag, onWalls, onLights } = {}) {
   const channel = supabase.channel('board-tokens-' + boardId);
   if (onChange) {
     channel.on('postgres_changes', { event: '*', schema: 'public', table: 'board_tokens', filter: `board_id=eq.${boardId}` }, onChange);
+  }
+  if (onWalls) {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'board_walls', filter: `board_id=eq.${boardId}` }, onWalls);
+  }
+  if (onLights) {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'board_lights', filter: `board_id=eq.${boardId}` }, onLights);
   }
   if (onCursor) channel.on('broadcast', { event: 'cursor' }, ({ payload }) => onCursor(payload));
   if (onDrag) channel.on('broadcast', { event: 'drag' }, ({ payload }) => onDrag(payload));
