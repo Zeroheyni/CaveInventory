@@ -17,6 +17,8 @@ import { createInvadersGame } from '../games/invaders.js';
 import { createMinasGame } from '../games/minas.js';
 import { createFroggerGame } from '../games/frogger.js';
 import { createFarkleGame } from '../games/farkle.js';
+import { createBlackjackGame } from '../games/blackjack.js';
+import { createPacmanGame } from '../games/pacman.js';
 
 const GAMES = {
   snake: { label: 'Cobrinha', icon: '🐍', factory: createSnakeGame, width: 360, height: 360, hasPreview: false },
@@ -33,6 +35,8 @@ const GAMES = {
   minas: { label: 'Campo Minado', icon: '💣', factory: createMinasGame, width: 360, height: 410, hasPreview: false },
   frogger: { label: 'Frogger', icon: '🐸', factory: createFroggerGame, width: 364, height: 392, hasPreview: false },
   farkle: { label: 'Farkle', icon: '🎲', factory: createFarkleGame, width: 360, height: 420, hasPreview: false },
+  blackjack: { label: 'Blackjack', icon: '🃏', factory: createBlackjackGame, width: 360, height: 420, hasPreview: false },
+  pacman: { label: 'Pac-Man', icon: '🟡', factory: createPacmanGame, width: 342, height: 426, hasPreview: false },
 };
 
 // chamado quando o overlay fecha -- pra tela de baixo (character.js/
@@ -247,6 +251,8 @@ export function renderEasterEggOverlay({ campaign, profile, onClose }) {
                   ${selectedGame === 'minas' ? '🖱 clique abre · botão direito (ou segurar no toque) marca · setas + espaço/F no teclado' : ''}
                   ${selectedGame === 'frogger' ? '⌨ setas/WASD pulam uma casa · ou deslize/toque na tela' : ''}
                   ${selectedGame === 'farkle' ? '🖱 clique nos dados que pontuam · R rola · B guarda · 1-6 seleciona · A seleciona tudo' : ''}
+                  ${selectedGame === 'blackjack' ? '🖱 clique nas fichas e botões · 1-4 apostam · Enter distribui · H pede · S para · D dobra · P divide' : ''}
+                  ${selectedGame === 'pacman' ? '⌨ setas/WASD (ou deslize) · coma tudo, fuja dos fantasmas, pílula grande inverte o jogo' : ''}
                   ${selectedGame === 'invaders' ? '⌨ ◄ ► ou A/D move · espaço atira · ou arraste o mouse/dedo (clique/toque atira)' : ''}
                 </div>
               </div>

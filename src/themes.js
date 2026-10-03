@@ -4,7 +4,7 @@
 // importa `renderFichaScreen` de ficha.js, então ficha.js importar de
 // volta `THEMES`/`themeSwatchHtml` de character.js criaria um import
 // circular. Módulo próprio, sem depender de nenhuma tela.
-export const GAME_THEME_LABELS = { snake: 'Cobrinha', tetris: 'Tetris', flappy: 'Flappy Bird', '2048': '2048', breakout: 'Breakout', pong: 'Pong', asteroids: 'Asteroids', dino: 'Dino', invaders: 'Space Invaders', minas: 'Campo Minado', frogger: 'Frogger', farkle: 'Farkle' };
+export const GAME_THEME_LABELS = { snake: 'Cobrinha', tetris: 'Tetris', flappy: 'Flappy Bird', '2048': '2048', breakout: 'Breakout', pong: 'Pong', asteroids: 'Asteroids', dino: 'Dino', invaders: 'Space Invaders', minas: 'Campo Minado', frogger: 'Frogger', farkle: 'Farkle', blackjack: 'Blackjack', pacman: 'Pac-Man' };
 
 // html de UM swatch do seletor de tema -- compartilhado entre
 // character.js, masterCampaignHub.js e ficha.js (tema por NPC) pra não
@@ -95,5 +95,9 @@ export const THEMES = [
   {id:'frogger-noite', label:'Travessia Noturna', group:'especial', accent:'#3ef0c4', void:'#050d14', unlockGame:'frogger'},
   {id:'frogger-nenufar', label:'Lago de Nenúfares', group:'especial', accent:'#d9548c', void:'#eef6f1', unlockGame:'frogger'},
   {id:'farkle-cassino', label:'Cassino Veludo', group:'especial', accent:'#f5c542', void:'#12060a', unlockGame:'farkle'},
-  {id:'farkle-taverna', label:'Taverna de Madeira', group:'especial', accent:'#2a6f6a', void:'#efe0bd', unlockGame:'farkle'}
+  {id:'farkle-taverna', label:'Taverna de Madeira', group:'especial', accent:'#2a6f6a', void:'#efe0bd', unlockGame:'farkle'},
+  {id:'blackjack-feltro', label:'Mesa de Feltro', group:'especial', accent:'#4aa3ff', void:'#04140c', unlockGame:'blackjack'},
+  {id:'blackjack-deco', label:'Salão Art Déco', group:'especial', accent:'#0f6b6b', void:'#f4ecd8', unlockGame:'blackjack'},
+  {id:'pacman-neon', label:'Fliperama Neon', group:'especial', accent:'#3b5bff', void:'#02030d', unlockGame:'pacman'},
+  {id:'pacman-kawaii', label:'Doceria Kawaii', group:'especial', accent:'#f59a23', void:'#fff7ea', unlockGame:'pacman'}
 ];

@@ -569,6 +569,39 @@
     --danger:#a8321f; --danger-rgb:168,50,31;
   }
 
+  html[data-theme="blackjack-feltro"]{
+    /* Blackjack, escuro -- mesa de feltro verde com fichas azuis e ouro. */
+    --void:#04140c; --stone-900:#072016; --stone-800:#0b2c1e; --stone-700:#103a28; --stone-line:#1d5a3e;
+    --ink:#e8f5ec; --ink-dim:#9cc9b0; --ink-faint:#5a8a70;
+    --accent:#4aa3ff; --accent-core:#2a7fd6; --accent-deep:#0c2a4a; --accent-faint:rgba(74,163,255,0.13); --accent-rgb:74,163,255;
+    --warn:#f5c542; --warn-rgb:245,197,66;
+    --danger:#ff5a5a; --danger-rgb:255,90,90;
+  }
+  html[data-theme="blackjack-deco"]{
+    /* Blackjack, claro -- salão Art Déco: creme, ouro velho e verde-petróleo. */
+    --void:#f4ecd8; --stone-900:#ece2c6; --stone-800:#e2d6b3; --stone-700:#d4c597; --stone-line:#b49b5c;
+    --ink:#1c1a14; --ink-dim:#4a4430; --ink-faint:#857c5e;
+    --accent:#0f6b6b; --accent-core:#0a4f4f; --accent-deep:#cfe6e2; --accent-faint:rgba(15,107,107,0.12); --accent-rgb:15,107,107;
+    --warn:#a87408; --warn-rgb:168,116,8;
+    --danger:#a3231f; --danger-rgb:163,35,31;
+  }
+  html[data-theme="pacman-neon"]{
+    /* Pac-Man, escuro -- fliperama: preto-azulado com neon azul de labirinto e amarelo de Pac-Man. */
+    --void:#02030d; --stone-900:#05071a; --stone-800:#090c26; --stone-700:#0f1438; --stone-line:#1f2f9a;
+    --ink:#eef0ff; --ink-dim:#9aa6e8; --ink-faint:#5a66b0;
+    --accent:#3b5bff; --accent-core:#2a43d6; --accent-deep:#0a1250; --accent-faint:rgba(59,91,255,0.14); --accent-rgb:59,91,255;
+    --warn:#ffe600; --warn-rgb:255,230,0;
+    --danger:#ff3b6a; --danger-rgb:255,59,106;
+  }
+  html[data-theme="pacman-kawaii"]{
+    /* Pac-Man, claro -- doceria kawaii: creme com laranja de bala e fantasminhas pastel. */
+    --void:#fff7ea; --stone-900:#ffeed8; --stone-800:#ffe3c4; --stone-700:#ffd6ae; --stone-line:#f2b98a;
+    --ink:#6a4a3a; --ink-dim:#956e58; --ink-faint:#c29a80;
+    --accent:#f59a23; --accent-core:#d97f0c; --accent-deep:#ffe8c2; --accent-faint:rgba(245,154,35,0.14); --accent-rgb:245,154,35;
+    --warn:#e0701a; --warn-rgb:224,112,26;
+    --danger:#e0456b; --danger-rgb:224,69,107;
+  }
+
   *{box-sizing:border-box; margin:0; padding:0;}
 
   /* troca de tema suave -- só nas cores (background/border/texto/sombra),
@@ -2168,6 +2201,272 @@
     html[data-theme="farkle-taverna"] :is(body, .wrap)::before, html[data-theme="farkle-taverna"] :is(body, .wrap)::after,
     html[data-theme="minas-perigo"] .title .dot, html[data-theme="frogger-noite"] .title .dot, html[data-theme="frogger-nenufar"] .title .dot,
     html[data-theme="farkle-cassino"] .title .dot, html[data-theme="farkle-taverna"] .title .dot{ animation:none !important; }
+  }
+
+
+  /* ---------- Blackjack / Mesa de Feltro ---------- */
+  html[data-theme="blackjack-feltro"] body{
+    background:
+      radial-gradient(ellipse 70% 45% at 50% -8%, rgba(255,240,190,0.2), transparent 70%),
+      radial-gradient(ellipse 140% 100% at 50% 55%, transparent 45%, rgba(0,0,0,0.6) 100%),
+      repeating-radial-gradient(circle at 50% 120%, transparent 0 78px, rgba(245,197,66,0.07) 79px 80px),
+      linear-gradient(180deg, #0a2a1c, #06180f);
+    background-attachment: fixed;
+  }
+  /* carta (verso azul) sendo distribuída pela mesa */
+  html[data-theme="blackjack-feltro"] body::before{
+    content:""; mix-blend-mode:normal; position:fixed; left:0; top:22vh; width:56px; height:79px; pointer-events:none; z-index:0; opacity:0;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'64'%20height%3D'90'%20viewBox%3D'0%200%2064%2090'%3E%20%3Crect%20x%3D'1'%20y%3D'1'%20width%3D'62'%20height%3D'88'%20rx%3D'7'%20fill%3D'%23f4f1e8'%20stroke%3D'%23000'%20stroke-opacity%3D'.35'%2F%3E%20%3Crect%20x%3D'6'%20y%3D'6'%20width%3D'52'%20height%3D'78'%20rx%3D'4'%20fill%3D'%231f4fb8'%2F%3E%20%3Cpath%20d%3D'M32%206%20L58%2045%20L32%2084%20L6%2045Z'%20fill%3D'none'%20stroke%3D'%23a9c9ff'%20stroke-width%3D'1.4'%2F%3E%20%3Cpath%20d%3D'M32%2016%20L50%2045%20L32%2074%20L14%2045Z'%20fill%3D'none'%20stroke%3D'%23a9c9ff'%20stroke-width%3D'1'%20stroke-opacity%3D'.7'%2F%3E%20%3Ccircle%20cx%3D'32'%20cy%3D'45'%20r%3D'7'%20fill%3D'%23a9c9ff'%2F%3E%3Ccircle%20cx%3D'32'%20cy%3D'45'%20r%3D'3'%20fill%3D'%231f4fb8'%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat;
+    animation: card-deal 11s ease-in-out infinite;
+  }
+  @keyframes card-deal{
+    0%{ opacity:0; translate:-80px 0; rotate:-35deg; }
+    6%{ opacity:0.85; }
+    30%{ opacity:0.85; translate:calc(50vw - 28px) 8vh; rotate:12deg; }
+    42%{ opacity:0.85; translate:calc(50vw - 28px) 8vh; rotate:12deg; }
+    60%{ opacity:0; translate:calc(100vw + 60px) -4vh; rotate:300deg; }
+    100%{ opacity:0; translate:calc(100vw + 60px) -4vh; rotate:300deg; }
+  }
+  /* pilha de fichas respirando no canto */
+  html[data-theme="blackjack-feltro"] body::after{
+    content:""; position:fixed; left:18px; bottom:16px; top:auto; right:auto; width:70px; height:92px; pointer-events:none; z-index:0; opacity:0.9;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'70'%20height%3D'92'%20viewBox%3D'0%200%2070%2092'%3E%3Cellipse%20cx%3D'35'%20cy%3D'76'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%23000'%20fill-opacity%3D'.35'%2F%3E%3Crect%20x%3D'5'%20y%3D'66'%20width%3D'60'%20height%3D'10'%20fill%3D'%232a7fd6'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'76'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%232a7fd6'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'66'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%232a7fd6'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'66'%20rx%3D'30'%20ry%3D'9'%20fill%3D'none'%20stroke%3D'%23fff'%20stroke-opacity%3D'.85'%20stroke-width%3D'1.5'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'66'%20rx%3D'21'%20ry%3D'5.5'%20fill%3D'none'%20stroke%3D'%23fff'%20stroke-opacity%3D'.8'%20stroke-width%3D'2'%20stroke-dasharray%3D'5%206'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'66'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%23000'%20fill-opacity%3D'.35'%2F%3E%3Crect%20x%3D'5'%20y%3D'56'%20width%3D'60'%20height%3D'10'%20fill%3D'%23d9382f'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'66'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%23d9382f'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'56'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%23d9382f'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'56'%20rx%3D'30'%20ry%3D'9'%20fill%3D'none'%20stroke%3D'%23fff'%20stroke-opacity%3D'.85'%20stroke-width%3D'1.5'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'56'%20rx%3D'21'%20ry%3D'5.5'%20fill%3D'none'%20stroke%3D'%23fff'%20stroke-opacity%3D'.8'%20stroke-width%3D'2'%20stroke-dasharray%3D'5%206'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'56'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%23000'%20fill-opacity%3D'.35'%2F%3E%3Crect%20x%3D'5'%20y%3D'46'%20width%3D'60'%20height%3D'10'%20fill%3D'%23f4f1e8'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'56'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%23f4f1e8'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'46'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%23f4f1e8'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'46'%20rx%3D'30'%20ry%3D'9'%20fill%3D'none'%20stroke%3D'%23fff'%20stroke-opacity%3D'.85'%20stroke-width%3D'1.5'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'46'%20rx%3D'21'%20ry%3D'5.5'%20fill%3D'none'%20stroke%3D'%23fff'%20stroke-opacity%3D'.8'%20stroke-width%3D'2'%20stroke-dasharray%3D'5%206'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'46'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%23000'%20fill-opacity%3D'.35'%2F%3E%3Crect%20x%3D'5'%20y%3D'36'%20width%3D'60'%20height%3D'10'%20fill%3D'%232a7fd6'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'46'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%232a7fd6'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'36'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%232a7fd6'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'36'%20rx%3D'30'%20ry%3D'9'%20fill%3D'none'%20stroke%3D'%23fff'%20stroke-opacity%3D'.85'%20stroke-width%3D'1.5'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'36'%20rx%3D'21'%20ry%3D'5.5'%20fill%3D'none'%20stroke%3D'%23fff'%20stroke-opacity%3D'.8'%20stroke-width%3D'2'%20stroke-dasharray%3D'5%206'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'36'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%23000'%20fill-opacity%3D'.35'%2F%3E%3Crect%20x%3D'5'%20y%3D'26'%20width%3D'60'%20height%3D'10'%20fill%3D'%231c9a5a'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'36'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%231c9a5a'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'26'%20rx%3D'30'%20ry%3D'9'%20fill%3D'%231c9a5a'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'26'%20rx%3D'30'%20ry%3D'9'%20fill%3D'none'%20stroke%3D'%23fff'%20stroke-opacity%3D'.85'%20stroke-width%3D'1.5'%2F%3E%3Cellipse%20cx%3D'35'%20cy%3D'26'%20rx%3D'21'%20ry%3D'5.5'%20fill%3D'none'%20stroke%3D'%23fff'%20stroke-opacity%3D'.8'%20stroke-width%3D'2'%20stroke-dasharray%3D'5%206'%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat;
+    transform-origin:50% 100%; animation: chips-bob 3.6s ease-in-out infinite alternate;
+  }
+  @keyframes chips-bob{ from{ transform:scale(1,1); } to{ transform:scale(1.02,1.05); } }
+  /* leque de cartas balançando no outro canto */
+  html[data-theme="blackjack-feltro"] .wrap::before{
+    content:""; position:fixed; right:20px; bottom:14px; width:130px; height:110px; pointer-events:none; z-index:0; opacity:0.92;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'130'%20height%3D'110'%20viewBox%3D'0%200%20130%20110'%3E%20%3Cg%20transform%3D'translate(38%20100)%20rotate(-20)'%3E%20%3Crect%20x%3D'-26'%20y%3D'-84'%20width%3D'52'%20height%3D'80'%20rx%3D'6'%20fill%3D'%23fbf8ee'%20stroke%3D'%23000'%20stroke-opacity%3D'.3'%2F%3E%20%3Ctext%20x%3D'-19'%20y%3D'-66'%20font-family%3D'Georgia%2C%20serif'%20font-size%3D'17'%20font-weight%3D'bold'%20fill%3D'%23c8201f'%3EK%3C%2Ftext%3E%20%3Ctext%20x%3D'-19'%20y%3D'-51'%20font-family%3D'Georgia%2C%20serif'%20font-size%3D'14'%20fill%3D'%23c8201f'%3E%E2%99%A5%3C%2Ftext%3E%20%3Ctext%20x%3D'0'%20y%3D'-28'%20text-anchor%3D'middle'%20font-family%3D'Georgia%2C%20serif'%20font-size%3D'30'%20fill%3D'%23c8201f'%3E%E2%99%A5%3C%2Ftext%3E%20%3C%2Fg%3E%20%3Cg%20transform%3D'translate(65%20100)%20rotate(0)'%3E%20%3Crect%20x%3D'-26'%20y%3D'-84'%20width%3D'52'%20height%3D'80'%20rx%3D'6'%20fill%3D'%23fbf8ee'%20stroke%3D'%23000'%20stroke-opacity%3D'.3'%2F%3E%20%3Ctext%20x%3D'-19'%20y%3D'-66'%20font-family%3D'Georgia%2C%20serif'%20font-size%3D'17'%20font-weight%3D'bold'%20fill%3D'%2315130e'%3EA%3C%2Ftext%3E%20%3Ctext%20x%3D'-19'%20y%3D'-51'%20font-family%3D'Georgia%2C%20serif'%20font-size%3D'14'%20fill%3D'%2315130e'%3E%E2%99%A0%3C%2Ftext%3E%20%3Ctext%20x%3D'0'%20y%3D'-28'%20text-anchor%3D'middle'%20font-family%3D'Georgia%2C%20serif'%20font-size%3D'30'%20fill%3D'%2315130e'%3E%E2%99%A0%3C%2Ftext%3E%20%3C%2Fg%3E%20%3Cg%20transform%3D'translate(92%20100)%20rotate(20)'%3E%20%3Crect%20x%3D'-26'%20y%3D'-84'%20width%3D'52'%20height%3D'80'%20rx%3D'6'%20fill%3D'%23fbf8ee'%20stroke%3D'%23000'%20stroke-opacity%3D'.3'%2F%3E%20%3Ctext%20x%3D'-19'%20y%3D'-66'%20font-family%3D'Georgia%2C%20serif'%20font-size%3D'17'%20font-weight%3D'bold'%20fill%3D'%23c8201f'%3EQ%3C%2Ftext%3E%20%3Ctext%20x%3D'-19'%20y%3D'-51'%20font-family%3D'Georgia%2C%20serif'%20font-size%3D'14'%20fill%3D'%23c8201f'%3E%E2%99%A6%3C%2Ftext%3E%20%3Ctext%20x%3D'0'%20y%3D'-28'%20text-anchor%3D'middle'%20font-family%3D'Georgia%2C%20serif'%20font-size%3D'30'%20fill%3D'%23c8201f'%3E%E2%99%A6%3C%2Ftext%3E%20%3C%2Fg%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat;
+    transform-origin:50% 100%; animation: fan-sway 5s ease-in-out infinite alternate;
+  }
+  @keyframes fan-sway{ from{ transform:rotate(-3deg); } to{ transform:rotate(3deg); } }
+  /* brilho de lustre passando pelo feltro */
+  html[data-theme="blackjack-feltro"] .wrap::after{
+    content:""; position:fixed; left:-30vw; top:0; width:30vw; height:100vh; pointer-events:none; z-index:0; opacity:0.5;
+    background: linear-gradient(100deg, transparent, rgba(255,246,200,0.09) 50%, transparent);
+    animation: felt-sheen 13s linear infinite;
+  }
+  @keyframes felt-sheen{ from{ translate:0 0; } to{ translate:160vw 0; } }
+  html[data-theme="blackjack-feltro"] .title .dot{ background: radial-gradient(circle at 35% 30%, #cfe6ff, var(--accent) 60%, #1a5aa8); animation: dot-chip 2.6s ease-in-out infinite; }
+  @keyframes dot-chip{ 0%,100%{ transform:scaleX(1); } 50%{ transform:scaleX(0.2); } }
+
+  /* ---------- Blackjack / Salão Art Déco ---------- */
+  html[data-theme="blackjack-deco"] body{
+    background:
+      radial-gradient(ellipse 140% 100% at 50% 45%, transparent 55%, rgba(120,90,30,0.22) 100%),
+      url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'80'%20height%3D'40'%20viewBox%3D'0%200%2080%2040'%3E%3Cpath%20d%3D'M4%2040%20A36%2036%200%200%201%2076%2040'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.4'%20stroke-width%3D'1.2'%2F%3E%3Cpath%20d%3D'M36%200%20A36%2036%200%200%201%200%2036'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.4'%20stroke-width%3D'1.2'%2F%3E%3Cpath%20d%3D'M44%200%20A36%2036%200%200%200%2080%2036'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.4'%20stroke-width%3D'1.2'%2F%3E%3Cpath%20d%3D'M13%2040%20A27%2027%200%200%201%2067%2040'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.4'%20stroke-width%3D'1.2'%2F%3E%3Cpath%20d%3D'M27%200%20A27%2027%200%200%201%200%2027'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.4'%20stroke-width%3D'1.2'%2F%3E%3Cpath%20d%3D'M53%200%20A27%2027%200%200%200%2080%2027'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.4'%20stroke-width%3D'1.2'%2F%3E%3Cpath%20d%3D'M22%2040%20A18%2018%200%200%201%2058%2040'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.4'%20stroke-width%3D'1.2'%2F%3E%3Cpath%20d%3D'M18%200%20A18%2018%200%200%201%200%2018'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.4'%20stroke-width%3D'1.2'%2F%3E%3Cpath%20d%3D'M62%200%20A18%2018%200%200%200%2080%2018'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.4'%20stroke-width%3D'1.2'%2F%3E%3Cpath%20d%3D'M31%2040%20A9%209%200%200%201%2049%2040'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.4'%20stroke-width%3D'1.2'%2F%3E%3Cpath%20d%3D'M9%200%20A9%209%200%200%201%200%209'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.4'%20stroke-width%3D'1.2'%2F%3E%3Cpath%20d%3D'M71%200%20A9%209%200%200%200%2080%209'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.4'%20stroke-width%3D'1.2'%2F%3E%3C%2Fsvg%3E") 0 0 / 80px 40px,
+      linear-gradient(180deg, #f7f0dc, #efe5c8);
+    background-attachment: fixed;
+  }
+  /* leque de raios dourados girando devagar (camada enorme, só rotate) */
+  html[data-theme="blackjack-deco"] body::before{
+    content:""; mix-blend-mode:normal; position:fixed; left:50%; top:50%; width:230vmax; height:230vmax; margin:-115vmax 0 0 -115vmax; pointer-events:none; z-index:0;
+    background: repeating-conic-gradient(from 0deg, rgba(168,116,8,0.1) 0deg 3deg, transparent 3deg 12deg);
+    -webkit-mask-image: radial-gradient(circle, transparent 4%, #000 40%, transparent 72%); mask-image: radial-gradient(circle, transparent 4%, #000 40%, transparent 72%);
+    animation: deco-rays 150s linear infinite;
+  }
+  @keyframes deco-rays{ from{ rotate:0deg; } to{ rotate:360deg; } }
+  /* moldura dourada dupla pulsando */
+  html[data-theme="blackjack-deco"] body::after{
+    content:""; position:fixed; inset:10px; pointer-events:none; z-index:0;
+    border:2px solid rgba(168,116,8,0.55); box-shadow: inset 0 0 0 5px transparent, inset 0 0 0 6px rgba(168,116,8,0.35);
+    animation: deco-frame 6s ease-in-out infinite alternate;
+  }
+  @keyframes deco-frame{ from{ opacity:0.55; } to{ opacity:1; } }
+  /* ficha preta e ouro girando devagar */
+  html[data-theme="blackjack-deco"] .wrap::before{
+    content:""; position:fixed; right:26px; bottom:26px; width:78px; height:78px; pointer-events:none; z-index:0; opacity:0.9;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'90'%20height%3D'90'%20viewBox%3D'0%200%2090%2090'%3E%20%3Ccircle%20cx%3D'45'%20cy%3D'45'%20r%3D'42'%20fill%3D'%2316140f'%2F%3E%3Crect%20x%3D'42'%20y%3D'3'%20width%3D'6'%20height%3D'13'%20rx%3D'1'%20fill%3D'%23e8c766'%20transform%3D'rotate(0%2045%2045)'%2F%3E%3Crect%20x%3D'42'%20y%3D'3'%20width%3D'6'%20height%3D'13'%20rx%3D'1'%20fill%3D'%23e8c766'%20transform%3D'rotate(30%2045%2045)'%2F%3E%3Crect%20x%3D'42'%20y%3D'3'%20width%3D'6'%20height%3D'13'%20rx%3D'1'%20fill%3D'%23e8c766'%20transform%3D'rotate(60%2045%2045)'%2F%3E%3Crect%20x%3D'42'%20y%3D'3'%20width%3D'6'%20height%3D'13'%20rx%3D'1'%20fill%3D'%23e8c766'%20transform%3D'rotate(90%2045%2045)'%2F%3E%3Crect%20x%3D'42'%20y%3D'3'%20width%3D'6'%20height%3D'13'%20rx%3D'1'%20fill%3D'%23e8c766'%20transform%3D'rotate(120%2045%2045)'%2F%3E%3Crect%20x%3D'42'%20y%3D'3'%20width%3D'6'%20height%3D'13'%20rx%3D'1'%20fill%3D'%23e8c766'%20transform%3D'rotate(150%2045%2045)'%2F%3E%3Crect%20x%3D'42'%20y%3D'3'%20width%3D'6'%20height%3D'13'%20rx%3D'1'%20fill%3D'%23e8c766'%20transform%3D'rotate(180%2045%2045)'%2F%3E%3Crect%20x%3D'42'%20y%3D'3'%20width%3D'6'%20height%3D'13'%20rx%3D'1'%20fill%3D'%23e8c766'%20transform%3D'rotate(210%2045%2045)'%2F%3E%3Crect%20x%3D'42'%20y%3D'3'%20width%3D'6'%20height%3D'13'%20rx%3D'1'%20fill%3D'%23e8c766'%20transform%3D'rotate(240%2045%2045)'%2F%3E%3Crect%20x%3D'42'%20y%3D'3'%20width%3D'6'%20height%3D'13'%20rx%3D'1'%20fill%3D'%23e8c766'%20transform%3D'rotate(270%2045%2045)'%2F%3E%3Crect%20x%3D'42'%20y%3D'3'%20width%3D'6'%20height%3D'13'%20rx%3D'1'%20fill%3D'%23e8c766'%20transform%3D'rotate(300%2045%2045)'%2F%3E%3Crect%20x%3D'42'%20y%3D'3'%20width%3D'6'%20height%3D'13'%20rx%3D'1'%20fill%3D'%23e8c766'%20transform%3D'rotate(330%2045%2045)'%2F%3E%20%3Ccircle%20cx%3D'45'%20cy%3D'45'%20r%3D'29'%20fill%3D'none'%20stroke%3D'%23e8c766'%20stroke-width%3D'1.6'%2F%3E%20%3Ccircle%20cx%3D'45'%20cy%3D'45'%20r%3D'23'%20fill%3D'%230f6b6b'%2F%3E%20%3Cpath%20d%3D'M45%2028%20L58%2045%20L45%2062%20L32%2045Z'%20fill%3D'none'%20stroke%3D'%23e8c766'%20stroke-width%3D'1.6'%2F%3E%20%3Cpath%20d%3D'M45%2035%20L52%2045%20L45%2055%20L38%2045Z'%20fill%3D'%23e8c766'%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat;
+    animation: deco-chip-spin 22s linear infinite;
+  }
+  @keyframes deco-chip-spin{ from{ rotate:0deg; } to{ rotate:360deg; } }
+  /* ás flutuando */
+  html[data-theme="blackjack-deco"] .wrap::after{
+    content:""; position:fixed; left:30px; bottom:22px; width:62px; height:88px; pointer-events:none; z-index:0; opacity:0.92;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'70'%20height%3D'100'%20viewBox%3D'0%200%2070%20100'%3E%20%3Crect%20x%3D'2'%20y%3D'2'%20width%3D'66'%20height%3D'96'%20rx%3D'6'%20fill%3D'%23f7f0dc'%20stroke%3D'%23b8860b'%20stroke-width%3D'2'%2F%3E%20%3Crect%20x%3D'7'%20y%3D'7'%20width%3D'56'%20height%3D'86'%20rx%3D'3'%20fill%3D'none'%20stroke%3D'%23b8860b'%20stroke-opacity%3D'.6'%2F%3E%20%3Ctext%20x%3D'13'%20y%3D'28'%20font-family%3D'Georgia%2C%20serif'%20font-size%3D'22'%20font-weight%3D'bold'%20fill%3D'%230f6b6b'%3EA%3C%2Ftext%3E%20%3Ctext%20x%3D'35'%20y%3D'66'%20text-anchor%3D'middle'%20font-family%3D'Georgia%2C%20serif'%20font-size%3D'40'%20fill%3D'%230f6b6b'%3E%E2%99%A0%3C%2Ftext%3E%20%3Cpath%20d%3D'M35%2076%20L41%2084%20L35%2092%20L29%2084Z'%20fill%3D'%23b8860b'%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat;
+    rotate:-9deg; animation: ace-float 4.6s ease-in-out infinite alternate;
+  }
+  @keyframes ace-float{ from{ transform:translateY(0); } to{ transform:translateY(-9px); } }
+  html[data-theme="blackjack-deco"] .title .dot{ border-radius:1px; transform:rotate(45deg); background: linear-gradient(135deg, #f3d77a, var(--warn)); box-shadow:0 0 8px rgba(var(--warn-rgb),0.5); animation: dot-diamond 3s ease-in-out infinite; }
+  @keyframes dot-diamond{ 0%,100%{ transform:rotate(45deg) scale(1); } 50%{ transform:rotate(225deg) scale(1.25); } }
+
+  /* ---------- Pac-Man / Fliperama Neon ---------- */
+  html[data-theme="pacman-neon"] body{
+    background:
+      radial-gradient(ellipse 90% 60% at 50% 110%, rgba(59,91,255,0.2), transparent 70%),
+      url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'34'%20height%3D'34'%20viewBox%3D'0%200%2034%2034'%3E%3Ccircle%20cx%3D'17'%20cy%3D'17'%20r%3D'1.3'%20fill%3D'%233b5bff'%20fill-opacity%3D'.35'%2F%3E%3C%2Fsvg%3E") 0 0 / 34px 34px,
+      linear-gradient(180deg, #03041a, #02030d);
+    background-attachment: fixed;
+  }
+  /* Pac-Man comendo pelo rodapé, fantasmas atrás */
+  html[data-theme="pacman-neon"] body::before{
+    content:""; mix-blend-mode:normal; position:fixed; left:0; bottom:46px; top:auto; right:auto; width:36px; height:36px; pointer-events:none; z-index:0; opacity:0.95;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'144'%20height%3D'36'%20viewBox%3D'0%200%20144%2036'%3E%3Ccircle%20cx%3D'18'%20cy%3D'18'%20r%3D'15'%20fill%3D'%23ffe600'%2F%3E%3Cpath%20d%3D'M54%2018%20L67.24%2010.96%20A15%2015%200%201%200%2067.24%2025.04Z'%20fill%3D'%23ffe600'%2F%3E%3Cpath%20d%3D'M90%2018%20L99.23%206.18%20A15%2015%200%201%200%2099.23%2029.82Z'%20fill%3D'%23ffe600'%2F%3E%3Cpath%20d%3D'M126%2018%20L139.24%2010.96%20A15%2015%200%201%200%20139.24%2025.04Z'%20fill%3D'%23ffe600'%2F%3E%3Ccircle%20cx%3D'20'%20cy%3D'9'%20r%3D'2'%20fill%3D'%23000'%2F%3E%3Ccircle%20cx%3D'56'%20cy%3D'9'%20r%3D'2'%20fill%3D'%23000'%2F%3E%3Ccircle%20cx%3D'92'%20cy%3D'9'%20r%3D'2'%20fill%3D'%23000'%2F%3E%3Ccircle%20cx%3D'128'%20cy%3D'9'%20r%3D'2'%20fill%3D'%23000'%2F%3E%3C%2Fsvg%3E") 0 0 / 144px 36px no-repeat;
+    filter: drop-shadow(0 0 6px rgba(255,230,0,0.7));
+    animation: pac-run 16s linear infinite, pac-chomp 0.42s steps(4) infinite;
+  }
+  @keyframes pac-run{ from{ translate:-60px 0; } to{ translate:calc(100vw + 340px) 0; } }
+  @keyframes pac-chomp{ from{ background-position:0 0; } to{ background-position:-144px 0; } }
+  html[data-theme="pacman-neon"] .wrap::before{
+    content:""; position:fixed; left:-300px; bottom:48px; width:136px; height:30px; pointer-events:none; z-index:0; opacity:0.9;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'136'%20height%3D'30'%20viewBox%3D'0%200%20136%2030'%3E%20%3Cg%20transform%3D'translate(0%201)'%3E%20%3Cpath%20d%3D'M0%2028%20V14%20A14%2014%200%200%201%2028%2014%20V28%20L23%2023%20L18%2028%20L14%2023%20L10%2028%20L5%2023Z'%20fill%3D'%23ff2d2d'%2F%3E%20%3Cellipse%20cx%3D'9'%20cy%3D'13'%20rx%3D'4'%20ry%3D'5'%20fill%3D'%23fff'%2F%3E%3Cellipse%20cx%3D'19'%20cy%3D'13'%20rx%3D'4'%20ry%3D'5'%20fill%3D'%23fff'%2F%3E%20%3Ccircle%20cx%3D'11'%20cy%3D'14'%20r%3D'2.2'%20fill%3D'%231a2cd8'%2F%3E%3Ccircle%20cx%3D'21'%20cy%3D'14'%20r%3D'2.2'%20fill%3D'%231a2cd8'%2F%3E%20%3C%2Fg%3E%20%3Cg%20transform%3D'translate(36%201)'%3E%20%3Cpath%20d%3D'M0%2028%20V14%20A14%2014%200%200%201%2028%2014%20V28%20L23%2023%20L18%2028%20L14%2023%20L10%2028%20L5%2023Z'%20fill%3D'%23ffb8f0'%2F%3E%20%3Cellipse%20cx%3D'9'%20cy%3D'13'%20rx%3D'4'%20ry%3D'5'%20fill%3D'%23fff'%2F%3E%3Cellipse%20cx%3D'19'%20cy%3D'13'%20rx%3D'4'%20ry%3D'5'%20fill%3D'%23fff'%2F%3E%20%3Ccircle%20cx%3D'11'%20cy%3D'14'%20r%3D'2.2'%20fill%3D'%231a2cd8'%2F%3E%3Ccircle%20cx%3D'21'%20cy%3D'14'%20r%3D'2.2'%20fill%3D'%231a2cd8'%2F%3E%20%3C%2Fg%3E%20%3Cg%20transform%3D'translate(72%201)'%3E%20%3Cpath%20d%3D'M0%2028%20V14%20A14%2014%200%200%201%2028%2014%20V28%20L23%2023%20L18%2028%20L14%2023%20L10%2028%20L5%2023Z'%20fill%3D'%233ee6ff'%2F%3E%20%3Cellipse%20cx%3D'9'%20cy%3D'13'%20rx%3D'4'%20ry%3D'5'%20fill%3D'%23fff'%2F%3E%3Cellipse%20cx%3D'19'%20cy%3D'13'%20rx%3D'4'%20ry%3D'5'%20fill%3D'%23fff'%2F%3E%20%3Ccircle%20cx%3D'11'%20cy%3D'14'%20r%3D'2.2'%20fill%3D'%231a2cd8'%2F%3E%3Ccircle%20cx%3D'21'%20cy%3D'14'%20r%3D'2.2'%20fill%3D'%231a2cd8'%2F%3E%20%3C%2Fg%3E%20%3Cg%20transform%3D'translate(108%201)'%3E%20%3Cpath%20d%3D'M0%2028%20V14%20A14%2014%200%200%201%2028%2014%20V28%20L23%2023%20L18%2028%20L14%2023%20L10%2028%20L5%2023Z'%20fill%3D'%23ffb852'%2F%3E%20%3Cellipse%20cx%3D'9'%20cy%3D'13'%20rx%3D'4'%20ry%3D'5'%20fill%3D'%23fff'%2F%3E%3Cellipse%20cx%3D'19'%20cy%3D'13'%20rx%3D'4'%20ry%3D'5'%20fill%3D'%23fff'%2F%3E%20%3Ccircle%20cx%3D'11'%20cy%3D'14'%20r%3D'2.2'%20fill%3D'%231a2cd8'%2F%3E%3Ccircle%20cx%3D'21'%20cy%3D'14'%20r%3D'2.2'%20fill%3D'%231a2cd8'%2F%3E%20%3C%2Fg%3E%3C%2Fsvg%3E") 0 0 / 136px 30px no-repeat;
+    filter: drop-shadow(0 0 5px rgba(120,150,255,0.6));
+    animation: pac-run 16s linear infinite;
+  }
+  /* trilha de pílulas no rodapé */
+  html[data-theme="pacman-neon"] .wrap::after{
+    content:""; position:fixed; left:0; right:0; bottom:60px; height:8px; pointer-events:none; z-index:0; opacity:0.8;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'26'%20height%3D'8'%20viewBox%3D'0%200%2026%208'%3E%3Ccircle%20cx%3D'13'%20cy%3D'4'%20r%3D'2.4'%20fill%3D'%23ffd9a8'%2F%3E%3C%2Fsvg%3E") 0 0 / 26px 8px repeat-x;
+  }
+  /* linhas de varredura + tremida de CRT */
+  html[data-theme="pacman-neon"] body::after{
+    content:""; position:fixed; inset:0; pointer-events:none; z-index:2; opacity:0.5;
+    background: repeating-linear-gradient(0deg, rgba(0,0,0,0.28) 0 1px, transparent 1px 3px);
+    animation: crt-flicker 5s steps(1) infinite;
+  }
+  @keyframes crt-flicker{ 0%,100%{ opacity:0.5; } 47%{ opacity:0.5; } 48%{ opacity:0.3; } 50%{ opacity:0.55; } 82%{ opacity:0.4; } }
+  html[data-theme="pacman-neon"] .title .dot{ background:#ffe600; box-shadow:0 0 8px #ffe600; animation: dot-chomp 0.5s steps(1) infinite; }
+  @keyframes dot-chomp{
+    0%{ clip-path: circle(50%); }
+    50%{ clip-path: polygon(50% 50%, 100% 22%, 100% 0, 0 0, 0 100%, 100% 100%, 100% 78%); }
+  }
+
+  /* ---------- Pac-Man / Doceria Kawaii ---------- */
+  html[data-theme="pacman-kawaii"] body{
+    background:
+      radial-gradient(circle, rgba(245,154,35,0.13) 2px, transparent 3px) 0 0 / 30px 30px,
+      radial-gradient(circle, rgba(255,150,190,0.12) 3px, transparent 4px) 15px 15px / 30px 30px,
+      linear-gradient(180deg, #fff9ee, #ffefd8);
+    background-attachment: fixed;
+  }
+  /* pétalas caindo em diagonal */
+  html[data-theme="pacman-kawaii"] body::before{
+    content:""; mix-blend-mode:normal; position:fixed; top:-300px; left:-300px; right:0; bottom:0; pointer-events:none; z-index:0; opacity:0.75;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'300'%20height%3D'300'%20viewBox%3D'0%200%20300%20300'%3E%3Cg%20transform%3D'translate(40%2050)%20rotate(10)%20scale(1)'%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.8'%20transform%3D'rotate(0)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.8'%20transform%3D'rotate(72)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.8'%20transform%3D'rotate(144)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.8'%20transform%3D'rotate(216)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.8'%20transform%3D'rotate(288)'%2F%3E%3Ccircle%20r%3D'2'%20fill%3D'%23ffe08a'%20fill-opacity%3D'0.8'%2F%3E%3C%2Fg%3E%3Cg%20transform%3D'translate(160%2030)%20rotate(40)%20scale(0.7)'%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(0)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(72)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(144)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(216)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(288)'%2F%3E%3Ccircle%20r%3D'2'%20fill%3D'%23ffe08a'%20fill-opacity%3D'0.7'%2F%3E%3C%2Fg%3E%3Cg%20transform%3D'translate(250%20110)%20rotate(70)%20scale(1.1)'%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.75'%20transform%3D'rotate(0)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.75'%20transform%3D'rotate(72)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.75'%20transform%3D'rotate(144)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.75'%20transform%3D'rotate(216)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.75'%20transform%3D'rotate(288)'%2F%3E%3Ccircle%20r%3D'2'%20fill%3D'%23ffe08a'%20fill-opacity%3D'0.75'%2F%3E%3C%2Fg%3E%3Cg%20transform%3D'translate(90%20170)%20rotate(20)%20scale(0.8)'%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(0)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(72)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(144)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(216)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(288)'%2F%3E%3Ccircle%20r%3D'2'%20fill%3D'%23ffe08a'%20fill-opacity%3D'0.7'%2F%3E%3C%2Fg%3E%3Cg%20transform%3D'translate(200%20220)%20rotate(55)%20scale(1)'%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.8'%20transform%3D'rotate(0)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.8'%20transform%3D'rotate(72)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.8'%20transform%3D'rotate(144)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.8'%20transform%3D'rotate(216)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.8'%20transform%3D'rotate(288)'%2F%3E%3Ccircle%20r%3D'2'%20fill%3D'%23ffe08a'%20fill-opacity%3D'0.8'%2F%3E%3C%2Fg%3E%3Cg%20transform%3D'translate(30%20260)%20rotate(30)%20scale(0.7)'%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.65'%20transform%3D'rotate(0)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.65'%20transform%3D'rotate(72)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.65'%20transform%3D'rotate(144)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.65'%20transform%3D'rotate(216)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.65'%20transform%3D'rotate(288)'%2F%3E%3Ccircle%20r%3D'2'%20fill%3D'%23ffe08a'%20fill-opacity%3D'0.65'%2F%3E%3C%2Fg%3E%3Cg%20transform%3D'translate(280%20280)%20rotate(5)%20scale(0.8)'%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(0)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(72)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(144)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(216)'%2F%3E%3Cellipse%20cx%3D'0'%20cy%3D'-7'%20rx%3D'4'%20ry%3D'7'%20fill%3D'%23ffb6cf'%20fill-opacity%3D'0.7'%20transform%3D'rotate(288)'%2F%3E%3Ccircle%20r%3D'2'%20fill%3D'%23ffe08a'%20fill-opacity%3D'0.7'%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") 0 0 / 300px 300px;
+    animation: petals-fall 60s linear infinite;
+  }
+  @keyframes petals-fall{ from{ transform:translate(0,0); } to{ transform:translate(300px,300px); } }
+  /* fantasminha rosa flutuando */
+  html[data-theme="pacman-kawaii"] .wrap::before{
+    content:""; position:fixed; right:26px; bottom:22px; width:64px; height:70px; pointer-events:none; z-index:0; opacity:0.95;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'64'%20height%3D'70'%20viewBox%3D'0%200%2064%2070'%3E%20%3Cpath%20d%3D'M4%2062%20V30%20A28%2028%200%200%201%2060%2030%20V62%20L52%2054%20L44%2062%20L36%2054%20L28%2062%20L20%2054%20L12%2062Z'%20fill%3D'%23ffc2dd'%20stroke%3D'%23f08ab6'%20stroke-width%3D'2'%20stroke-linejoin%3D'round'%2F%3E%20%3Cellipse%20cx%3D'22'%20cy%3D'30'%20rx%3D'5'%20ry%3D'7'%20fill%3D'%235a3a2a'%2F%3E%3Cellipse%20cx%3D'42'%20cy%3D'30'%20rx%3D'5'%20ry%3D'7'%20fill%3D'%235a3a2a'%2F%3E%20%3Ccircle%20cx%3D'24'%20cy%3D'27'%20r%3D'2'%20fill%3D'%23fff'%2F%3E%3Ccircle%20cx%3D'44'%20cy%3D'27'%20r%3D'2'%20fill%3D'%23fff'%2F%3E%20%3Cellipse%20cx%3D'13'%20cy%3D'40'%20rx%3D'5'%20ry%3D'3'%20fill%3D'%23ff7fa8'%20fill-opacity%3D'.6'%2F%3E%3Cellipse%20cx%3D'51'%20cy%3D'40'%20rx%3D'5'%20ry%3D'3'%20fill%3D'%23ff7fa8'%20fill-opacity%3D'.6'%2F%3E%20%3Cpath%20d%3D'M28%2041%20Q32%2046%2036%2041'%20fill%3D'none'%20stroke%3D'%235a3a2a'%20stroke-width%3D'2'%20stroke-linecap%3D'round'%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat;
+    animation: kawaii-float 3.4s ease-in-out infinite alternate;
+  }
+  @keyframes kawaii-float{ from{ transform:translateY(0) rotate(-4deg); } to{ transform:translateY(-14px) rotate(4deg); } }
+  /* cereja balançando */
+  html[data-theme="pacman-kawaii"] .wrap::after{
+    content:""; position:fixed; left:26px; bottom:20px; width:50px; height:64px; pointer-events:none; z-index:0; opacity:0.95;
+    background: url("data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20width%3D'50'%20height%3D'64'%20viewBox%3D'0%200%2050%2064'%3E%20%3Cpath%20d%3D'M14%2040%20Q18%2010%2038%206%20M36%2042%20Q40%2018%2038%206'%20fill%3D'none'%20stroke%3D'%234a9a4a'%20stroke-width%3D'2.5'%20stroke-linecap%3D'round'%2F%3E%20%3Cpath%20d%3D'M38%206%20Q50%200%2048%2014%20Q40%2014%2038%206Z'%20fill%3D'%236fc46f'%2F%3E%20%3Ccircle%20cx%3D'14'%20cy%3D'48'%20r%3D'12'%20fill%3D'%23e8324a'%2F%3E%3Ccircle%20cx%3D'36'%20cy%3D'50'%20r%3D'12'%20fill%3D'%23e8324a'%2F%3E%20%3Ccircle%20cx%3D'10'%20cy%3D'44'%20r%3D'3'%20fill%3D'%23fff'%20fill-opacity%3D'.7'%2F%3E%3Ccircle%20cx%3D'32'%20cy%3D'46'%20r%3D'3'%20fill%3D'%23fff'%20fill-opacity%3D'.7'%2F%3E%3C%2Fsvg%3E") center / 100% 100% no-repeat;
+    transform-origin:80% 8%; animation: cherry-swing 3s ease-in-out infinite alternate;
+  }
+  @keyframes cherry-swing{ from{ transform:rotate(-9deg); } to{ transform:rotate(9deg); } }
+  html[data-theme="pacman-kawaii"] .title .dot{ background:#ffb02e; box-shadow:0 0 0 2px #ffd88a; animation: dot-squish 1.6s ease-in-out infinite; }
+  @keyframes dot-squish{ 0%,100%{ transform:scale(1,1); } 50%{ transform:scale(1.25,0.8); } }
+
+  /* ================================================================
+     SKINS DE UI dos 4 temas de Blackjack e Pac-Man
+     ================================================================ */
+  html[data-theme="blackjack-feltro"], html[data-theme="blackjack-deco"], html[data-theme="pacman-neon"], html[data-theme="pacman-kawaii"]{
+    font-synthesis:none; scrollbar-color: var(--accent-core) var(--stone-900);
+  }
+  html[data-theme="blackjack-feltro"] ::selection, html[data-theme="blackjack-deco"] ::selection,
+  html[data-theme="pacman-neon"] ::selection, html[data-theme="pacman-kawaii"] ::selection{ background: var(--accent); color: var(--void); }
+  html[data-theme="blackjack-deco"] ::selection, html[data-theme="pacman-kawaii"] ::selection{ color:#fff; }
+
+  /* --- Feltro: Playfair, fichas e moldura de mesa --- */
+  html[data-theme="blackjack-feltro"] :is(.title, .tab-btn, .btn, .theme-group-label, .log-panel-head){ font-family:'Playfair Display', serif; font-weight:700; }
+  html[data-theme="blackjack-feltro"] .title{ font-size:26px; letter-spacing:0.05em; color: var(--warn); text-shadow: 0 0 14px rgba(var(--warn-rgb),0.35), 0 2px 0 #4a3606; }
+  html[data-theme="blackjack-feltro"] .tab-btn{ font-size:13px; letter-spacing:0.06em; }
+  html[data-theme="blackjack-feltro"] .btn{
+    font-size:13px; letter-spacing:0.06em; border-radius:999px; border:2px solid #0c2a4a; color:#fff; padding:9px 20px;
+    background: linear-gradient(180deg, #5fb0ff, #2a7fd6); box-shadow: 0 3px 0 #0c2a4a, inset 0 0 0 3px rgba(255,255,255,0.18);
+    outline:2px dashed rgba(255,255,255,0.75); outline-offset:-7px;
+  }
+  html[data-theme="blackjack-feltro"] .btn:hover{ background: linear-gradient(180deg, #7bc0ff, #3a8fe6); }
+  html[data-theme="blackjack-feltro"] .btn:active{ transform:translateY(2px); box-shadow: 0 1px 0 #0c2a4a, inset 0 0 0 3px rgba(255,255,255,0.18); }
+  html[data-theme="blackjack-feltro"] .btn-ghost{ background: transparent; color: var(--ink-dim); border:1px solid var(--stone-line); box-shadow:none; outline:none; }
+  html[data-theme="blackjack-feltro"] .btn-ghost:hover{ color: var(--accent); border-color: var(--accent-core); }
+  html[data-theme="blackjack-feltro"] :is(.slot-card, .container-card){
+    border-radius:10px; border:2px solid #1d5a3e;
+    box-shadow: inset 0 0 0 3px var(--stone-900), inset 0 0 0 4px rgba(var(--warn-rgb),0.35), 0 8px 22px rgba(0,0,0,0.4);
+  }
+  html[data-theme="blackjack-feltro"] .container-card{ border-left:5px solid var(--accent); }
+  html[data-theme="blackjack-feltro"] .item-card{ border-radius:8px; }
+  html[data-theme="blackjack-feltro"] .tabs{ border-radius:10px; border-color: rgba(var(--warn-rgb),0.35); }
+
+  /* --- Art Déco: Poiret One, ouro e cantos chanfrados --- */
+  html[data-theme="blackjack-deco"] :is(.title, .tab-btn, .btn, .theme-group-label, .log-panel-head){ font-family:'Poiret One', sans-serif; font-weight:400; }
+  html[data-theme="blackjack-deco"] .title{ font-size:30px; letter-spacing:0.16em; text-transform:uppercase; color: var(--ink); text-shadow: 0 1px 0 rgba(255,244,214,0.9), 0 0 0 transparent; }
+  html[data-theme="blackjack-deco"] .tab-btn{ font-size:15px; letter-spacing:0.12em; font-weight:700; }
+  html[data-theme="blackjack-deco"] .btn{
+    font-size:15px; font-weight:700; letter-spacing:0.12em; text-transform:uppercase; border-radius:0; border:1px solid #a87408; color:#f3d77a; padding:9px 20px;
+    background: linear-gradient(180deg, #1f1d16, #0e0d09); box-shadow: inset 0 0 0 3px #0e0d09, inset 0 0 0 4px rgba(243,215,122,0.6);
+    clip-path: polygon(8px 0, calc(100% - 8px) 0, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0 calc(100% - 8px), 0 8px);
+  }
+  html[data-theme="blackjack-deco"] .btn:hover{ color:#fff0b0; background: linear-gradient(180deg, #2a2720, #14120d); }
+  html[data-theme="blackjack-deco"] .btn-ghost{ background: transparent; color: var(--ink-dim); border:1px solid var(--stone-line); box-shadow:none; clip-path:none; }
+  html[data-theme="blackjack-deco"] .btn-ghost:hover{ color: var(--accent); border-color: var(--accent-core); }
+  html[data-theme="blackjack-deco"] :is(.slot-card, .container-card){
+    border-radius:0; border:1px solid #a87408; background: linear-gradient(160deg, #f4ecd6, #e8dcb8);
+    box-shadow: inset 0 0 0 4px #f4ecd6, inset 0 0 0 5px rgba(168,116,8,0.55), 0 4px 12px rgba(80,56,10,0.16);
+  }
+  html[data-theme="blackjack-deco"] .container-card{ border-left:6px double #a87408; }
+  html[data-theme="blackjack-deco"] .item-card{ border-radius:0; }
+  html[data-theme="blackjack-deco"] .tabs{ border-radius:0; border:1px solid #a87408; }
+
+  /* --- Fliperama: DotGothic16, neon e pílulas --- */
+  html[data-theme="pacman-neon"] :is(.title, .tab-btn, .btn, .theme-group-label, .log-panel-head){ font-family:'DotGothic16', monospace; font-weight:400; }
+  html[data-theme="pacman-neon"] .title{ font-size:28px; letter-spacing:0.08em; text-transform:uppercase; color: var(--warn); text-shadow: 0 0 12px rgba(var(--warn-rgb),0.55), 0 0 2px #fff; }
+  html[data-theme="pacman-neon"] .tab-btn{ font-size:14px; letter-spacing:0.06em; }
+  html[data-theme="pacman-neon"] .btn{
+    font-size:14px; letter-spacing:0.08em; text-transform:uppercase; border-radius:999px; border:2px solid #ffe600; color:#05071a; padding:8px 20px;
+    background: #ffe600; box-shadow: 0 0 14px rgba(255,230,0,0.45), 0 0 0 3px #02030d, 0 0 0 5px var(--accent);
+  }
+  html[data-theme="pacman-neon"] .btn:hover{ background:#fff27a; box-shadow: 0 0 22px rgba(255,230,0,0.7), 0 0 0 3px #02030d, 0 0 0 5px #6b83ff; }
+  html[data-theme="pacman-neon"] .btn-ghost{ background: transparent; color: var(--ink-dim); border:2px solid var(--stone-line); box-shadow:none; }
+  html[data-theme="pacman-neon"] .btn-ghost:hover{ color: var(--accent); border-color: var(--accent); box-shadow: 0 0 10px rgba(var(--accent-rgb),0.5); }
+  html[data-theme="pacman-neon"] :is(.slot-card, .container-card){
+    border-radius:12px; border:2px solid var(--accent);
+    box-shadow: 0 0 0 2px #02030d, 0 0 0 4px rgba(var(--accent-rgb),0.45), 0 0 18px rgba(var(--accent-rgb),0.4), inset 0 0 14px rgba(var(--accent-rgb),0.14);
+  }
+  html[data-theme="pacman-neon"] .container-card{ border-left:5px solid var(--warn); }
+  html[data-theme="pacman-neon"] .item-card{ border-radius:8px; }
+  html[data-theme="pacman-neon"] .tabs{ border-radius:12px; border:2px solid var(--accent); box-shadow: 0 0 10px rgba(var(--accent-rgb),0.35); }
+
+  /* --- Kawaii: Baloo 2, balinhas e bordas fofas --- */
+  html[data-theme="pacman-kawaii"] :is(.title, .tab-btn, .btn, .theme-group-label, .log-panel-head){ font-family:'Baloo 2', sans-serif; font-weight:700; }
+  html[data-theme="pacman-kawaii"] .title{ font-size:29px; letter-spacing:0.02em; color: var(--accent-core); text-shadow: 2px 2px 0 #ffd88a; }
+  html[data-theme="pacman-kawaii"] .tab-btn{ font-size:15px; letter-spacing:0.01em; }
+  html[data-theme="pacman-kawaii"] .btn{
+    font-size:15px; letter-spacing:0.02em; border-radius:999px; border:2px solid #d97f0c; color:#5a3418; padding:7px 20px;
+    background: linear-gradient(180deg, #ffc25a, #f59a23); box-shadow: 0 4px 0 #d97f0c, inset 0 2px 0 rgba(255,255,255,0.5);
+  }
+  html[data-theme="pacman-kawaii"] .btn:hover{ background: linear-gradient(180deg, #ffd078, #ffa638); }
+  html[data-theme="pacman-kawaii"] .btn:active{ transform:translateY(3px); box-shadow: 0 1px 0 #d97f0c, inset 0 2px 0 rgba(255,255,255,0.5); }
+  html[data-theme="pacman-kawaii"] .btn-ghost{ background: var(--stone-800); color: var(--ink-dim); border:2px solid var(--stone-line); box-shadow:none; }
+  html[data-theme="pacman-kawaii"] .btn-ghost:hover{ color: var(--accent-core); border-color: var(--accent); }
+  html[data-theme="pacman-kawaii"] :is(.slot-card, .container-card){
+    border-radius:20px; border:2px solid var(--stone-line); background: linear-gradient(160deg, #fff3e0, #ffe6c8);
+    box-shadow: 0 4px 0 var(--stone-line), 0 8px 16px rgba(217,127,12,0.14);
+  }
+  html[data-theme="pacman-kawaii"] .container-card{ border-left:7px solid var(--accent); }
+  html[data-theme="pacman-kawaii"] .item-card{ border-radius:14px; }
+  html[data-theme="pacman-kawaii"] .tabs{ border-radius:18px; border:2px solid var(--stone-line); }
+
+  /* celular: fontes novas são mais largas -- abas mais apertadas */
+  @media (max-width:520px){
+    html[data-theme="blackjack-feltro"] .tab-btn, html[data-theme="blackjack-deco"] .tab-btn,
+    html[data-theme="pacman-neon"] .tab-btn, html[data-theme="pacman-kawaii"] .tab-btn{ padding:12px 4px; letter-spacing:0.02em; }
+    html[data-theme="blackjack-feltro"] .wrap::before, html[data-theme="blackjack-deco"] .wrap::before{ transform-origin:100% 100%; scale:0.7; }
+  }
+  @media (prefers-reduced-motion: reduce){
+    html[data-theme="blackjack-feltro"] :is(body, .wrap)::before, html[data-theme="blackjack-feltro"] :is(body, .wrap)::after,
+    html[data-theme="blackjack-deco"] :is(body, .wrap)::before, html[data-theme="blackjack-deco"] :is(body, .wrap)::after,
+    html[data-theme="pacman-neon"] :is(body, .wrap)::before, html[data-theme="pacman-neon"] :is(body, .wrap)::after,
+    html[data-theme="pacman-kawaii"] :is(body, .wrap)::before, html[data-theme="pacman-kawaii"] :is(body, .wrap)::after,
+    html[data-theme="blackjack-feltro"] .title .dot, html[data-theme="blackjack-deco"] .title .dot,
+    html[data-theme="pacman-neon"] .title .dot, html[data-theme="pacman-kawaii"] .title .dot{ animation:none !important; }
   }
 
   /* ---------- SELETOR DE TEMA ---------- */

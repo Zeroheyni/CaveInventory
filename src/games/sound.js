@@ -149,6 +149,32 @@ export const sfx = {
   },
   march: (i) => tone([110, 98, 87, 82][i % 4], 0.08, 'square', 0.1),
   invaderDie: () => sweep(520, 110, 0.14, 'square', 0.09),
+  // Pac-Man
+  chomp: (alt) => tone(alt ? 330 : 260, 0.05, 'square', 0.06),
+  power: () => sweep(180, 720, 0.25, 'square', 0.1),
+  eatGhost: () => {
+    sweep(300, 1400, 0.2, 'square', 0.1);
+    setTimeout(() => sweep(1400, 400, 0.12, 'triangle', 0.08), 120);
+  },
+  pacDeath: () => {
+    [0, 1, 2, 3, 4, 5].forEach((i) => setTimeout(() => sweep(700 - i * 80, 300 - i * 30, 0.16, 'triangle', 0.1), i * 140));
+  },
+  fruit: () => {
+    [880, 1175, 1568].forEach((f, i) => setTimeout(() => tone(f, 0.07, 'triangle', 0.12), i * 60));
+  },
+  // Blackjack
+  card: () => noiseBurst(0.06, 0.09, 4200, 1800),
+  chip: () => {
+    tone(1250, 0.03, 'triangle', 0.09);
+    setTimeout(() => tone(1650, 0.03, 'triangle', 0.08), 35);
+  },
+  bust: () => sweep(260, 90, 0.35, 'sawtooth', 0.1),
+  win: () => {
+    [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.1, 'triangle', 0.12), i * 70));
+  },
+  lose: () => {
+    sweep(300, 120, 0.4, 'triangle', 0.1);
+  },
   // Farkle
   diceRoll: () => {
     for (let i = 0; i < 6; i++) setTimeout(() => noiseBurst(0.05, 0.1, 2600 - i * 200, 500), i * 85);
