@@ -12,6 +12,7 @@
 
 export const SKIN = 1e-5; // folguinha entre o token e a parede depois de um contato
 const EPS = 1e-9;
+const MAX_PAIRWISE_SEGMENTS = 350;
 
 export function toWorld(xPct, yPct, aspect) {
   return { x: (xPct / 100) * aspect, y: yPct / 100 };
@@ -232,10 +233,15 @@ export function visibilityPolygon(ox, oy, R, walls, opts = {}) {
   // paredes que se cruzam (T, X, cantos): o "mais perto" troca no ponto de
   // cruzamento, que não é ponta de nenhuma -- sem esses ângulos o polígono
   // cortaria o canto
-  for (let i = 0; i < segs.length; i++) {
-    for (let j = i + 1; j < segs.length; j++) {
-      const p = segmentIntersection(segs[i], segs[j]);
-      if (p) addAngle(Math.atan2(p.y - oy, p.x - ox));
+  // (par a par é O(n²): com milhares de segmentos no raio -- mapa desenhado com
+  // curvas em muitos pedacinhos -- deixa de checar os cruzamentos; ainda é uma luz
+  // correta, só pode "cortar" um canto onde duas paredes se cruzam)
+  if (segs.length <= MAX_PAIRWISE_SEGMENTS) {
+    for (let i = 0; i < segs.length; i++) {
+      for (let j = i + 1; j < segs.length; j++) {
+        const p = segmentIntersection(segs[i], segs[j]);
+        if (p) addAngle(Math.atan2(p.y - oy, p.x - ox));
+      }
     }
   }
   if (cone) {
@@ -251,6 +257,26 @@ export function visibilityPolygon(ox, oy, R, walls, opts = {}) {
   const start = cone ? normAngle(dir - half) : 0;
   const rel = (a) => normAngle(a - start);
   const picked = angles.filter(inCone).sort((p, q) => rel(p) - rel(q));
+  // índice por setor angular: cada segmento entra nos setores que ele ocupa visto da
+  // origem (arco curto entre as pontas, com 1 setor de folga de cada lado); o raio só
+  // testa os segmentos do próprio setor -- com muitas paredes é a diferença entre
+  // O(raios × paredes) e O(raios × paredes do setor)
+  const NB = 512;
+  const TAU = Math.PI * 2;
+  const SECTOR = TAU / NB;
+  const buckets = Array.from({ length: NB }, () => []);
+  for (const sg of segs) {
+    const a1 = Math.atan2(sg.y1 - oy, sg.x1 - ox);
+    const a2 = Math.atan2(sg.y2 - oy, sg.x2 - ox);
+    let d = a2 - a1;
+    while (d > Math.PI) d -= TAU;
+    while (d <= -Math.PI) d += TAU;
+    const startA = normAngle(d >= 0 ? a1 : a2);
+    const span = Math.abs(d);
+    const first = Math.floor(startA / SECTOR) - 1;
+    const count = Math.min(NB, Math.ceil(span / SECTOR) + 3);
+    for (let k = 0; k < count; k++) buckets[(((first + k) % NB) + NB) % NB].push(sg);
+  }
   const pts = cone ? [{ x: ox, y: oy }] : [];
   let lastA = null;
   for (const a of picked) {
@@ -259,7 +285,7 @@ export function visibilityPolygon(ox, oy, R, walls, opts = {}) {
     const cx = Math.cos(a);
     const cy = Math.sin(a);
     let best = Infinity;
-    for (const s of segs) {
+    for (const s of buckets[Math.floor(normAngle(a) / SECTOR) % NB]) {
       const t = raySegment(ox, oy, cx, cy, s.x1, s.y1, s.x2, s.y2);
       if (t < best) best = t;
     }

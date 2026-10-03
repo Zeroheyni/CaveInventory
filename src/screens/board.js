@@ -815,6 +815,16 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   }
   function onAreaPointerDown(e) {
     if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 1) return;
+    const inCapture = !!e.target.closest('.board-wall-capture');
+    if (inCapture && e.pointerType === 'touch') {
+      // ferramenta de parede ativa: um dedo desenha (o editor cuida), dois dedos fazem pinça/pan
+      panPointers.set(e.pointerId, { x: e.clientX, y: e.clientY, passive: true });
+      if (panPointers.size === 2) {
+        const [p, q] = Array.from(panPointers.values());
+        pinchLast = { mid: { x: (p.x + q.x) / 2, y: (p.y + q.y) / 2 }, dist: Math.hypot(p.x - q.x, p.y - q.y) };
+      }
+      return;
+    }
     if (!isBackgroundTarget(e)) return;
     e.preventDefault();
     const area = e.currentTarget;
@@ -833,9 +843,9 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   function onAreaPointerMoveView(e) {
     const prev = panPointers.get(e.pointerId);
     if (!prev) return;
-    const cur = { x: e.clientX, y: e.clientY };
+    const cur = { x: e.clientX, y: e.clientY, passive: prev.passive };
     if (panPointers.size === 1) {
-      panByPixels(cur.x - prev.x, cur.y - prev.y);
+      if (!prev.passive) panByPixels(cur.x - prev.x, cur.y - prev.y);
       panPointers.set(e.pointerId, cur);
       return;
     }

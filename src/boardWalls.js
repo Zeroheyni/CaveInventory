@@ -84,6 +84,10 @@ export function createWallEditor(host) {
   let lastClick = { t: 0, x: 0, y: 0 };
   let gesture = null; // arrasto em andamento (rect | erase | edit)
   let hover = null; // último ponto (já encaixado) sob o cursor
+  // toque: um dedo desenha (ponto da poligonal só no "tap", pra pinça não marcar ponto);
+  // dois dedos = pinça/pan do mapa (quem trata é o board.js) e cancelam o que estava em curso
+  const touches = new Map(); // pointerId -> { x, y }
+  let tap = null; // { id, x, y } candidato a ponto de poligonal
   const undoStack = [];
   const redoStack = [];
 
@@ -267,9 +271,40 @@ export function createWallEditor(host) {
     showSnapDot(hover);
   }
 
+  // ponto da poligonal (clique de mouse ou tap de toque)
+  function linePoint(e, tool) {
+    const p = snapped(e, chain ? chain.last : null);
+    const now = Date.now();
+    const isDouble = now - lastClick.t < 320 && Math.hypot(e.clientX - lastClick.x, e.clientY - lastClick.y) < 6;
+    lastClick = { t: now, x: e.clientX, y: e.clientY };
+    if (!chain) {
+      chain = { last: p };
+      return;
+    }
+    if (isDouble) {
+      finishChain();
+      return;
+    }
+    if (Math.hypot(p.x - chain.last.x, p.y - chain.last.y) < MIN_LEN_PCT) return;
+    const seg = { x1: chain.last.x, y1: chain.last.y, x2: p.x, y2: p.y, kind: tool.kind };
+    chain.last = p;
+    addWalls([seg]).catch(() => {});
+  }
+
   function onPointerDown(e) {
     const tool = host.tool();
     if (!tool) return;
+    if (e.pointerType === 'touch') {
+      touches.set(e.pointerId, { x: e.clientX, y: e.clientY });
+      if (touches.size > 1) {
+        // segundo dedo: é pinça -- larga qualquer gesto/ponto pendente
+        gesture = null;
+        tap = null;
+        drawPreview([]);
+        showSnapDot(null);
+        return;
+      }
+    }
     if (e.button === 2) {
       // botão direito termina a poligonal
       e.preventDefault();
@@ -285,22 +320,11 @@ export function createWallEditor(host) {
     }
 
     if (tool.mode === 'line') {
-      const p = snapped(e, chain ? chain.last : null);
-      const now = Date.now();
-      const isDouble = now - lastClick.t < 320 && Math.hypot(e.clientX - lastClick.x, e.clientY - lastClick.y) < 6;
-      lastClick = { t: now, x: e.clientX, y: e.clientY };
-      if (!chain) {
-        chain = { last: p };
+      if (e.pointerType === 'touch') {
+        tap = { id: e.pointerId, x: e.clientX, y: e.clientY };
         return;
       }
-      if (isDouble) {
-        finishChain();
-        return;
-      }
-      if (Math.hypot(p.x - chain.last.x, p.y - chain.last.y) < MIN_LEN_PCT) return;
-      const seg = { x1: chain.last.x, y1: chain.last.y, x2: p.x, y2: p.y, kind: tool.kind };
-      chain.last = p;
-      addWalls([seg]).catch(() => {});
+      linePoint(e, tool);
       return;
     }
 
@@ -348,6 +372,8 @@ export function createWallEditor(host) {
   function onPointerMove(e) {
     const tool = host.tool();
     if (!tool) return;
+    if (tap && e.pointerId === tap.id && Math.hypot(e.clientX - tap.x, e.clientY - tap.y) > 10) tap = null; // virou arrasto: não é ponto
+    if (touches.size > 1) return;
     if (!gesture) {
       // sem arrasto: só mostra onde vai encaixar / a poligonal em andamento
       if (tool.mode === 'line' || tool.mode === 'rect') {
@@ -386,6 +412,15 @@ export function createWallEditor(host) {
   }
 
   async function onPointerUp(e) {
+    if (e.pointerType === 'touch') {
+      touches.delete(e.pointerId);
+      const t = tap;
+      tap = null;
+      const tool = host.tool();
+      if (t && t.id === e.pointerId && touches.size === 0 && tool && tool.mode === 'line' && e.type === 'pointerup') {
+        linePoint({ clientX: t.x, clientY: t.y, altKey: false, shiftKey: false }, tool);
+      }
+    }
     if (!gesture) return;
     const g = gesture;
     gesture = null;

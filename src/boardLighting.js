@@ -28,6 +28,8 @@ const MASTER_DARK_FACTOR = 0.4; // o mestre vê a escuridão a 40% do valor do j
 const HALO_PCT = 4.5; // a lanterna também ilumina um halo curto em volta de quem carrega
 const FRAME_MS = 33;
 const MAX_BACKING_W = 1100;
+const SLOW_DRAW_MS = 14; // média de desenho acima disso = aparelho sofrendo -> baixa a resolução
+const reduceMotion = () => !!(typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
 const hexToRgb = (hex) => {
   const m = /^#?([0-9a-f]{6})$/i.exec(hex || '');
@@ -69,6 +71,9 @@ export function createLighting(host) {
   const facing = new Map(); // tokenId -> ângulo (rad)
   let fogPattern = null;
   let fogTile = null;
+  let quality = 1; // fração da resolução máxima; cai sozinha se o desenho demorar
+  let drawEma = 0;
+  let drawSamples = 0;
 
   function lightWalls(aspect) {
     const v = host.wallsVersion();
@@ -143,7 +148,7 @@ export function createLighting(host) {
     const cssW = parseFloat(stage.style.width) || stage.clientWidth;
     const cssH = parseFloat(stage.style.height) || stage.clientHeight;
     if (!cssW || !cssH) return;
-    const scale = Math.min(1, MAX_BACKING_W / cssW);
+    const scale = Math.min(1, MAX_BACKING_W / cssW) * quality;
     const w = Math.max(2, Math.round(cssW * scale));
     const h = Math.max(2, Math.round(cssH * scale));
     if (w !== backW || h !== backH) {
@@ -192,6 +197,7 @@ export function createLighting(host) {
 
   function isAnimated(b, entries) {
     if (!b || !b.lighting_enabled) return false;
+    if (reduceMotion()) return false; // quem pediu menos movimento recebe luz estática
     if (b.fog_mode === 'neblina') return true;
     return entries.some((e) => e.l.flicker > 0 || e.l.pulse > 0 || e.l.kind === 'magia');
   }
@@ -255,8 +261,9 @@ export function createLighting(host) {
     for (const e of entries) {
       const l = e.l;
       const ph = phaseOf(l.id);
-      const f = l.flicker > 0 ? flickerNoise(t, ph) : 0;
-      const pulse = l.pulse > 0 ? Math.sin(t * 1.6 + ph) : 0;
+      const still = reduceMotion();
+      const f = l.flicker > 0 && !still ? flickerNoise(t, ph) : 0;
+      const pulse = l.pulse > 0 && !still ? Math.sin(t * 1.6 + ph) : 0;
       const scale = 1 + l.flicker * 0.1 * f + l.pulse * 0.12 * pulse;
       const inten = Math.max(0, Math.min(1, l.intensity * (1 - l.flicker * 0.1 * ((f + 1) / 2))));
       const dimPct = Math.max(l.dim_radius, l.radius);
@@ -364,8 +371,23 @@ export function createLighting(host) {
     }
     lastFrame = now;
     dirty = false;
+    const t0 = performance.now();
     const animated = draw(now);
+    watchCost(performance.now() - t0);
     if (animated) raf = requestAnimationFrame(frame);
+  }
+  // desenho lento (celular fraco, mapa enorme): reduz a resolução dos canvases (a luz é
+  // difusa, quase ninguém percebe) até a média voltar a ficar leve. Não sobe de novo
+  // sozinho pra não oscilar.
+  function watchCost(ms) {
+    drawEma = drawSamples === 0 ? ms : drawEma * 0.9 + ms * 0.1;
+    drawSamples += 1;
+    if (drawSamples >= 20 && drawEma > SLOW_DRAW_MS && quality > 0.45) {
+      quality = Math.max(0.45, quality * 0.75);
+      drawSamples = 0;
+      sizeCanvases();
+      dirty = true;
+    }
   }
   function schedule() {
     if (raf === null) raf = requestAnimationFrame(frame);
