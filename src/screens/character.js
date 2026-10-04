@@ -16,7 +16,7 @@ import { createPublicItem, createPublicContainer, listCampaignPlayers, transferC
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 import { updateProfileTheme } from '../campaign.js';
 import { listUnlockedGameThemes } from '../games.js';
-import { THEMES, themeSwatchHtml } from '../themes.js';
+import { themeTraysHtml, toggleThemeTray } from '../themes.js';
 
 let activeChannel = null;
 
@@ -68,14 +68,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3a9 9 0 100 18c1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a4 4 0 004-4c0-4.4-3.6-8-8-8z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="9.5" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="10.5" r="1" fill="currentColor" stroke="none"/></svg>
         </button>
         <div class="theme-panel" id="theme-panel" style="display:none;">
-          <div class="theme-group-label">ESPECIAIS 🏆</div>
-          <div class="theme-swatch-row" data-group="especial"></div>
-          <div class="theme-group-label">ESCUROS</div>
-          <div class="theme-swatch-row" data-group="dark"></div>
-          <div class="theme-group-label">CLAROS</div>
-          <div class="theme-swatch-row" data-group="light"></div>
-          <div class="theme-group-label">NEUTROS</div>
-          <div class="theme-swatch-row" data-group="neutral"></div>
+          <div id="theme-trays"></div>
         </div>
       </div>
     </div>
@@ -1640,10 +1633,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     renderThemePanel();
   }
   function renderThemePanel(){
-    ['especial','dark','light','neutral'].forEach(group => {
-      const row = document.querySelector(`.theme-swatch-row[data-group="${group}"]`);
-      row.innerHTML = THEMES.filter(t => t.group === group).map(t => themeSwatchHtml(t, state.theme, unlockedGames)).join('');
-    });
+    document.getElementById('theme-trays').innerHTML = themeTraysHtml(state.theme, unlockedGames);
   }
   function applyTheme(id, persist){
     state.theme = id;
@@ -1700,6 +1690,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
   });
   document.getElementById('theme-panel').addEventListener('click', (e)=>{
+    const tray = e.target.closest('.theme-tray-head');
+    if(tray){ toggleThemeTray(tray); return; }
     const btn = e.target.closest('button[data-theme-id]');
     if(!btn || btn.dataset.locked === '1') return; // trancado -- precisa destravar jogando (ver renderThemePanel)
     applyTheme(btn.dataset.themeId, true);

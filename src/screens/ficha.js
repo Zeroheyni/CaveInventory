@@ -31,7 +31,7 @@ import {
 import { rollDice } from '../dice.js';
 import { listCharacterCustomBarsFor, updateCharacterCustomBarValue, customBarMax, createCustomBar, assignCustomBar } from '../customBars.js';
 import { applyGlobalTheme } from '../campaign.js';
-import { THEMES, themeSwatchHtml } from '../themes.js';
+import { themeTraysHtml, toggleThemeTray } from '../themes.js';
 
 let activeChannel = null;
 const HISTORIA_COLLAPSED_H = 90;
@@ -286,8 +286,6 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
   // é o mestre escolhendo livremente a cara daquele NPC.
   function npcThemePickerHtml() {
     const activeId = sheet.theme || '';
-    const groups = ['especial', 'dark', 'light', 'neutral'];
-    const labels = { especial: 'ESPECIAIS 🏆', dark: 'ESCUROS', light: 'CLAROS', neutral: 'NEUTROS' };
     return `
       <div class="ficha-npc-theme">
         <span class="ficha-npc-theme-label">🎨 tema deste NPC</span>
@@ -301,15 +299,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
                 ? `<button type="button" class="btn btn-ghost" id="npc-theme-clear" style="width:100%; margin-bottom:10px;">✕ voltar pro tema padrão</button>`
                 : ''
             }
-            ${groups
-              .map(
-                (g) => `
-              <div class="theme-group-label">${labels[g]}</div>
-              <div class="theme-swatch-row">${THEMES.filter((t) => t.group === g)
-                .map((t) => themeSwatchHtml(t, activeId, NPC_THEME_UNLOCKED))
-                .join('')}</div>`
-              )
-              .join('')}
+            ${themeTraysHtml(activeId, NPC_THEME_UNLOCKED)}
           </div>
         </div>
       </div>`;
@@ -468,6 +458,11 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
       return onBack && onBack();
     }
 
+    const npcTrayHead = e.target.closest('#npc-theme-panel .theme-tray-head');
+    if (npcTrayHead) {
+      toggleThemeTray(npcTrayHead);
+      return;
+    }
     const npcThemeTriggerBtn = e.target.closest('#npc-theme-trigger');
     if (npcThemeTriggerBtn) {
       npcThemePanelOpen = !npcThemePanelOpen;

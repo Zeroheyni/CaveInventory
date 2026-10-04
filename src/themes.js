@@ -12,9 +12,70 @@ export const GAME_THEME_LABELS = { snake: 'Cobrinha', tetris: 'Tetris', flappy: 
 // qual jogo destrava) em cada lugar.
 export function themeSwatchHtml(t, activeId, unlockedGames) {
   const locked = !!t.unlockGame && !(unlockedGames && unlockedGames.has(t.unlockGame));
-  const special = t.group === 'especial'; // ganha brilho/selo próprio no seletor -- ver .theme-swatch.special em theme.css
+  const special = t.group.startsWith('especial'); // ganha brilho/selo próprio no seletor -- ver .theme-swatch.special em theme.css
   const title = locked ? `${t.label} — destrave batendo o recorde da campanha no ${GAME_THEME_LABELS[t.unlockGame] || t.unlockGame}` : t.label;
   return `<button type="button" class="theme-swatch ${special ? 'special' : ''} ${activeId === t.id ? 'active' : ''} ${locked ? 'locked' : ''}" data-theme-id="${t.id}" ${locked ? 'data-locked="1"' : ''} title="${title}" style="--swatch-accent:${t.accent}; --swatch-void:${t.void};">${locked ? '<span class="theme-swatch-lock">🔒</span>' : ''}</button>`;
+}
+
+// ---- bandejas do seletor de tema ----
+// Cada bandeja agrupa um tipo de tema e abre/fecha (o estado de aberta/fechada
+// fica no localStorage, por bandeja). Antes todos os especiais ficavam numa fila
+// só, misturando escuros, claros e neutros.
+export const THEME_TRAYS = [
+  { id: 'especial-dark', label: 'ESPECIAIS ESCUROS 🏆', special: true },
+  { id: 'especial-light', label: 'ESPECIAIS CLAROS 🏆', special: true },
+  { id: 'especial-neutral', label: 'ESPECIAIS NEUTROS 🏆', special: true },
+  { id: 'dark', label: 'ESCUROS' },
+  { id: 'light', label: 'CLAROS' },
+  { id: 'neutral', label: 'NEUTROS' },
+];
+const trayKey = (id) => 'theme-tray-open-' + id;
+function readTrayOpen(id) {
+  try {
+    const v = localStorage.getItem(trayKey(id));
+    return v === null ? null : v === '1';
+  } catch (_) {
+    return null; // storage bloqueado: sem preferência salva
+  }
+}
+
+// HTML de todas as bandejas. Quem ainda não abriu/fechou uma bandeja à mão vê aberta só a
+// que tem o tema ativo (as outras ficam recolhidas, o painel não vira uma parede de bolinhas).
+export function themeTraysHtml(activeId, unlockedGames) {
+  const active = THEMES.find((t) => t.id === activeId);
+  return THEME_TRAYS.map((tr) => {
+    const list = THEMES.filter((t) => t.group === tr.id);
+    if (!list.length) return '';
+    const saved = readTrayOpen(tr.id);
+    const open = saved === null ? !!(active && active.group === tr.id) : saved;
+    const free = list.filter((t) => !t.unlockGame || (unlockedGames && unlockedGames.has(t.unlockGame))).length;
+    const count = tr.special ? `${free}/${list.length}` : String(list.length);
+    return `
+      <section class="theme-tray ${open ? 'open' : ''} ${tr.special ? 'special' : ''}" data-tray="${tr.id}">
+        <button type="button" class="theme-tray-head" aria-expanded="${open}">
+          <span class="theme-tray-title theme-group-label">${tr.label}</span>
+          <span class="theme-tray-count">${count}</span>
+          <span class="theme-tray-chevron" aria-hidden="true">▾</span>
+        </button>
+        <div class="theme-tray-body"><div class="theme-tray-inner">
+          <div class="theme-swatch-row">${list.map((t) => themeSwatchHtml(t, activeId, unlockedGames)).join('')}</div>
+        </div></div>
+      </section>`;
+  }).join('');
+}
+
+// clique no cabeçalho de uma bandeja (delegado pela tela que mostra o painel)
+export function toggleThemeTray(headEl) {
+  const tray = headEl.closest('.theme-tray');
+  if (!tray) return;
+  const open = !tray.classList.contains('open');
+  tray.classList.toggle('open', open);
+  headEl.setAttribute('aria-expanded', String(open));
+  try {
+    localStorage.setItem(trayKey(tray.dataset.tray), open ? '1' : '0');
+  } catch (_) {
+    // sem storage, a bandeja só não lembra
+  }
 }
 
 export const THEMES = [
@@ -72,32 +133,48 @@ export const THEMES = [
   // juntas (o desbloqueio é por jogo, não por tema -- ver
   // db/049_patch_2048_and_theme_unlocks.sql, `unlockGame` é o que liga
   // um tema ao outro pro mesmo `game`).
-  {id:'snake-terrario', label:'Terrário Neon', group:'especial', accent:'#5cff8f', void:'#071009', unlockGame:'snake'},
-  {id:'snake-jardim', label:'Jardim de Manhã', group:'especial', accent:'#d94f3d', void:'#f3fbee', unlockGame:'snake'},
-  {id:'tetris-nebulosa', label:'Nebulosa de Blocos', group:'especial', accent:'#4fe1ff', void:'#070b1a', unlockGame:'tetris'},
-  {id:'tetris-vidro', label:'Vidro e Ouro', group:'especial', accent:'#d69a2b', void:'#f6f4ee', unlockGame:'tetris'},
-  {id:'flappy-noturno', label:'Voo Noturno', group:'especial', accent:'#ffb03e', void:'#0a0e24', unlockGame:'flappy'},
-  {id:'flappy-aurora', label:'Aurora Matinal', group:'especial', accent:'#ff8a5c', void:'#cdeaff', unlockGame:'flappy'},
-  {id:'2048-ambar', label:'Âmbar Noturno', group:'especial', accent:'#f2a65a', void:'#16130f', unlockGame:'2048'},
-  {id:'2048-marfim', label:'Tabuleiro de Marfim', group:'especial', accent:'#f2b179', void:'#faf8ef', unlockGame:'2048'},
-  {id:'breakout-neon', label:'Fliperama Neon', group:'especial', accent:'#ff2e88', void:'#0a0612', unlockGame:'breakout'},
-  {id:'breakout-confeitaria', label:'Confeitaria Pastel', group:'especial', accent:'#ff5c9e', void:'#fff3f8', unlockGame:'breakout'},
-  {id:'pong-mesa', label:'Mesa Noturna', group:'especial', accent:'#ff9f43', void:'#04110e', unlockGame:'pong'},
-  {id:'pong-caderno', label:'Caderno de Rabisco', group:'especial', accent:'#2f5fd0', void:'#fbf6e9', unlockGame:'pong'},
-  {id:'asteroids-vetor', label:'Radar Vetorial', group:'especial', accent:'#d7e6ff', void:'#03060d', unlockGame:'asteroids'},
-  {id:'asteroids-carta', label:'Carta Celeste', group:'especial', accent:'#a8431f', void:'#f3e7cf', unlockGame:'asteroids'},
-  {id:'dino-jurassico', label:'Era Jurássica', group:'especial', accent:'#ff5a2e', void:'#120806', unlockGame:'dino'},
-  {id:'dino-offline', label:'Sem Internet', group:'especial', accent:'#535353', void:'#f7f7f7', unlockGame:'dino'},
-  {id:'invaders-alien', label:'Invasão Alienígena', group:'especial', accent:'#b6ff3c', void:'#0d0420', unlockGame:'invaders'},
-  {id:'invaders-gibi', label:'Gibi Retrô', group:'especial', accent:'#e0402a', void:'#fff6dc', unlockGame:'invaders'},
-  {id:'minas-perigo', label:'Zona de Perigo', group:'especial', accent:'#ffd400', void:'#0c0c08', unlockGame:'minas'},
-  {id:'minas-janela', label:'Janela 95', group:'especial', accent:'#000080', void:'#008080', unlockGame:'minas'},
-  {id:'frogger-noite', label:'Travessia Noturna', group:'especial', accent:'#3ef0c4', void:'#050d14', unlockGame:'frogger'},
-  {id:'frogger-nenufar', label:'Lago de Nenúfares', group:'especial', accent:'#d9548c', void:'#eef6f1', unlockGame:'frogger'},
-  {id:'farkle-cassino', label:'Cassino Veludo', group:'especial', accent:'#f5c542', void:'#12060a', unlockGame:'farkle'},
-  {id:'farkle-taverna', label:'Taverna de Madeira', group:'especial', accent:'#2a6f6a', void:'#efe0bd', unlockGame:'farkle'},
-  {id:'blackjack-feltro', label:'Mesa de Feltro', group:'especial', accent:'#4aa3ff', void:'#04140c', unlockGame:'blackjack'},
-  {id:'blackjack-deco', label:'Salão Art Déco', group:'especial', accent:'#0f6b6b', void:'#f4ecd8', unlockGame:'blackjack'},
-  {id:'pacman-neon', label:'Fliperama Neon', group:'especial', accent:'#3b5bff', void:'#02030d', unlockGame:'pacman'},
-  {id:'pacman-kawaii', label:'Doceria Kawaii', group:'especial', accent:'#f59a23', void:'#fff7ea', unlockGame:'pacman'}
+  {id:'snake-terrario', label:'Terrário Neon', group:'especial-dark', accent:'#5cff8f', void:'#071009', unlockGame:'snake'},
+  {id:'snake-jardim', label:'Jardim de Manhã', group:'especial-light', accent:'#d94f3d', void:'#f3fbee', unlockGame:'snake'},
+  {id:'tetris-nebulosa', label:'Nebulosa de Blocos', group:'especial-dark', accent:'#4fe1ff', void:'#070b1a', unlockGame:'tetris'},
+  {id:'tetris-vidro', label:'Vidro e Ouro', group:'especial-light', accent:'#d69a2b', void:'#f6f4ee', unlockGame:'tetris'},
+  {id:'flappy-noturno', label:'Voo Noturno', group:'especial-dark', accent:'#ffb03e', void:'#0a0e24', unlockGame:'flappy'},
+  {id:'flappy-aurora', label:'Aurora Matinal', group:'especial-light', accent:'#ff8a5c', void:'#cdeaff', unlockGame:'flappy'},
+  {id:'2048-ambar', label:'Âmbar Noturno', group:'especial-dark', accent:'#f2a65a', void:'#16130f', unlockGame:'2048'},
+  {id:'2048-marfim', label:'Tabuleiro de Marfim', group:'especial-light', accent:'#f2b179', void:'#faf8ef', unlockGame:'2048'},
+  {id:'breakout-neon', label:'Fliperama Neon', group:'especial-dark', accent:'#ff2e88', void:'#0a0612', unlockGame:'breakout'},
+  {id:'breakout-confeitaria', label:'Confeitaria Pastel', group:'especial-light', accent:'#ff5c9e', void:'#fff3f8', unlockGame:'breakout'},
+  {id:'pong-mesa', label:'Mesa Noturna', group:'especial-dark', accent:'#ff9f43', void:'#04110e', unlockGame:'pong'},
+  {id:'pong-caderno', label:'Caderno de Rabisco', group:'especial-light', accent:'#2f5fd0', void:'#fbf6e9', unlockGame:'pong'},
+  {id:'asteroids-vetor', label:'Radar Vetorial', group:'especial-dark', accent:'#d7e6ff', void:'#03060d', unlockGame:'asteroids'},
+  {id:'asteroids-carta', label:'Carta Celeste', group:'especial-light', accent:'#a8431f', void:'#f3e7cf', unlockGame:'asteroids'},
+  {id:'dino-jurassico', label:'Era Jurássica', group:'especial-dark', accent:'#ff5a2e', void:'#120806', unlockGame:'dino'},
+  {id:'dino-offline', label:'Sem Internet', group:'especial-light', accent:'#535353', void:'#f7f7f7', unlockGame:'dino'},
+  {id:'invaders-alien', label:'Invasão Alienígena', group:'especial-dark', accent:'#b6ff3c', void:'#0d0420', unlockGame:'invaders'},
+  {id:'invaders-gibi', label:'Gibi Retrô', group:'especial-light', accent:'#e0402a', void:'#fff6dc', unlockGame:'invaders'},
+  {id:'minas-perigo', label:'Zona de Perigo', group:'especial-dark', accent:'#ffd400', void:'#0c0c08', unlockGame:'minas'},
+  {id:'minas-janela', label:'Janela 95', group:'especial-light', accent:'#000080', void:'#008080', unlockGame:'minas'},
+  {id:'frogger-noite', label:'Travessia Noturna', group:'especial-dark', accent:'#3ef0c4', void:'#050d14', unlockGame:'frogger'},
+  {id:'frogger-nenufar', label:'Lago de Nenúfares', group:'especial-light', accent:'#d9548c', void:'#eef6f1', unlockGame:'frogger'},
+  {id:'farkle-cassino', label:'Cassino Veludo', group:'especial-dark', accent:'#f5c542', void:'#12060a', unlockGame:'farkle'},
+  {id:'farkle-taverna', label:'Taverna de Madeira', group:'especial-light', accent:'#2a6f6a', void:'#efe0bd', unlockGame:'farkle'},
+  {id:'blackjack-feltro', label:'Mesa de Feltro', group:'especial-dark', accent:'#4aa3ff', void:'#04140c', unlockGame:'blackjack'},
+  {id:'blackjack-deco', label:'Salão Art Déco', group:'especial-light', accent:'#0f6b6b', void:'#f4ecd8', unlockGame:'blackjack'},
+  {id:'pacman-neon', label:'Fliperama Neon', group:'especial-dark', accent:'#3b5bff', void:'#02030d', unlockGame:'pacman'},
+  {id:'pacman-kawaii', label:'Doceria Kawaii', group:'especial-light', accent:'#f59a23', void:'#fff7ea', unlockGame:'pacman'},
+
+  // ---- especiais NEUTROS: um por jogo, destravam junto com os outros dois ----
+  {id:'snake-neutro', label:'Pedra de Cobra', group:'especial-neutral', accent:'#8fbf9a', void:'#1f2320', unlockGame:'snake'},
+  {id:'tetris-neutro', label:'Concreto Modular', group:'especial-neutral', accent:'#8fb4c8', void:'#1f2223', unlockGame:'tetris'},
+  {id:'flappy-neutro', label:'Céu Encoberto', group:'especial-neutral', accent:'#c9a27a', void:'#1f2123', unlockGame:'flappy'},
+  {id:'2048-neutro', label:'Pedra Polida', group:'especial-neutral', accent:'#c4a07a', void:'#23211f', unlockGame:'2048'},
+  {id:'breakout-neutro', label:'Parede de Tijolo', group:'especial-neutral', accent:'#c58a8a', void:'#231f20', unlockGame:'breakout'},
+  {id:'pong-neutro', label:'Quadra Cinza', group:'especial-neutral', accent:'#a9b8a0', void:'#1f2322', unlockGame:'pong'},
+  {id:'asteroids-neutro', label:'Poeira Lunar', group:'especial-neutral', accent:'#a8b4c8', void:'#1f2023', unlockGame:'asteroids'},
+  {id:'dino-neutro', label:'Fóssil de Calcário', group:'especial-neutral', accent:'#c9a37a', void:'#23221f', unlockGame:'dino'},
+  {id:'invaders-neutro', label:'Cinzento Orbital', group:'especial-neutral', accent:'#a99bc4', void:'#211f23', unlockGame:'invaders'},
+  {id:'minas-neutro', label:'Terreno Minado', group:'especial-neutral', accent:'#bdb67a', void:'#23231f', unlockGame:'minas'},
+  {id:'frogger-neutro', label:'Brejo Acinzentado', group:'especial-neutral', accent:'#88b0a0', void:'#1f2321', unlockGame:'frogger'},
+  {id:'farkle-neutro', label:'Mesa de Pedra', group:'especial-neutral', accent:'#c9a066', void:'#23211f', unlockGame:'farkle'},
+  {id:'blackjack-neutro', label:'Feltro Cinza', group:'especial-neutral', accent:'#8fb7ae', void:'#1f2322', unlockGame:'blackjack'},
+  {id:'pacman-neutro', label:'Labirinto Fosco', group:'especial-neutral', accent:'#9aa6d8', void:'#1f1f23', unlockGame:'pacman'}
 ];
