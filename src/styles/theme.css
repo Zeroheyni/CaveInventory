@@ -973,7 +973,7 @@
   /* ---------- HEADER ---------- */
   .header{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; padding-bottom:18px; border-bottom:1px solid var(--stone-line); margin-bottom:20px; }
   .header .id{ font-size:11.5px; letter-spacing:0.2em; color: var(--ink-faint); transition: color 0.3s ease; }
-  .title{ font-family: var(--font-display); font-weight:900; font-size:22px; letter-spacing:0.08em; color: var(--ink); text-shadow: 0 0 18px var(--accent-faint); display:flex; align-items:center; gap:10px; }
+  .title{ font-family: var(--font-display); font-weight:900; font-size:22px; letter-spacing:0.08em; color: var(--ink); text-shadow: 0 0 18px var(--accent-faint); display:flex; align-items:center; gap:10px; user-select:none; -webkit-user-select:none; touch-action:manipulation; -webkit-tap-highlight-color:transparent; }
   .title .dot{ width:8px; height:8px; border-radius:50%; background: var(--accent); box-shadow: 0 0 10px 2px var(--accent); animation: pulse-dot 2.4s ease-in-out infinite; }
   @keyframes pulse-dot{ 0%,100%{opacity:1;} 50%{opacity:0.35;} }
 

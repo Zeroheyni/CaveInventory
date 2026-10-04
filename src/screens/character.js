@@ -11,6 +11,7 @@ import { renderBattleLogScreen } from './battleLog.js';
 import { renderSessionJournalScreen } from './sessionJournal.js';
 import { renderMasterInventoryChooser } from './masterInventoryChooser.js';
 import { renderBoardScreen } from './board.js';
+import { createEasterEggTrigger } from '../easterEggTrigger.js';
 import { createPublicItem, createPublicContainer, listCampaignPlayers, transferCurrencyRpc } from '../publicArea.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 import { updateProfileTheme } from '../campaign.js';
@@ -2918,23 +2919,13 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   // campanha. Sem cursor:pointer nem hover -- ninguém percebe que é
   // clicável, de propósito. import() dinâmico: o código dos jogos só
   // baixa se alguém realmente achar o easter egg.
+  // (a área clicável é um raio em volta do pontinho, ver easterEggTrigger.js)
   (function wireEasterEgg() {
-    let clicks = 0;
-    let resetTimer = null;
     const dot = document.querySelector('.title .dot');
-    if (!dot) return;
-    dot.addEventListener('click', async () => {
-      clicks += 1;
-      clearTimeout(resetTimer);
-      resetTimer = setTimeout(() => {
-        clicks = 0;
-      }, 2000);
-      if (clicks >= 5) {
-        clicks = 0;
-        const { renderEasterEggOverlay } = await import('./easterEggGames.js');
-        renderEasterEggOverlay({ campaign, profile, onClose: loadUnlockedGames });
-      }
-    });
+    createEasterEggTrigger(async () => {
+      const { renderEasterEggOverlay } = await import('./easterEggGames.js');
+      renderEasterEggOverlay({ campaign, profile, onClose: loadUnlockedGames });
+    }).attach(dot && dot.closest('.title'));
   })();
 
   // ---- desfazer: captura o estado antes de qualquer clique/drop e compara depois ----

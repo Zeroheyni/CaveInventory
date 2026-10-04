@@ -11,6 +11,7 @@ import { THEMES, themeSwatchHtml } from '../themes.js';
 import { listUnlockedGameThemes } from '../games.js';
 import { renderCombatScreen } from './combat.js';
 import { renderBoardScreen } from './board.js';
+import { createEasterEggTrigger } from '../easterEggTrigger.js';
 import { renderMasterFichaScreen } from './masterFicha.js';
 import { renderNpcBankScreen } from './npcBank.js';
 import { renderMasterInventoryChooser } from './masterInventoryChooser.js';
@@ -62,8 +63,11 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
   let mode = initialMode || 'ficha';
   let theme = profile.theme || 'caverna-azul';
   const mounted = Object.fromEntries(MODES.map((m) => [m, false]));
-  let easterEggClicks = 0; // fica fora do render() -- não pode zerar toda vez que a tela é reconstruída
-  let easterEggResetTimer = null;
+  // o contador mora dentro do gatilho (fora do render()) -- não pode zerar toda vez que a tela é reconstruída
+  const easterEgg = createEasterEggTrigger(async () => {
+    const { renderEasterEggOverlay } = await import('./easterEggGames.js');
+    renderEasterEggOverlay({ campaign, profile, onClose: loadUnlockedGames });
+  });
   // quais jogos escondidos essa conta já destravou (ver character.js/
   // THEMES + db/049) -- carregado uma vez e de novo quando o overlay
   // dos jogos fecha, pra um tema recém-destravado aparecer sem recarregar.
@@ -149,20 +153,7 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
     // também vivesse aqui dentro, zerava toda vez que o mestre trocava
     // de aba no meio da contagem.
     const dot = document.querySelector('.title .dot');
-    if (dot) {
-      dot.addEventListener('click', async () => {
-        easterEggClicks += 1;
-        clearTimeout(easterEggResetTimer);
-        easterEggResetTimer = setTimeout(() => {
-          easterEggClicks = 0;
-        }, 2000);
-        if (easterEggClicks >= 5) {
-          easterEggClicks = 0;
-          const { renderEasterEggOverlay } = await import('./easterEggGames.js');
-          renderEasterEggOverlay({ campaign, profile, onClose: loadUnlockedGames });
-        }
-      });
-    }
+    easterEgg.attach(dot && dot.closest('.title'));
 
     const sideNav = document.getElementById('side-nav');
     document.getElementById('side-nav-toggle').addEventListener('click', () => {
