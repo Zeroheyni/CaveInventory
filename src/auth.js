@@ -2,7 +2,9 @@ import { supabase } from './supabaseClient.js';
 import { nicknameToEmail, padPassword } from './nickname.js';
 
 export function signIn(nickname, password) {
-  return supabase.auth.signInWithPassword({ email: nicknameToEmail(nickname), password: padPassword(password) });
+  // quem tem conta com e-mail de verdade (ex.: o ADM antigo) pode digitar o e-mail inteiro no lugar do apelido
+  const email = String(nickname || '').includes('@') ? String(nickname).trim().toLowerCase() : nicknameToEmail(nickname);
+  return supabase.auth.signInWithPassword({ email, password: padPassword(password) });
 }
 
 export function signOut() {

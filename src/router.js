@@ -3,7 +3,9 @@ import { getMyProfile, getCampaign, applyGlobalTheme } from './campaign.js';
 import { listMyMemberships, listMyCharacters, effectiveProfile, rememberCharacter, lastCharacter } from './accounts.js';
 import { renderLogin } from './screens/login.js';
 import { renderCharacterScreen } from './screens/character.js';
-import { renderCharacterPicker } from './screens/characterPicker.js';
+import { renderHome } from './screens/home.js';
+import { renderProfileScreen } from './screens/profile.js';
+import { renderMasterCampaignHub } from './screens/masterCampaignHub.js';
 import { renderAdminScreen } from './screens/admin.js';
 
 const app = document.getElementById('app');
@@ -52,6 +54,12 @@ export async function renderApp() {
     return;
   }
 
+  const isAdmin = !!profile.is_superadmin;
+  // mesas em que a conta é MESTRE (dona, ou membro com papel de mestre)
+  const masterCampaigns = memberships
+    .filter((m) => m.role === 'master' || m.campaigns.master_id === profile.id)
+    .map((m) => m.campaigns);
+
   // jogar um personagem: o perfil entregue às telas é o "efetivo" (papel/flags da mesa dele)
   async function play(character) {
     let campaign;
@@ -76,17 +84,40 @@ export async function renderApp() {
     });
   }
 
-  const isMasterAccount =
-    !!profile.is_superadmin || profile.role === 'master' || memberships.some((m) => m.role === 'master');
-
-  // ADM e contas de mestre: painel (ADM vê tudo; mestre vê só as próprias mesas -- o banco filtra)
-  if (isMasterAccount) {
-    renderAdminScreen(app, { session, profile, memberships, characters, onPlayCharacter: play });
-    return;
+  // painel de mestre (combate, fichas, NPCs, tabuleiro...) de uma mesa
+  function openMaster(campaign) {
+    const membership = memberships.find((m) => m.campaign_id === campaign.id) || null;
+    renderMasterCampaignHub(app, {
+      session,
+      profile: effectiveProfile(profile, campaign, membership),
+      campaign,
+      onBack: switchContext,
+    });
   }
 
-  // a conta de jogador não pertence a mesa nenhuma: a tela inicial é sempre a escolha de personagem
-  renderCharacterPicker(app, { profile, characters, lastId: lastCharacter(profile.id), onPick: play });
+  const isMasterish = isAdmin || masterCampaigns.length > 0 || profile.role === 'master';
+  const kinds = [isAdmin ? 'ADM' : null, isMasterish ? 'mestre' : null, characters.length || !isMasterish ? 'jogador' : null].filter(Boolean);
+
+  function openProfile() {
+    renderProfileScreen(app, { session, profile, kinds, onBack: switchContext });
+  }
+
+  function openManage() {
+    renderAdminScreen(app, { session, profile, memberships, characters, onHome: switchContext, onOpenProfile: openProfile });
+  }
+
+  // tela inicial: todo mundo (jogador, mestre, ADM) cai na escolha de personagem; mestre ganha o cartão do painel da mesa
+  renderHome(app, {
+    profile,
+    characters,
+    masterCampaigns,
+    isAdmin,
+    lastId: lastCharacter(profile.id),
+    onPick: play,
+    onOpenMaster: openMaster,
+    onOpenManage: openManage,
+    onOpenProfile: openProfile,
+  });
 }
 
 function renderFatalError(err) {

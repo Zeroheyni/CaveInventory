@@ -101,7 +101,7 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
                 <div id="theme-trays"></div>
               </div>
             </div>
-            <button type="button" class="campaign-strip-signout" id="hub-back-btn">← voltar ao painel</button>
+            <button type="button" class="campaign-strip-signout" id="hub-back-btn">← voltar</button>
           </div>
         </div>
 

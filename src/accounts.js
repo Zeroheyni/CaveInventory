@@ -2,6 +2,7 @@
 // diferentes) e escolhe quem joga ao entrar; o papel (mestre/jogador) vem de `campaign_members`,
 // por campanha. `profiles.is_superadmin` é o ADM.
 import { supabase } from './supabaseClient.js';
+import { padPassword } from './nickname.js';
 
 // ---- leitura ----
 
@@ -133,4 +134,36 @@ export function lastCharacter(userId) {
 }
 export function forgetCharacter(userId) {
   try { localStorage.removeItem(lastKey(userId)); } catch (_) { /* idem */ }
+}
+
+// ---- perfil da conta (db/070) ----
+
+// nome mostrado: o de exibição, ou o apelido de login se ainda não escolheu um
+export const displayNameOf = (p) => (p && ((p.display_name && p.display_name.trim()) || p.username)) || '';
+
+export async function updateMyProfile(userId, fields) {
+  const patch = {};
+  if ('display_name' in fields) patch.display_name = (fields.display_name || '').trim().slice(0, 40) || null;
+  if ('bio' in fields) patch.bio = (fields.bio || '').trim().slice(0, 280) || null;
+  if ('avatar_url' in fields) patch.avatar_url = fields.avatar_url || null;
+  const { error } = await supabase.from('profiles').update(patch).eq('id', userId);
+  if (error) throw error;
+  return patch;
+}
+
+// foto da conta em avatars/users/<id>/ (um nome novo a cada envio, pelo mesmo motivo de uploadAvatar em characterSheet.js)
+export async function uploadProfileAvatar(userId, blob) {
+  const path = `users/${userId}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.jpg`;
+  const { error } = await supabase.storage.from('avatars').upload(path, blob, { upsert: false, cacheControl: '3600', contentType: 'image/jpeg' });
+  if (error) throw error;
+  return supabase.storage.from('avatars').getPublicUrl(path).data.publicUrl;
+}
+
+// troca a senha da PRÓPRIA conta: confere a atual antes (o app acrescenta o sufixo interno, ver nickname.js)
+export async function changeMyPassword(email, currentPassword, newPassword) {
+  if (!newPassword || newPassword.length < 4 || newPassword.length > 64) throw new Error('a nova senha precisa ter de 4 a 64 caracteres');
+  const { error: authErr } = await supabase.auth.signInWithPassword({ email, password: padPassword(currentPassword) });
+  if (authErr) throw new Error('a senha atual está incorreta');
+  const { error } = await supabase.auth.updateUser({ password: padPassword(newPassword) });
+  if (error) throw error;
 }
