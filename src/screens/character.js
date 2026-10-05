@@ -20,7 +20,9 @@ import { themeTraysHtml, toggleThemeTray } from '../themes.js';
 
 let activeChannel = null;
 
-export function renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, ownerName, onBack }) {
+// characterId: o MESTRE/ADM abrindo o personagem de outra pessoa (modo admin, tem onBack).
+// playCharacterId: o DONO jogando o próprio personagem (escolhido na tela de seleção; onSwitchCharacter volta pra ela).
+export function renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, playCharacterId, ownerName, onBack, onSwitchCharacter }) {
   const campaignId = campaign.id;
   const userId = session.user.id;
   const isAdminView = !!presetCharacterId;
@@ -520,6 +522,10 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     if(presetCharacterId){
       const { data } = await supabase.from('characters').select('*').eq('id', presetCharacterId).maybeSingle();
       row = data;
+    } else if(playCharacterId){
+      const { data } = await supabase.from('characters').select('*').eq('id', playCharacterId).eq('owner_id', userId).maybeSingle();
+      row = data;
+      if(!row) throw new Error('personagem não encontrado ou não é seu');
     } else {
       const { data: rows } = await supabase
         .from('characters')
@@ -528,39 +534,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         .eq('owner_id', userId)
         .limit(1);
       row = rows && rows[0];
-      if(!row){
-        // ver db/022_patch_character_owner_unique.sql: duas cargas rápidas
-        // dessa tela sem personagem ainda criado podiam cair aqui ao mesmo
-        // tempo e criar duas linhas pro mesmo dono+campanha (corrida entre
-        // o select acima e o insert). upsert com ignoreDuplicates vira um
-        // "insert ... on conflict do nothing" -- se perder a corrida, não
-        // cria linha nenhuma (nem sobrescreve a que já existe), e busca ela
-        // de novo abaixo.
-        const { data: created } = await supabase
-          .from('characters')
-          .upsert({
-            campaign_id: campaignId,
-            owner_id: userId,
-            data: {
-              items: [], containers: [], order: [],
-              equipSlots: state.equipSlots, equip: state.equip,
-              transportPersonal: [], transportPersonalMaxCarga: 100,
-              theme: 'caverna-azul'
-            }
-          }, { onConflict: 'campaign_id,owner_id', ignoreDuplicates: true })
-          .select()
-          .maybeSingle();
-        row = created;
-        if(!row){
-          const { data: existing } = await supabase
-            .from('characters')
-            .select('*')
-            .eq('campaign_id', campaignId)
-            .eq('owner_id', userId)
-            .limit(1);
-          row = existing && existing[0];
-        }
-      }
+      // sem criação automática: personagem agora é criado pelo mestre e atribuído à conta (db/065)
+      if(!row) throw new Error('nenhum personagem nessa campanha ainda');
     }
     characterId = row.id;
     characterName = row.name || 'Personagem';
@@ -898,6 +873,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         ${offSessionBadge}
       </div>
       <div style="display:flex; gap:8px;">
+        ${onSwitchCharacter && !isAdminView ? '<button type="button" class="campaign-strip-signout" id="campaign-switch-btn" title="escolher outro personagem">⇄ trocar personagem</button>' : ''}
         <button type="button" class="campaign-strip-signout" id="campaign-signout-btn">${isAdminView ? '← voltar ao painel' : 'sair'}</button>
       </div>
     `;
@@ -910,6 +886,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         saveState();
       }
     });
+    const switchBtn = document.getElementById('campaign-switch-btn');
+    if(switchBtn) switchBtn.addEventListener('click', ()=> onSwitchCharacter());
     document.getElementById('campaign-signout-btn').addEventListener('click', async ()=>{
       if(isAdminView){
         if(activeChannel){ supabase.removeChannel(activeChannel); activeChannel = null; }
@@ -2560,7 +2538,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       document.getElementById('panel-transport-' + btn.dataset.transportTab).classList.add('active');
       if(btn.dataset.transportTab === 'public' && !publicEmbedMounted){
         publicEmbedMounted = true;
-        renderPublicAreaScreen(document.getElementById('public-area-embed'), { session, profile, campaign });
+        renderPublicAreaScreen(document.getElementById('public-area-embed'), { session, profile, campaign, characterId: isAdminView ? null : characterId });
       }
     });
   });
@@ -2997,7 +2975,12 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   renderActivityLog();
   updateUndoButton();
 
-  loadState();
+  loadState().catch((err)=>{
+    // sem isso a tela ficava em branco pra sempre (promise rejeitada sem ninguém olhando)
+    app.innerHTML = `<div class="wrap"><div class="auth-card"><p class="auth-error" style="display:block;">${escapeHtml(err.message || String(err))}</p>${onSwitchCharacter ? '<button type="button" class="btn" id="load-err-back">voltar</button>' : ''}</div></div>`;
+    const b = document.getElementById('load-err-back');
+    if(b) b.addEventListener('click', onSwitchCharacter);
+  });
 
   // mestre não pousa no próprio inventário (inútil pra ele) -- já
   // abre direto no seletor de quem gerenciar.

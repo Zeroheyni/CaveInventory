@@ -1,4 +1,5 @@
 import { supabase } from './supabaseClient.js';
+import { listCampaignMembers, setMemberFlags } from './accounts.js';
 
 export async function fetchPublicArea(campaignId) {
   const [items, containers, compartments, currencyRes, permissions, profiles] = await Promise.all([
@@ -7,9 +8,9 @@ export async function fetchPublicArea(campaignId) {
     supabase.from('public_compartments').select('*').eq('campaign_id', campaignId).order('created_at'),
     supabase.from('public_currency').select('*').eq('campaign_id', campaignId).maybeSingle(),
     supabase.from('compartment_permissions').select('*'),
-    supabase.from('profiles').select('*').eq('campaign_id', campaignId),
+    listCampaignMembers(campaignId),
   ]);
-  for (const r of [items, containers, compartments, permissions, profiles]) if (r.error) throw r.error;
+  for (const r of [items, containers, compartments, permissions]) if (r.error) throw r.error;
   if (currencyRes.error) throw currencyRes.error;
 
   let currency = currencyRes.data;
@@ -29,7 +30,7 @@ export async function fetchPublicArea(campaignId) {
     compartments: compartments.data,
     currency,
     permissions: permissions.data,
-    profiles: profiles.data,
+    profiles,
   };
 }
 
@@ -41,7 +42,7 @@ export function subscribePublicArea(campaignId, onChange) {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'public_compartments', filter: `campaign_id=eq.${campaignId}` }, onChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'public_currency', filter: `campaign_id=eq.${campaignId}` }, onChange)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'compartment_permissions' }, onChange)
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'profiles', filter: `campaign_id=eq.${campaignId}` }, onChange)
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'campaign_members', filter: `campaign_id=eq.${campaignId}` }, onChange)
     .subscribe();
   return channel;
 }
@@ -136,28 +137,25 @@ export async function revokeCompartmentPermission(compartmentId, userId) {
 }
 
 // ---- transport admin ----
-export async function setTransportAdmin(profileId, value) {
-  const { error } = await supabase.from('profiles').update({ is_transport_admin: value }).eq('id', profileId);
-  if (error) throw error;
+export async function setTransportAdmin(campaignId, userId, value) {
+  await setMemberFlags(campaignId, userId, { is_transport_admin: value });
 }
 
 // ---- mover entre Pessoal <-> Público ----
-export async function getMyCharacter(campaignId, userId) {
-  const { data, error } = await supabase
-    .from('characters')
-    .select('*')
-    .eq('campaign_id', campaignId)
-    .eq('owner_id', userId)
-    .maybeSingle();
+// uma conta pode ter vários personagens na mesma campanha: quem chama diz QUAL (characterId)
+export async function getMyCharacter(campaignId, userId, characterId) {
+  let q = supabase.from('characters').select('*').eq('campaign_id', campaignId).eq('owner_id', userId);
+  if (characterId) q = q.eq('id', characterId);
+  const { data, error } = await q.order('id').limit(1);
   if (error) throw error;
-  return data;
+  return (data && data[0]) || null;
 }
 // acrescenta UMA entrada (item ou recipiente) ao inventário pessoal, direto
 // na linha atual do banco (db/048). Antes o app regravava o `data` inteiro
 // a partir de uma cópia lida antes -- se o inventário mudasse nesse meio
 // tempo, a cópia velha sobrescrevia tudo.
-export async function appendPersonalEntry(kind, entry) {
-  const { error } = await supabase.rpc('append_personal_inventory_entry', { p_kind: kind, p_entry: entry });
+export async function appendPersonalEntry(kind, entry, characterId = null) {
+  const { error } = await supabase.rpc('append_personal_inventory_entry', { p_kind: kind, p_entry: entry, p_character_id: characterId });
   if (error) throw error;
 }
 

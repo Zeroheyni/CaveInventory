@@ -35,6 +35,7 @@ import {
   createCustomCondition,
   resolveCondition,
 } from '../combat.js';
+import { listCampaignMembers } from '../accounts.js';
 import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, STATUS_STATS } from '../characterSheet.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 import { rollDice, listRecentRolls, subscribeDiceRolls, DICE_PRESETS, normalizeCustomDie } from '../dice.js';
@@ -144,7 +145,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       myStatusStats = charRow || null;
     }
     if (isMaster) {
-      const [{ data: chars }, { data: profs }] = await Promise.all([
+      const [{ data: chars }, profs] = await Promise.all([
         supabase
           .from('characters')
           .select(
@@ -153,7 +154,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           )
           .eq('campaign_id', campaignId)
           .order('name'),
-        supabase.from('profiles').select('id, username, role, can_see_others_hp, can_see_hidden_initiative').eq('campaign_id', campaignId),
+        listCampaignMembers(campaignId),
       ]);
       charactersInCampaign = chars || [];
       members = (profs || []).filter((p) => p.role !== 'master');
@@ -1406,7 +1407,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       if (permBtn) {
         const field = permBtn.dataset.perm;
         const current = permBtn.dataset.current === 'true';
-        await setPlayerCombatPermission(permBtn.dataset.pid, field, !current);
+        await setPlayerCombatPermission(campaignId, permBtn.dataset.pid, field, !current);
         await load();
         return;
       }

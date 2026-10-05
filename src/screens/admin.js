@@ -7,536 +7,617 @@ import {
   listCharactersInCampaign,
   createCampaignAsAdmin,
   deleteCampaignAsAdmin,
-  createPlayerAccount,
   listDiscordConfigs,
   setCampaignDiscordChannel,
   setCampaignCombatChannel,
   listCharacterDiscordConfigs,
   setCharacterDiscordChannel,
   setPlayerDiscordUserId,
-  deletePlayerAccount,
   setCampaignLiveSession,
+  countMembersByCampaign,
 } from '../admin.js';
+import {
+  listCampaignMembers,
+  effectiveProfile,
+  setMemberFlags,
+  addMemberByNickname,
+  removeMember,
+  createCharacterFor,
+  assignCharacterOwner,
+  deleteCharacterRpc,
+  setCampaignMaster,
+  createMasterAccount,
+  createPlayerAccountFn,
+  resetAccountPassword,
+  setAccountKind,
+  deleteAccount,
+  listMyMemberships,
+} from '../accounts.js';
 import { renderCharacterScreen } from './character.js';
 import { renderMasterCampaignHub } from './masterCampaignHub.js';
 
-export function renderAdminScreen(app, { session, profile }) {
-  let campaigns = [];
-  let profilesById = new Map();
-  let expanded = new Set(); // ids de campanhas com a lista de personagens aberta
+function escapeHtml(str) {
+  const d = document.createElement('div');
+  d.textContent = str == null ? '' : String(str);
+  return d.innerHTML;
+}
+
+// Painel do ADM (vê e mexe em tudo) e do MESTRE (só as mesas dele -- o banco já filtra o que cada um enxerga).
+// opts: { session, profile, memberships, characters, onPlayCharacter }
+export function renderAdminScreen(app, opts) {
+  const { session, profile, characters = [], onPlayCharacter } = opts;
+  const isAdmin = !!profile.is_superadmin;
+  const myId = profile.id;
+  const reopen = () => renderAdminScreen(app, opts);
+
+  let memberships = opts.memberships || [];
+  let campaigns = []; // só as mesas que ESSA conta administra
+  let accounts = []; // ADM: todas as contas
+  let memberCounts = new Map();
+  let expanded = new Set();
+  let membersByCampaign = new Map();
   let charactersByCampaign = new Map();
-  let confirmingDelete = null;
-  let confirmingDeleteCharacter = null;
-  let deleteStage = null; // { kind: 'campaign'|'character', id, campaignId, error } -- passo final (senha) antes de excluir de verdade
-  let syncingLiveSession = null;
-  let lastCreatedAccount = null;
   let discordChannelByCampaign = new Map();
   let combatChannelByCampaign = new Map();
   let discordChannelByCharacter = new Map();
+  let confirming = null; // 'kind:id' no 1º clique de excluir
+  let confirmingTimer = null;
+  let deleteStage = null; // { kind: 'campaign'|'character'|'account', id, campaignId, error } -- passo da senha
+  let syncingLiveSession = null;
+  let lastCreatedAccount = null; // { nickname, password, kind }
+  let banner = null; // { text, error }
+
+  const isMasterOf = (c) => isAdmin || c.master_id === myId || memberships.some((m) => m.campaign_id === c.id && m.role === 'master');
+  const effFor = (campaign) => effectiveProfile(profile, campaign, memberships.find((m) => m.campaign_id === campaign.id) || null);
+  const ownerNameOf = (campaign) => {
+    const a = accounts.find((x) => x.id === campaign.master_id);
+    return a ? a.username : null;
+  };
 
   async function load() {
-    const [camps, profs, discordConfigs] = await Promise.all([listAllCampaigns(), listAllProfiles(), listDiscordConfigs()]);
-    campaigns = camps;
-    profilesById = new Map(profs.map((p) => [p.id, p]));
+    const [camps, discordConfigs, counts] = await Promise.all([listAllCampaigns(), listDiscordConfigs(), countMembersByCampaign()]);
+    if (!isAdmin) memberships = await listMyMemberships(myId);
+    campaigns = camps.filter(isMasterOf);
+    if (isAdmin) accounts = await listAllProfiles();
+    memberCounts = counts;
     discordChannelByCampaign = new Map(discordConfigs.map((c) => [c.campaign_id, c.channel_id]));
     combatChannelByCampaign = new Map(discordConfigs.map((c) => [c.campaign_id, c.combat_channel_id]));
+    membersByCampaign.clear();
     charactersByCampaign.clear();
+    for (const id of expanded) if (!campaigns.some((c) => c.id === id)) expanded.delete(id);
+    await Promise.all([...expanded].map(loadCampaignDetails));
     render();
   }
 
-  function memberCount(campaignId) {
-    let n = 0;
-    for (const p of profilesById.values()) if (p.campaign_id === campaignId) n += 1;
-    return n;
+  async function loadCampaignDetails(campaignId) {
+    const [members, chars] = await Promise.all([listCampaignMembers(campaignId), listCharactersInCampaign(campaignId)]);
+    membersByCampaign.set(campaignId, members);
+    charactersByCampaign.set(campaignId, chars);
+    const cfgs = chars.length ? await listCharacterDiscordConfigs(chars.map((c) => c.id)) : [];
+    cfgs.forEach((c) => discordChannelByCharacter.set(c.character_id, c.channel_id));
   }
 
-  function escapeHtml(str) {
-    const d = document.createElement('div');
-    d.textContent = str == null ? '' : String(str);
-    return d.innerHTML;
+  function flash(text, error = false) {
+    banner = { text, error };
+    render();
   }
 
-  // último passo antes de excluir campanha/conta pra valer -- depois dos
-  // 2 cliques, pede a senha do mestre global de novo (revalida contra o
-  // Supabase Auth) e só exclui depois de confirmar aqui.
+  // ---------- HTML ----------
+
   function deleteGateBox(kind, id) {
     if (!deleteStage || deleteStage.kind !== kind || deleteStage.id !== id) return '';
     return `
       <div class="admin-delete-gate">
-        <p class="admin-delete-gate-warn">⚠ essa ação não pode ser desfeita. digite sua senha de mestre pra confirmar.</p>
-        <input type="password" class="admin-delete-gate-pass" data-delete-gate-pass="${kind}:${id}" placeholder="sua senha" autocomplete="current-password">
+        <p class="admin-delete-gate-warn">⚠ essa ação não pode ser desfeita. digite a sua senha pra confirmar.</p>
+        <input type="password" class="admin-delete-gate-pass" data-gate-pass="${kind}:${id}" placeholder="sua senha" autocomplete="current-password">
         ${deleteStage.error ? `<p class="admin-error" style="display:block;">${escapeHtml(deleteStage.error)}</p>` : ''}
         <div class="admin-delete-gate-actions">
-          <button type="button" class="admin-danger-btn" data-delete-gate-confirm="${kind}:${id}">tenho certeza — excluir</button>
-          <button type="button" class="btn btn-ghost" data-delete-gate-cancel="${kind}:${id}">cancelar</button>
+          <button type="button" class="admin-danger-btn" data-act="gate-confirm" data-key="${kind}:${id}">tenho certeza — excluir</button>
+          <button type="button" class="btn btn-ghost" data-act="gate-cancel">cancelar</button>
         </div>
       </div>`;
   }
 
-  function render() {
-    app.innerHTML = `
-      <div class="wrap admin-wrap">
-        <div class="admin-header">
-          <div class="title"><span class="dot"></span>PAINEL DO MESTRE GLOBAL</div>
-          <button type="button" class="campaign-strip-signout" id="admin-signout">sair</button>
-        </div>
+  function dangerBtn(kind, id, label, title = '') {
+    const pending = confirming === `${kind}:${id}`;
+    return `<button type="button" class="admin-danger-btn ${pending ? 'confirm-pending' : ''}" data-act="arm" data-kind="${kind}" data-id="${id}" ${title ? `title="${escapeHtml(title)}"` : ''}>${pending ? 'confirmar?' : label}</button>`;
+  }
 
+  function masterOptions(selectedId) {
+    const masters = accounts.filter((a) => a.role === 'master' || a.is_superadmin || a.id === selectedId);
+    return masters.map((a) => `<option value="${a.id}" ${a.id === selectedId ? 'selected' : ''}>${escapeHtml(a.username)}${a.is_superadmin ? ' (ADM)' : ''}</option>`).join('');
+  }
+
+  function accountsCard() {
+    if (!isAdmin) return '';
+    const rows = accounts
+      .slice()
+      .sort((a, b) => (b.is_superadmin ? 1 : 0) - (a.is_superadmin ? 1 : 0) || (a.username || '').localeCompare(b.username || ''))
+      .map((a) => {
+        const isMe = a.id === myId;
+        const tag = a.is_superadmin ? '<span class="acc-tag acc-tag-master">ADM</span>' : a.role === 'master' ? '<span class="acc-tag acc-tag-master">mestre</span>' : '<span class="acc-tag">jogador</span>';
+        return `
+          <div class="acc-row">
+            <span>${escapeHtml(a.username)} ${tag}${isMe ? '<span class="acc-tag">você</span>' : ''}</span>
+            <div class="acc-row-actions">
+              <button type="button" class="btn btn-ghost" data-act="reset-pw" data-uid="${a.id}" data-name="${escapeHtml(a.username)}">nova senha</button>
+              ${!isMe && !a.is_superadmin ? `<button type="button" class="btn btn-ghost" data-act="set-kind" data-uid="${a.id}" data-kind="${a.role === 'master' ? 'player' : 'master'}">virar ${a.role === 'master' ? 'jogador' : 'mestre'}</button>${dangerBtn('account', a.id, 'excluir conta', 'só funciona se a conta não tiver personagens nem campanhas')}` : ''}
+            </div>
+          </div>
+          ${deleteGateBox('account', a.id)}`;
+      })
+      .join('');
+    return `
+      <div class="admin-card">
+        <h3 class="admin-card-title">CONTAS (ADM)</h3>
+        <div class="acc-inline" style="margin-top:0;">
+          <input type="text" id="master-nick" placeholder="apelido do novo mestre" />
+          <input type="text" id="master-pass" placeholder="senha" />
+          <button type="button" class="btn" data-act="create-master">+ conta de mestre</button>
+        </div>
+        <div style="margin-top:10px;">${rows}</div>
+      </div>`;
+  }
+
+  function memberRow(c, m) {
+    const isOwner = c.master_id === m.id;
+    const isM = m.role === 'master';
+    const perms = isM
+      ? ''
+      : `<button type="button" class="acc-perm ${m.can_see_others_hp ? 'granted' : ''}" data-act="perm" data-cid="${c.id}" data-uid="${m.id}" data-field="can_see_others_hp" data-current="${m.can_see_others_hp}">vê HP dos outros</button>
+         <button type="button" class="acc-perm ${m.can_see_hidden_initiative ? 'granted' : ''}" data-act="perm" data-cid="${c.id}" data-uid="${m.id}" data-field="can_see_hidden_initiative" data-current="${m.can_see_hidden_initiative}">vê iniciativas ocultas</button>
+         <button type="button" class="acc-perm ${m.is_transport_admin ? 'granted' : ''}" data-act="perm" data-cid="${c.id}" data-uid="${m.id}" data-field="is_transport_admin" data-current="${m.is_transport_admin}">admin do baú</button>`;
+    return `
+      <div class="acc-row">
+        <span>${escapeHtml(m.username)} <span class="acc-tag ${isM ? 'acc-tag-master' : ''}">${isM ? 'mestre' : 'jogador'}</span></span>
+        <div class="acc-row-actions">
+          ${perms}
+          ${!isM ? `<button type="button" class="btn btn-ghost" data-act="reset-pw" data-uid="${m.id}" data-name="${escapeHtml(m.username)}">nova senha</button>` : ''}
+          ${!isM && !isOwner ? `<button type="button" class="admin-danger-btn" data-act="remove-member" data-cid="${c.id}" data-uid="${m.id}" data-name="${escapeHtml(m.username)}" title="tira da mesa (não apaga a conta nem os personagens)">tirar da mesa</button>` : ''}
+        </div>
+      </div>
+      ${!isM ? `<div class="admin-discord-row">
+        <label>🎮 Discord user ID de ${escapeHtml(m.username)}</label>
+        <input type="text" class="admin-discord-input" data-player-discord="${m.id}" placeholder="ID numérico da conta" value="${escapeHtml(m.discord_user_id || '')}" />
+        <button type="button" class="btn btn-ghost" data-act="save-player-discord" data-uid="${m.id}">vincular</button>
+        <span class="admin-discord-feedback" data-player-discord-fb="${m.id}"></span>
+      </div>` : ''}`;
+  }
+
+  function characterRow(c, ch, members) {
+    const owner = members.find((m) => m.id === ch.owner_id);
+    const ownerLabel = owner ? owner.username : 'sem dono';
+    const players = members.filter((m) => m.role !== 'master' || m.id === ch.owner_id);
+    return `
+      <div class="admin-character-row">
+        <span>${escapeHtml(ch.name || 'Personagem')} <span class="admin-owner-tag">(${escapeHtml(ownerLabel)})</span></span>
+        <div style="display:flex; gap:6px; flex-wrap:wrap;">
+          <button type="button" class="btn btn-ghost" data-act="open-char" data-cid="${c.id}" data-chid="${ch.id}" data-owner="${escapeHtml(ownerLabel)}">abrir inventário</button>
+          ${dangerBtn('character', ch.id, 'excluir personagem', 'apaga o personagem (a conta do jogador continua)')}
+        </div>
+      </div>
+      ${deleteGateBox('character', ch.id)}
+      <div class="admin-discord-row">
+        <label>👤 Dono</label>
+        <select data-assign="${ch.id}">${players.map((m) => `<option value="${m.id}" ${m.id === ch.owner_id ? 'selected' : ''}>${escapeHtml(m.username)}</option>`).join('')}</select>
+        <button type="button" class="btn btn-ghost" data-act="assign-char" data-chid="${ch.id}">atribuir</button>
+      </div>
+      <div class="admin-discord-row">
+        <label>🤖 Canal do Discord (inventário)</label>
+        <input type="text" class="admin-discord-input" data-discord-character="${ch.id}" placeholder="ID do canal" value="${escapeHtml(discordChannelByCharacter.get(ch.id) || '')}" />
+        <button type="button" class="btn btn-ghost" data-act="save-char-discord" data-chid="${ch.id}">vincular</button>
+        <span class="admin-discord-feedback" data-discord-character-fb="${ch.id}"></span>
+      </div>`;
+  }
+
+  function campaignDetails(c) {
+    const members = membersByCampaign.get(c.id);
+    const chars = charactersByCampaign.get(c.id);
+    if (!members || !chars) return '<div class="acc-sub"><p class="admin-empty">Carregando...</p></div>';
+    const players = members.filter((m) => m.role !== 'master');
+    return `
+      <div class="acc-sub">
+        <h4>MEMBROS</h4>
+        ${members.map((m) => memberRow(c, m)).join('') || '<p class="admin-empty">Ninguém ainda.</p>'}
+        <div class="acc-inline">
+          <input type="text" id="nm-nick-${c.id}" placeholder="apelido" />
+          <input type="text" id="nm-pass-${c.id}" placeholder="senha (conta nova)" />
+          <button type="button" class="btn" data-act="create-player" data-cid="${c.id}">criar conta de jogador</button>
+        </div>
+        <div class="acc-inline">
+          <input type="text" id="lk-nick-${c.id}" placeholder="apelido de uma conta que já existe" />
+          <button type="button" class="btn btn-ghost" data-act="link-player" data-cid="${c.id}">vincular à mesa</button>
+        </div>
+      </div>
+      <div class="acc-sub">
+        <h4>PERSONAGENS</h4>
+        ${chars.length ? chars.map((ch) => characterRow(c, ch, members)).join('') : '<p class="admin-empty">Nenhum personagem nessa campanha ainda.</p>'}
+        ${
+          players.length
+            ? `<div class="acc-inline">
+          <input type="text" id="ncp-name-${c.id}" placeholder="nome do personagem" />
+          <select id="ncp-owner-${c.id}">${players.map((m) => `<option value="${m.id}">${escapeHtml(m.username)}</option>`).join('')}</select>
+          <button type="button" class="btn" data-act="create-char" data-cid="${c.id}">+ criar e atribuir</button>
+        </div>`
+            : '<p class="admin-empty">Vincule ou crie uma conta de jogador pra poder criar personagens.</p>'
+        }
+      </div>
+      ${
+        isAdmin
+          ? `<div class="acc-sub"><h4>DONO DA CAMPANHA (ADM)</h4>
+        <div class="acc-inline" style="margin-top:0;">
+          <select id="owner-${c.id}">${masterOptions(c.master_id)}</select>
+          <button type="button" class="btn btn-ghost" data-act="set-owner" data-cid="${c.id}">passar a campanha</button>
+        </div></div>`
+          : ''
+      }`;
+  }
+
+  function campaignCard(c) {
+    const isOpen = expanded.has(c.id);
+    const created = new Date(c.created_at).toLocaleDateString('pt-BR');
+    const ownerName = isAdmin ? ownerNameOf(c) : null;
+    return `
+      <div class="admin-campaign-card">
+        <div class="admin-campaign-head">
+          <div>
+            <div class="admin-campaign-name">${escapeHtml(c.name)}</div>
+            <div class="admin-campaign-meta">${memberCounts.get(c.id) || 0} membro(s) · criada em ${created}${ownerName ? ` · mestre <b>${escapeHtml(ownerName)}</b>` : ''}</div>
+          </div>
+          <div class="admin-campaign-actions">
+            <button type="button" class="btn btn-ghost" data-act="open-hub" data-cid="${c.id}" data-mode="combat">⚔ combate</button>
+            <button type="button" class="btn btn-ghost" data-act="open-hub" data-cid="${c.id}" data-mode="ficha">📋 fichas</button>
+            <button type="button" class="btn btn-ghost" data-act="toggle-camp" data-cid="${c.id}">${isOpen ? 'fechar' : 'gerenciar mesa'}</button>
+            ${dangerBtn('campaign', c.id, 'excluir')}
+          </div>
+        </div>
+        ${deleteGateBox('campaign', c.id)}
+        <div class="admin-discord-row">
+          <label>🤖 Canal do Discord (transporte público)</label>
+          <input type="text" class="admin-discord-input" data-discord-campaign="${c.id}" placeholder="ID do canal" value="${escapeHtml(discordChannelByCampaign.get(c.id) || '')}" />
+          <button type="button" class="btn btn-ghost" data-act="save-camp-discord" data-cid="${c.id}">vincular</button>
+          <span class="admin-discord-feedback" data-discord-campaign-fb="${c.id}"></span>
+        </div>
+        <div class="admin-discord-row">
+          <label>⚔ Canal do Discord (aviso de turno)</label>
+          <input type="text" class="admin-discord-input" data-combat-discord-campaign="${c.id}" placeholder="ID do canal" value="${escapeHtml(combatChannelByCampaign.get(c.id) || '')}" />
+          <button type="button" class="btn btn-ghost" data-act="save-combat-discord" data-cid="${c.id}">vincular</button>
+          <span class="admin-discord-feedback" data-combat-discord-fb="${c.id}"></span>
+        </div>
+        <div class="admin-discord-row">
+          <label>🎲 Sessão do Discord</label>
+          <button type="button" class="btn ${c.discord_live_session ? 'btn-live-session' : 'btn-ghost'}" data-act="toggle-live" data-cid="${c.id}" data-live="${c.discord_live_session}" ${syncingLiveSession === c.id ? 'disabled' : ''} title="em sessão, o Discord atualiza em tempo real a cada mudança; fora de sessão, só atualiza quando alguém clica em 🔄 atualizar">
+            ${syncingLiveSession === c.id ? 'sincronizando tudo...' : c.discord_live_session ? '🟢 em sessão (tempo real)' : '⚪ fora de sessão (só no 🔄 atualizar)'}
+          </button>
+          <span class="admin-discord-feedback" data-live-fb="${c.id}"></span>
+        </div>
+        ${isOpen ? campaignDetails(c) : ''}
+      </div>`;
+  }
+
+  function myCharactersCard() {
+    if (!characters.length || !onPlayCharacter) return '';
+    return `
+      <div class="admin-card">
+        <h3 class="admin-card-title">JOGAR COM UM PERSONAGEM</h3>
+        ${characters
+          .map(
+            (c) => `<div class="acc-row"><span>${escapeHtml(c.name || 'Personagem')} <span class="admin-owner-tag">${escapeHtml(c.campaigns ? c.campaigns.name : '')} · nível ${Number(c.level) || 1}</span></span>
+            <button type="button" class="btn btn-ghost" data-act="play" data-chid="${c.id}">jogar</button></div>`
+          )
+          .join('')}
+      </div>`;
+  }
+
+  function render() {
+    const scrollY = window.scrollY;
+    const success = lastCreatedAccount
+      ? `<div class="admin-success">
+          <p>Conta criada! Passe pra pessoa:</p>
+          <p><b>apelido:</b> ${escapeHtml(lastCreatedAccount.nickname)} &nbsp; <b>senha:</b> ${escapeHtml(lastCreatedAccount.password)}</p>
+          <button type="button" class="btn btn-ghost" data-act="dismiss-account">ok, entendi</button>
+        </div>`
+      : '';
+    app.innerHTML = `
+      <div class="wrap admin-wrap" data-admin-root>
+        <div class="admin-header">
+          <div class="title"><span class="dot"></span>${isAdmin ? 'PAINEL DO ADM' : 'MINHAS MESAS'}</div>
+          <button type="button" class="campaign-strip-signout" data-act="signout">sair</button>
+        </div>
+        ${banner ? `<p class="admin-error" style="display:block; ${banner.error ? '' : 'color:var(--accent-core);'}">${escapeHtml(banner.text)}</p>` : ''}
+        ${success}
+        ${myCharactersCard()}
         <div class="admin-card">
           <h3 class="admin-card-title">+ Nova campanha</h3>
           <div class="admin-new-row">
-            <input type="text" id="admin-new-name" placeholder="Nome da campanha" />
-            <button type="button" class="btn" id="admin-create-btn">criar</button>
+            <input type="text" id="new-camp-name" placeholder="Nome da campanha" />
+            ${isAdmin ? `<select id="new-camp-owner" class="acc-inline-select">${masterOptions(myId)}</select>` : ''}
+            <button type="button" class="btn" data-act="create-campaign">criar</button>
           </div>
-          <p class="admin-error" id="admin-error" style="display:none;"></p>
         </div>
-
-        <div class="admin-card">
-          <h3 class="admin-card-title">+ Nova conta de jogador</h3>
-          ${
-            lastCreatedAccount
-              ? `
-            <div class="admin-success">
-              <p>Conta criada! Passe pro seu amigo:</p>
-              <p><b>apelido:</b> ${escapeHtml(lastCreatedAccount.nickname)} &nbsp; <b>senha:</b> ${escapeHtml(lastCreatedAccount.password)}</p>
-              <button type="button" class="btn btn-ghost" id="account-success-dismiss">ok, entendi</button>
-            </div>
-          `
-              : ''
-          }
-          ${
-            campaigns.length === 0
-              ? '<p class="admin-empty">Crie uma campanha primeiro.</p>'
-              : `
-            <div class="form-grid" style="margin-bottom:12px;">
-              <div class="field"><label>Apelido</label><input type="text" id="account-nickname" placeholder="ex: João" /></div>
-              <div class="field"><label>Senha</label><input type="text" id="account-password" placeholder="ex: 1234" /></div>
-              <div class="field">
-                <label>Campanha</label>
-                <select id="account-campaign">${campaigns.map((c) => `<option value="${c.id}">${escapeHtml(c.name)}</option>`).join('')}</select>
-              </div>
-            </div>
-            <button type="button" class="btn" id="account-create-btn">criar conta</button>
-          `
-          }
-          <p class="admin-error" id="account-error" style="display:none;"></p>
+        ${accountsCard()}
+        <div class="admin-list">
+          ${campaigns.length ? campaigns.map(campaignCard).join('') : '<p class="admin-empty">Nenhuma campanha ainda.</p>'}
         </div>
-
-        <div class="admin-list" id="admin-list"></div>
-      </div>
-    `;
-
-    document.getElementById('admin-signout').addEventListener('click', async () => {
-      await signOut();
-      window.location.reload();
-    });
-
-    document.getElementById('admin-create-btn').addEventListener('click', async () => {
-      const input = document.getElementById('admin-new-name');
-      const name = input.value.trim();
-      if (!name) {
-        input.focus();
-        return;
-      }
-      const errorEl = document.getElementById('admin-error');
-      try {
-        await createCampaignAsAdmin(name);
-        input.value = '';
-        errorEl.style.display = 'none';
-        await load();
-      } catch (err) {
-        errorEl.textContent = err.message;
-        errorEl.style.display = 'block';
-      }
-    });
-
-    const accountSuccessDismiss = document.getElementById('account-success-dismiss');
-    if (accountSuccessDismiss) {
-      accountSuccessDismiss.addEventListener('click', () => {
-        lastCreatedAccount = null;
-        render();
-      });
-    }
-
-    const accountCreateBtn = document.getElementById('account-create-btn');
-    if (accountCreateBtn) {
-      accountCreateBtn.addEventListener('click', async () => {
-        const nicknameInput = document.getElementById('account-nickname');
-        const passwordInput = document.getElementById('account-password');
-        const campaignSelect = document.getElementById('account-campaign');
-        const errorEl = document.getElementById('account-error');
-        errorEl.style.display = 'none';
-
-        const nickname = nicknameInput.value.trim();
-        const password = passwordInput.value;
-        if (!nickname || !password) {
-          errorEl.textContent = 'Preencha apelido e senha.';
-          errorEl.style.display = 'block';
-          return;
-        }
-        try {
-          await createPlayerAccount(nickname, password, campaignSelect.value);
-          charactersByCampaign.delete(campaignSelect.value);
-          lastCreatedAccount = { nickname, password };
-          await load();
-        } catch (err) {
-          errorEl.textContent = err.message;
-          errorEl.style.display = 'block';
-        }
-      });
-    }
-
-    renderList();
+      </div>`;
+    window.scrollTo(0, scrollY);
   }
 
-  function renderList() {
-    const listEl = document.getElementById('admin-list');
-    if (!listEl) return;
+  // ---------- ações ----------
 
-    if (campaigns.length === 0) {
-      listEl.innerHTML = '<p class="admin-empty">Nenhuma campanha criada ainda.</p>';
-      return;
-    }
+  const $ = (sel) => app.querySelector(sel);
+  const campaignById = (id) => campaigns.find((c) => c.id === id);
 
-    listEl.innerHTML = campaigns
-      .map((c) => {
-        const isOpen = expanded.has(c.id);
-        const isConfirming = confirmingDelete === c.id;
-        const created = new Date(c.created_at).toLocaleDateString('pt-BR');
-        return `
-          <div class="admin-campaign-card">
-            <div class="admin-campaign-head">
-              <div>
-                <div class="admin-campaign-name">${escapeHtml(c.name)}</div>
-                <div class="admin-campaign-meta">código <b>${escapeHtml(c.invite_code)}</b> · ${memberCount(c.id)} membro(s) · criada em ${created}</div>
-              </div>
-              <div class="admin-campaign-actions">
-                <button type="button" class="btn btn-ghost" data-open-combat="${c.id}">⚔ combate</button>
-                <button type="button" class="btn btn-ghost" data-open-ficha-campaign="${c.id}">📋 fichas</button>
-                <button type="button" class="btn btn-ghost" data-view-campaign="${c.id}">${isOpen ? 'fechar' : 'ver personagens'}</button>
-                <button type="button" class="admin-danger-btn ${isConfirming ? 'confirm-pending' : ''}" data-delete-campaign="${c.id}">${isConfirming ? 'confirmar?' : 'excluir'}</button>
-              </div>
-            </div>
-            ${deleteGateBox('campaign', c.id)}
-            <div class="admin-discord-row">
-              <label>🤖 Canal do Discord (transporte público)</label>
-              <input type="text" class="admin-discord-input" data-discord-campaign="${c.id}" placeholder="ID do canal" value="${escapeHtml(discordChannelByCampaign.get(c.id) || '')}" />
-              <button type="button" class="btn btn-ghost" data-save-discord-campaign="${c.id}">vincular</button>
-              <span class="admin-discord-feedback" data-discord-feedback-campaign="${c.id}"></span>
-            </div>
-            <div class="admin-discord-row">
-              <label>⚔ Canal do Discord (aviso de turno)</label>
-              <input type="text" class="admin-discord-input" data-combat-discord-campaign="${c.id}" placeholder="ID do canal" value="${escapeHtml(combatChannelByCampaign.get(c.id) || '')}" />
-              <button type="button" class="btn btn-ghost" data-save-combat-discord-campaign="${c.id}">vincular</button>
-              <span class="admin-discord-feedback" data-combat-discord-feedback-campaign="${c.id}"></span>
-            </div>
-            <div class="admin-discord-row">
-              <label>🎲 Sessão do Discord</label>
-              <button type="button" class="btn ${c.discord_live_session ? 'btn-live-session' : 'btn-ghost'}" data-toggle-live-session="${c.id}" data-live="${c.discord_live_session}" ${syncingLiveSession === c.id ? 'disabled' : ''} title="em sessão, o Discord atualiza em tempo real a cada mudança; fora de sessão, só atualiza quando alguém clica em 🔄 atualizar">
-                ${syncingLiveSession === c.id ? 'sincronizando tudo...' : (c.discord_live_session ? '🟢 em sessão (tempo real)' : '⚪ fora de sessão (só no 🔄 atualizar)')}
-              </button>
-              <span class="admin-discord-feedback" data-live-session-feedback="${c.id}"></span>
-            </div>
-            ${isOpen ? `<div class="admin-character-list" id="admin-chars-${c.id}"><p class="admin-empty">Carregando...</p></div>` : ''}
-          </div>
-        `;
-      })
-      .join('');
-
-    listEl.querySelectorAll('button[data-open-combat]').forEach((btn) => {
-      btn.addEventListener('click', () => onOpenCombat(btn.dataset.openCombat));
-    });
-    listEl.querySelectorAll('button[data-open-ficha-campaign]').forEach((btn) => {
-      btn.addEventListener('click', () => onOpenFicha(btn.dataset.openFichaCampaign));
-    });
-    listEl.querySelectorAll('button[data-view-campaign]').forEach((btn) => {
-      btn.addEventListener('click', () => toggleCampaign(btn.dataset.viewCampaign));
-    });
-    listEl.querySelectorAll('button[data-delete-campaign]').forEach((btn) => {
-      btn.addEventListener('click', () => onDeleteClick(btn.dataset.deleteCampaign));
-    });
-    listEl.querySelectorAll('button[data-delete-gate-confirm]').forEach((btn) => {
-      btn.addEventListener('click', () => onDeleteGateConfirm(btn.dataset.deleteGateConfirm));
-    });
-    listEl.querySelectorAll('button[data-delete-gate-cancel]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        deleteStage = null;
-        renderList();
-      });
-    });
-    listEl.querySelectorAll('button[data-save-discord-campaign]').forEach((btn) => {
-      btn.addEventListener('click', () => onSaveCampaignDiscord(btn.dataset.saveDiscordCampaign));
-    });
-    listEl.querySelectorAll('button[data-save-combat-discord-campaign]').forEach((btn) => {
-      btn.addEventListener('click', () => onSaveCampaignCombatDiscord(btn.dataset.saveCombatDiscordCampaign));
-    });
-    listEl.querySelectorAll('button[data-toggle-live-session]').forEach((btn) => {
-      btn.addEventListener('click', () => onToggleLiveSession(btn.dataset.toggleLiveSession, btn.dataset.live !== 'true'));
-    });
-
-    expanded.forEach((campaignId) => {
-      if (campaigns.some((c) => c.id === campaignId)) renderCharacterList(campaignId);
-    });
-  }
-
-  async function toggleCampaign(campaignId) {
-    if (expanded.has(campaignId)) {
-      expanded.delete(campaignId);
-      renderList();
-      return;
-    }
-    expanded.add(campaignId);
-    renderList();
-    await renderCharacterList(campaignId);
-  }
-
-  async function renderCharacterList(campaignId) {
-    let characters = charactersByCampaign.get(campaignId);
-    if (!characters) {
-      characters = await listCharactersInCampaign(campaignId);
-      charactersByCampaign.set(campaignId, characters);
-    }
-    const el = document.getElementById('admin-chars-' + campaignId);
-    if (!el) return;
-    const campaign = campaigns.find((c) => c.id === campaignId);
-
-    if (characters.length === 0) {
-      el.innerHTML = '<p class="admin-empty">Ninguém criou personagem nesta campanha ainda.</p>';
-      return;
-    }
-
-    const discordConfigs = await listCharacterDiscordConfigs(characters.map((ch) => ch.id));
-    discordConfigs.forEach((c) => discordChannelByCharacter.set(c.character_id, c.channel_id));
-
-    el.innerHTML = characters
-      .map((ch) => {
-        const owner = profilesById.get(ch.owner_id);
-        const ownerLabel = owner ? owner.username : 'jogador desconhecido';
-        const isConfirmingChar = confirmingDeleteCharacter === ch.id;
-        return `
-          <div class="admin-character-row">
-            <span>${escapeHtml(ch.name || 'Personagem')} <span class="admin-owner-tag">(${escapeHtml(ownerLabel)})</span></span>
-            <div style="display:flex; gap:6px;">
-              <button type="button" class="btn btn-ghost" data-open-character="${ch.id}" data-owner-name="${escapeHtml(ownerLabel)}">abrir inventário</button>
-              <button type="button" class="admin-danger-btn ${isConfirmingChar ? 'confirm-pending' : ''}" data-delete-character="${ch.id}" title="excluir a conta de ${escapeHtml(ownerLabel)} (apelido, senha e personagem — não dá pra desfazer)">${isConfirmingChar ? 'confirmar?' : 'excluir conta'}</button>
-            </div>
-          </div>
-          ${deleteGateBox('character', ch.id)}
-          <div class="admin-discord-row">
-            <label>🤖 Canal do Discord (inventário)</label>
-            <input type="text" class="admin-discord-input" data-discord-character="${ch.id}" placeholder="ID do canal" value="${escapeHtml(discordChannelByCharacter.get(ch.id) || '')}" />
-            <button type="button" class="btn btn-ghost" data-save-discord-character="${ch.id}">vincular</button>
-            <span class="admin-discord-feedback" data-discord-feedback-character="${ch.id}"></span>
-          </div>
-          <div class="admin-discord-row">
-            <label>🎮 Discord user ID do jogador</label>
-            <input type="text" class="admin-discord-input" data-player-discord-owner="${ch.owner_id}" placeholder="ID numérico da conta" value="${escapeHtml((owner && owner.discord_user_id) || '')}" />
-            <button type="button" class="btn btn-ghost" data-save-player-discord="${ch.owner_id}">vincular</button>
-            <span class="admin-discord-feedback" data-player-discord-feedback="${ch.owner_id}"></span>
-          </div>
-        `;
-      })
-      .join('');
-
-    el.querySelectorAll('button[data-open-character]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        renderCharacterScreen(app, {
-          session,
-          profile,
-          campaign,
-          characterId: btn.dataset.openCharacter,
-          ownerName: btn.dataset.ownerName,
-          onBack: () => load(),
-        });
-      });
-    });
-    el.querySelectorAll('button[data-save-discord-character]').forEach((btn) => {
-      btn.addEventListener('click', () => onSaveCharacterDiscord(btn.dataset.saveDiscordCharacter));
-    });
-    el.querySelectorAll('button[data-save-player-discord]').forEach((btn) => {
-      btn.addEventListener('click', () => onSavePlayerDiscord(btn.dataset.savePlayerDiscord));
-    });
-    el.querySelectorAll('button[data-delete-character]').forEach((btn) => {
-      btn.addEventListener('click', () => onDeleteCharacterClick(campaignId, btn.dataset.deleteCharacter));
-    });
-    el.querySelectorAll('button[data-delete-gate-confirm]').forEach((btn) => {
-      btn.addEventListener('click', () => onDeleteGateConfirm(btn.dataset.deleteGateConfirm));
-    });
-    el.querySelectorAll('button[data-delete-gate-cancel]').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        deleteStage = null;
-        renderCharacterList(campaignId);
-      });
-    });
-  }
-
-  function onOpenCombat(campaignId) {
-    const campaign = campaigns.find((c) => c.id === campaignId);
-    if (!campaign) return;
-    renderMasterCampaignHub(app, { session, profile, campaign, initialMode: 'combat', onBack: () => renderAdminScreen(app, { session, profile }) });
-  }
-
-  function onOpenFicha(campaignId) {
-    const campaign = campaigns.find((c) => c.id === campaignId);
-    if (!campaign) return;
-    renderMasterCampaignHub(app, { session, profile, campaign, initialMode: 'ficha', onBack: () => renderAdminScreen(app, { session, profile }) });
-  }
-
-  async function onToggleLiveSession(campaignId, live) {
-    const feedback = document.querySelector(`span[data-live-session-feedback="${campaignId}"]`);
-    if (live) {
-      syncingLiveSession = campaignId;
-      renderList();
-    }
+  async function guarded(fn, okText) {
     try {
-      await setCampaignLiveSession(campaignId, live);
-      const c = campaigns.find((camp) => camp.id === campaignId);
-      if (c) c.discord_live_session = live;
-      syncingLiveSession = null;
-      renderList();
-      if (live) {
-        const freshFeedback = document.querySelector(`span[data-live-session-feedback="${campaignId}"]`);
-        if (freshFeedback) freshFeedback.textContent = 'sincronizado ✓';
-      }
-    } catch (err) {
-      syncingLiveSession = null;
-      renderList();
-      if (feedback) feedback.textContent = 'erro: ' + err.message;
-      else window.alert('Erro ao mudar sessão do Discord: ' + err.message);
-    }
-  }
-
-  async function onSaveCampaignDiscord(campaignId) {
-    const input = document.querySelector(`input[data-discord-campaign="${campaignId}"]`);
-    const feedback = document.querySelector(`span[data-discord-feedback-campaign="${campaignId}"]`);
-    const channelId = input.value.trim();
-    if (!channelId) { input.focus(); return; }
-    feedback.textContent = 'vinculando...';
-    try {
-      await setCampaignDiscordChannel(campaignId, channelId);
-      discordChannelByCampaign.set(campaignId, channelId);
-      feedback.textContent = 'vinculado ✓';
-    } catch (err) {
-      feedback.textContent = 'erro: ' + err.message;
-    }
-  }
-
-  async function onSaveCharacterDiscord(characterId) {
-    const input = document.querySelector(`input[data-discord-character="${characterId}"]`);
-    const feedback = document.querySelector(`span[data-discord-feedback-character="${characterId}"]`);
-    const channelId = input.value.trim();
-    if (!channelId) { input.focus(); return; }
-    feedback.textContent = 'vinculando...';
-    try {
-      await setCharacterDiscordChannel(characterId, channelId);
-      discordChannelByCharacter.set(characterId, channelId);
-      feedback.textContent = 'vinculado ✓';
-    } catch (err) {
-      feedback.textContent = 'erro: ' + err.message;
-    }
-  }
-
-  async function onSaveCampaignCombatDiscord(campaignId) {
-    const input = document.querySelector(`input[data-combat-discord-campaign="${campaignId}"]`);
-    const feedback = document.querySelector(`span[data-combat-discord-feedback-campaign="${campaignId}"]`);
-    const channelId = input.value.trim();
-    if (!channelId) { input.focus(); return; }
-    feedback.textContent = 'vinculando...';
-    try {
-      await setCampaignCombatChannel(campaignId, channelId);
-      combatChannelByCampaign.set(campaignId, channelId);
-      feedback.textContent = 'vinculado ✓';
-    } catch (err) {
-      feedback.textContent = 'erro: ' + err.message;
-    }
-  }
-
-  async function onSavePlayerDiscord(ownerId) {
-    const input = document.querySelector(`input[data-player-discord-owner="${ownerId}"]`);
-    const feedback = document.querySelector(`span[data-player-discord-feedback="${ownerId}"]`);
-    const discordUserId = input.value.trim();
-    if (!discordUserId) { input.focus(); return; }
-    feedback.textContent = 'vinculando...';
-    try {
-      await setPlayerDiscordUserId(ownerId, discordUserId);
-      const owner = profilesById.get(ownerId);
-      if (owner) owner.discord_user_id = discordUserId;
-      feedback.textContent = 'vinculado ✓';
-    } catch (err) {
-      feedback.textContent = 'erro: ' + err.message;
-    }
-  }
-
-  let deleteConfirmTimeout = null;
-  function onDeleteClick(campaignId) {
-    if (confirmingDelete === campaignId) {
-      clearTimeout(deleteConfirmTimeout);
-      confirmingDelete = null;
-      deleteStage = { kind: 'campaign', id: campaignId, error: '' };
-      renderList();
-      return;
-    }
-    confirmingDelete = campaignId;
-    renderList();
-    clearTimeout(deleteConfirmTimeout);
-    deleteConfirmTimeout = setTimeout(() => {
-      confirmingDelete = null;
-      renderList();
-    }, 3000);
-  }
-
-  let deleteCharacterConfirmTimeout = null;
-  function onDeleteCharacterClick(campaignId, characterId) {
-    if (confirmingDeleteCharacter === characterId) {
-      clearTimeout(deleteCharacterConfirmTimeout);
-      confirmingDeleteCharacter = null;
-      deleteStage = { kind: 'character', id: characterId, campaignId, error: '' };
-      renderCharacterList(campaignId);
-      return;
-    }
-    confirmingDeleteCharacter = characterId;
-    renderCharacterList(campaignId);
-    clearTimeout(deleteCharacterConfirmTimeout);
-    deleteCharacterConfirmTimeout = setTimeout(() => {
-      confirmingDeleteCharacter = null;
-      renderCharacterList(campaignId);
-    }, 3000);
-  }
-
-  async function onDeleteGateConfirm(encoded) {
-    const sepIndex = encoded.indexOf(':');
-    const kind = encoded.slice(0, sepIndex);
-    const id = encoded.slice(sepIndex + 1);
-    if (!deleteStage || deleteStage.kind !== kind || deleteStage.id !== id) return;
-    const passInput = document.querySelector(`input[data-delete-gate-pass="${kind}:${id}"]`);
-    const password = passInput ? passInput.value : '';
-    const rerenderGate = () => (kind === 'campaign' ? renderList() : renderCharacterList(deleteStage.campaignId));
-
-    if (!password) {
-      deleteStage = { ...deleteStage, error: 'digite sua senha.' };
-      rerenderGate();
-      return;
-    }
-    const { error: authError } = await supabase.auth.signInWithPassword({ email: session.user.email, password: padPassword(password) });
-    if (authError) {
-      deleteStage = { ...deleteStage, error: 'senha incorreta.' };
-      rerenderGate();
-      return;
-    }
-
-    const campaignIdForChar = deleteStage.campaignId;
-    deleteStage = null;
-    try {
-      if (kind === 'campaign') {
-        await deleteCampaignAsAdmin(id);
-      } else {
-        await deletePlayerAccount(id);
-        charactersByCampaign.delete(campaignIdForChar);
-      }
+      await fn();
+      if (okText) banner = { text: okText, error: false };
+      else banner = null;
       await load();
     } catch (err) {
-      window.alert('Erro ao excluir: ' + err.message);
+      flash(err.message || String(err), true);
     }
   }
 
-  load();
+  function setFeedback(selector, text) {
+    const el = $(selector);
+    if (el) el.textContent = text;
+  }
+
+  async function reauth(password) {
+    const { error } = await supabase.auth.signInWithPassword({ email: session.user.email, password: padPassword(password) });
+    return !error;
+  }
+
+  const actions = {
+    signout: async () => {
+      await signOut();
+      window.location.reload();
+    },
+    'dismiss-account': () => {
+      lastCreatedAccount = null;
+      render();
+    },
+    play: (el) => {
+      app.onclick = null;
+      const c = characters.find((x) => x.id === el.dataset.chid);
+      if (c) onPlayCharacter(c);
+    },
+
+    'create-campaign': () => {
+      const name = $('#new-camp-name').value.trim();
+      if (!name) return $('#new-camp-name').focus();
+      const ownerSel = $('#new-camp-owner');
+      return guarded(() => createCampaignAsAdmin(name, ownerSel ? ownerSel.value : null), 'campanha criada ✓');
+    },
+    'create-master': () => {
+      const nickname = $('#master-nick').value.trim();
+      const password = $('#master-pass').value;
+      if (!nickname || !password) return flash('Preencha apelido e senha do mestre.', true);
+      return guarded(async () => {
+        await createMasterAccount(nickname, password);
+        lastCreatedAccount = { nickname, password, kind: 'master' };
+      });
+    },
+    'create-player': (el) => {
+      const cid = el.dataset.cid;
+      const nickname = $(`#nm-nick-${cid}`).value.trim();
+      const password = $(`#nm-pass-${cid}`).value;
+      if (!nickname || !password) return flash('Preencha apelido e senha.', true);
+      return guarded(async () => {
+        await createPlayerAccountFn(nickname, password, cid);
+        lastCreatedAccount = { nickname, password, kind: 'player' };
+      });
+    },
+    'link-player': (el) => {
+      const cid = el.dataset.cid;
+      const nickname = $(`#lk-nick-${cid}`).value.trim();
+      if (!nickname) return $(`#lk-nick-${cid}`).focus();
+      return guarded(() => addMemberByNickname(cid, nickname), `${nickname} vinculado à mesa ✓`);
+    },
+    'remove-member': (el) => {
+      if (!window.confirm(`Tirar ${el.dataset.name} da mesa? A conta e os personagens não são apagados.`)) return;
+      return guarded(() => removeMember(el.dataset.cid, el.dataset.uid), 'removido da mesa ✓');
+    },
+    perm: async (el) => {
+      try {
+        await setMemberFlags(el.dataset.cid, el.dataset.uid, { [el.dataset.field]: el.dataset.current !== 'true' });
+        await loadCampaignDetails(el.dataset.cid);
+        render();
+      } catch (err) {
+        flash(err.message, true);
+      }
+    },
+    'reset-pw': (el) => {
+      const pw = window.prompt(`Nova senha para ${el.dataset.name} (4 a 64 caracteres):`);
+      if (!pw) return;
+      return guarded(() => resetAccountPassword(el.dataset.uid, pw), `senha de ${el.dataset.name} alterada ✓`);
+    },
+    'set-kind': (el) => {
+      const toMaster = el.dataset.kind === 'master';
+      if (!window.confirm(toMaster ? 'Transformar em conta de MESTRE (pode criar campanhas)?' : 'Voltar essa conta pra JOGADOR?')) return;
+      return guarded(() => setAccountKind(el.dataset.uid, el.dataset.kind), 'tipo da conta alterado ✓');
+    },
+    'set-owner': (el) => {
+      const cid = el.dataset.cid;
+      const sel = $(`#owner-${cid}`);
+      if (!window.confirm('Passar essa campanha pra outra conta de mestre?')) return;
+      return guarded(() => setCampaignMaster(cid, sel.value), 'dono da campanha alterado ✓');
+    },
+
+    'create-char': (el) => {
+      const cid = el.dataset.cid;
+      const name = $(`#ncp-name-${cid}`).value.trim();
+      const owner = $(`#ncp-owner-${cid}`).value;
+      if (!name) return $(`#ncp-name-${cid}`).focus();
+      return guarded(() => createCharacterFor(cid, name, owner), 'personagem criado ✓');
+    },
+    'assign-char': (el) => {
+      const sel = $(`select[data-assign="${el.dataset.chid}"]`);
+      return guarded(() => assignCharacterOwner(el.dataset.chid, sel.value), 'personagem atribuído ✓');
+    },
+    'open-char': (el) => {
+      const campaign = campaignById(el.dataset.cid);
+      if (!campaign) return;
+      app.onclick = null;
+      renderCharacterScreen(app, {
+        session,
+        profile: effFor(campaign),
+        campaign,
+        characterId: el.dataset.chid,
+        ownerName: el.dataset.owner,
+        onBack: reopen,
+      });
+    },
+    'open-hub': (el) => {
+      const campaign = campaignById(el.dataset.cid);
+      if (!campaign) return;
+      app.onclick = null;
+      renderMasterCampaignHub(app, { session, profile: effFor(campaign), campaign, initialMode: el.dataset.mode, onBack: reopen });
+    },
+    'toggle-camp': async (el) => {
+      const cid = el.dataset.cid;
+      if (expanded.has(cid)) {
+        expanded.delete(cid);
+        return render();
+      }
+      expanded.add(cid);
+      render();
+      try {
+        await loadCampaignDetails(cid);
+      } catch (err) {
+        flash(err.message, true);
+        return;
+      }
+      render();
+    },
+
+    arm: (el) => {
+      const key = `${el.dataset.kind}:${el.dataset.id}`;
+      clearTimeout(confirmingTimer);
+      if (confirming === key) {
+        confirming = null;
+        deleteStage = { kind: el.dataset.kind, id: el.dataset.id, error: '' };
+        return render();
+      }
+      confirming = key;
+      render();
+      confirmingTimer = setTimeout(() => {
+        confirming = null;
+        render();
+      }, 3000);
+    },
+    'gate-cancel': () => {
+      deleteStage = null;
+      render();
+    },
+    'gate-confirm': async (el) => {
+      const key = el.dataset.key;
+      const sep = key.indexOf(':');
+      const kind = key.slice(0, sep);
+      const id = key.slice(sep + 1);
+      if (!deleteStage || deleteStage.kind !== kind || deleteStage.id !== id) return;
+      const input = $(`input[data-gate-pass="${key}"]`);
+      const password = input ? input.value : '';
+      if (!password) {
+        deleteStage = { ...deleteStage, error: 'digite sua senha.' };
+        return render();
+      }
+      if (!(await reauth(password))) {
+        deleteStage = { ...deleteStage, error: 'senha incorreta.' };
+        return render();
+      }
+      deleteStage = null;
+      const run = { campaign: deleteCampaignAsAdmin, character: deleteCharacterRpc, account: deleteAccount }[kind];
+      return guarded(() => run(id), 'excluído ✓');
+    },
+
+    'save-camp-discord': async (el) => {
+      const cid = el.dataset.cid;
+      const input = $(`input[data-discord-campaign="${cid}"]`);
+      const v = input.value.trim();
+      if (!v) return input.focus();
+      setFeedback(`[data-discord-campaign-fb="${cid}"]`, 'vinculando...');
+      try {
+        await setCampaignDiscordChannel(cid, v);
+        discordChannelByCampaign.set(cid, v);
+        setFeedback(`[data-discord-campaign-fb="${cid}"]`, 'vinculado ✓');
+      } catch (err) {
+        setFeedback(`[data-discord-campaign-fb="${cid}"]`, 'erro: ' + err.message);
+      }
+    },
+    'save-combat-discord': async (el) => {
+      const cid = el.dataset.cid;
+      const input = $(`input[data-combat-discord-campaign="${cid}"]`);
+      const v = input.value.trim();
+      if (!v) return input.focus();
+      setFeedback(`[data-combat-discord-fb="${cid}"]`, 'vinculando...');
+      try {
+        await setCampaignCombatChannel(cid, v);
+        combatChannelByCampaign.set(cid, v);
+        setFeedback(`[data-combat-discord-fb="${cid}"]`, 'vinculado ✓');
+      } catch (err) {
+        setFeedback(`[data-combat-discord-fb="${cid}"]`, 'erro: ' + err.message);
+      }
+    },
+    'save-char-discord': async (el) => {
+      const chid = el.dataset.chid;
+      const input = $(`input[data-discord-character="${chid}"]`);
+      const v = input.value.trim();
+      if (!v) return input.focus();
+      setFeedback(`[data-discord-character-fb="${chid}"]`, 'vinculando...');
+      try {
+        await setCharacterDiscordChannel(chid, v);
+        discordChannelByCharacter.set(chid, v);
+        setFeedback(`[data-discord-character-fb="${chid}"]`, 'vinculado ✓');
+      } catch (err) {
+        setFeedback(`[data-discord-character-fb="${chid}"]`, 'erro: ' + err.message);
+      }
+    },
+    'save-player-discord': async (el) => {
+      const uid = el.dataset.uid;
+      const input = $(`input[data-player-discord="${uid}"]`);
+      const v = input.value.trim();
+      if (!v) return input.focus();
+      setFeedback(`[data-player-discord-fb="${uid}"]`, 'vinculando...');
+      try {
+        await setPlayerDiscordUserId(uid, v);
+        setFeedback(`[data-player-discord-fb="${uid}"]`, 'vinculado ✓');
+      } catch (err) {
+        setFeedback(`[data-player-discord-fb="${uid}"]`, 'erro: ' + err.message);
+      }
+    },
+    'toggle-live': async (el) => {
+      const cid = el.dataset.cid;
+      const live = el.dataset.live !== 'true';
+      if (live) {
+        syncingLiveSession = cid;
+        render();
+      }
+      try {
+        await setCampaignLiveSession(cid, live);
+        const c = campaignById(cid);
+        if (c) c.discord_live_session = live;
+        syncingLiveSession = null;
+        render();
+        if (live) setFeedback(`[data-live-fb="${cid}"]`, 'sincronização pedida ✓');
+      } catch (err) {
+        syncingLiveSession = null;
+        render();
+        setFeedback(`[data-live-fb="${cid}"]`, 'erro: ' + err.message);
+      }
+    },
+  };
+
+  app.onclick = (e) => {
+    const el = e.target.closest('[data-act]');
+    // o mesmo #app serve as outras telas: só age enquanto o painel é o que está na tela
+    if (!el || !app.contains(el) || !app.querySelector('[data-admin-root]')) return;
+    const fn = actions[el.dataset.act];
+    if (fn) fn(el);
+  };
+
+  load().catch((err) => {
+    app.innerHTML = `<div class="wrap admin-wrap"><div class="auth-card"><p class="auth-error" style="display:block;">Erro ao carregar o painel: ${escapeHtml(err.message)}</p></div></div>`;
+  });
 }

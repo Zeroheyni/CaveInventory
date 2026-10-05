@@ -26,7 +26,7 @@ let activeChannel = null;
 // Embutida como aba "PÚBLICO" dentro do Baú do Veículo (character.js) — não é
 // mais uma tela cheia à parte, então não desenha wrap/header/footer/campaign-strip
 // próprios (o character.js já tem os dele em volta).
-export function renderPublicAreaScreen(app, { session, profile, campaign }) {
+export function renderPublicAreaScreen(app, { session, profile, campaign, characterId: playingCharacterId = null }) {
   const campaignId = campaign.id;
   const userId = session.user.id;
   let maxCarga = campaign.max_carga_publico;
@@ -88,7 +88,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
     permissions = data.permissions;
     members = data.profiles;
     try {
-      myCharacter = await getMyCharacter(campaignId, userId);
+      myCharacter = await getMyCharacter(campaignId, userId, playingCharacterId);
     } catch (e) {
       myCharacter = null;
     }
@@ -231,7 +231,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
         description: it.description, ammoLinked: false, ammoItemId: null, damage: it.damage, range: it.range,
         pinned: false,
       };
-      await appendPersonalEntry('item', newItem);
+      await appendPersonalEntry('item', newItem, myCharacter ? myCharacter.id : null);
       await deletePublicItem(id);
     } else {
       // recipientes com filhos não são movidos pro pessoal por enquanto (evita mesclar duas árvores)
@@ -245,7 +245,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
         id: 'pub' + c.id, name: c.name, ownWeight: c.own_weight, maxSlots: c.max_slots,
         collapsed: false, tag: c.tag, contents: [],
       };
-      await appendPersonalEntry('container', newContainer);
+      await appendPersonalEntry('container', newContainer, myCharacter ? myCharacter.id : null);
       await deletePublicContainer(id);
     }
     await load();
@@ -417,7 +417,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign }) {
       btn.addEventListener('click', async () => {
         const id = btn.dataset.toggleTransportAdmin;
         const current = btn.dataset.current === 'true';
-        await setTransportAdmin(id, !current);
+        await setTransportAdmin(campaignId, id, !current);
         await load();
       });
     });

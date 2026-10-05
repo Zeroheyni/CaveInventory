@@ -4,6 +4,7 @@
 // iniciativa, que o mestre e os jogadores ajustam manualmente.
 import { supabase } from './supabaseClient.js';
 import { logEvent } from './battleLog.js';
+import { setMemberFlags } from './accounts.js';
 
 // catálogo fixo de condições (Fase 8, db/031_patch_combat_conditions.sql) --
 // fórmula/catálogo em vez de texto livre, mesmo espírito de STATUS_STATS
@@ -302,9 +303,9 @@ export async function reorderParticipants(orderedIds) {
   await Promise.all(orderedIds.map((id, i) => supabase.from('combat_participants').update({ position: i }).eq('id', id)));
 }
 
-export async function setPlayerCombatPermission(profileId, field, value) {
-  const { error } = await supabase.from('profiles').update({ [field]: value }).eq('id', profileId);
-  if (error) throw error;
+// permissão POR MESA (campaign_members, db/062) -- field: 'can_see_others_hp' | 'can_see_hidden_initiative'
+export async function setPlayerCombatPermission(campaignId, userId, field, value) {
+  await setMemberFlags(campaignId, userId, { [field]: value });
 }
 
 // true se esse participante deveria aparecer pro jogador `viewerProfile`

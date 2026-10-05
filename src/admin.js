@@ -1,6 +1,5 @@
 import { supabase } from './supabaseClient.js';
-import { nicknameToEmail, padPassword } from './nickname.js';
-import { setRerenderSuppressed } from './auth.js';
+import { requestDiscordSync, setPlayerDiscordId, setCharacterDiscordChannelRpc, createCampaignRpc, deleteCampaignRpc } from './accounts.js';
 
 export async function listAllCampaigns() {
   const { data, error } = await supabase.from('campaigns').select('*').order('created_at', { ascending: false });
@@ -40,7 +39,7 @@ export async function setCampaignDiscordChannel(campaignId, channelId) {
   const { error } = await supabase.from('discord_config').upsert({ campaign_id: campaignId, channel_id: channelId });
   if (error) throw error;
   // dispara uma sincronização imediata pra dar feedback na hora ao mestre
-  await supabase.functions.invoke('discord-sync-public', { body: { campaign_id: campaignId } });
+  await requestDiscordSync('public', campaignId);
 }
 
 // canal DEDICADO do aviso de turno (Fase 8, db/033_patch_discord_turn_notify.sql)
@@ -55,8 +54,7 @@ export async function setCampaignCombatChannel(campaignId, channelId) {
 // ID da conta Discord do jogador (Fase 8) -- cadastrado pelo mestre, pra o
 // bot poder @mencionar quando chega a vez dele no combate.
 export async function setPlayerDiscordUserId(profileId, discordUserId) {
-  const { error } = await supabase.from('profiles').update({ discord_user_id: discordUserId }).eq('id', profileId);
-  if (error) throw error;
+  await setPlayerDiscordId(profileId, discordUserId);
 }
 
 export async function listCharacterDiscordConfigs(characterIds) {
@@ -70,20 +68,15 @@ export async function listCharacterDiscordConfigs(characterIds) {
 }
 
 export async function setCharacterDiscordChannel(characterId, channelId) {
-  const { error } = await supabase.from('discord_character_config').upsert({ character_id: characterId, channel_id: channelId });
-  if (error) throw error;
-  await supabase.functions.invoke('discord-sync-character', { body: { character_id: characterId } });
+  await setCharacterDiscordChannelRpc(characterId, channelId); // grava e já pede a sincronização
 }
 
-export async function createCampaignAsAdmin(name) {
-  const { data, error } = await supabase.from('campaigns').insert({ name }).select().single();
-  if (error) throw error;
-  return data;
+export async function createCampaignAsAdmin(name, masterId = null) {
+  return createCampaignRpc(name, masterId);
 }
 
 export async function deleteCampaignAsAdmin(campaignId) {
-  const { error } = await supabase.from('campaigns').delete().eq('id', campaignId);
-  if (error) throw error;
+  await deleteCampaignRpc(campaignId);
 }
 
 // Fora de sessão, o Discord só atualiza no clique manual de "🔄 atualizar"
@@ -98,63 +91,16 @@ export async function setCampaignLiveSession(campaignId, live) {
 // Força uma sincronização completa (área pública + cada personagem
 // vinculado) de uma vez -- chamado ao ligar a sessão, pra corrigir o que
 // ficou desatualizado sem esperar a próxima edição de cada personagem.
+// (pedido pelo banco com o segredo do Vault: vale pra qualquer mestre DA mesa, db/065)
 export async function syncCampaignAll(campaignId) {
-  const { error } = await supabase.functions.invoke('discord-sync-campaign-all', { body: { campaign_id: campaignId } });
-  if (error) throw error;
+  await requestDiscordSync('campaign', campaignId);
 }
 
-// Exclui só UMA conta de jogador (perfil + personagem + login), sem apagar
-// a campanha inteira — via db/011_patch_delete_player_account.sql (a conta
-// de auth.users só pode ser apagada por uma função SECURITY DEFINER).
-export async function deletePlayerAccount(characterId) {
-  const { error } = await supabase.rpc('delete_player_account', { p_character_id: characterId });
+// contagem de membros por campanha (campaign_members; o RLS já limita ao que a conta enxerga)
+export async function countMembersByCampaign() {
+  const { data, error } = await supabase.from('campaign_members').select('campaign_id');
   if (error) throw error;
-}
-
-// Cria uma conta de jogador (apelido + senha, sem e-mail de verdade) já
-// vinculada a uma campanha específica. Só o mestre chama isso.
-//
-// supabase.auth.signUp() troca a sessão do navegador pra sessão do usuário
-// recém-criado — por isso guardamos a sessão do mestre antes e restauramos
-// depois, sem precisar da senha dele.
-export async function createPlayerAccount(nickname, password, campaignId) {
-  const {
-    data: { session: masterSession },
-  } = await supabase.auth.getSession();
-
-  setRerenderSuppressed(true);
-  try {
-    const email = nicknameToEmail(nickname);
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ email, password: padPassword(password) });
-
-    if (signUpError) {
-      if (masterSession) {
-        await supabase.auth.setSession({
-          access_token: masterSession.access_token,
-          refresh_token: masterSession.refresh_token,
-        });
-      }
-      throw signUpError;
-    }
-
-    const newUserId = signUpData.user.id;
-
-    const { error: rpcError } = await supabase.rpc('complete_player_account', {
-      p_campaign_id: campaignId,
-      p_username: nickname,
-    });
-
-    if (masterSession) {
-      await supabase.auth.setSession({
-        access_token: masterSession.access_token,
-        refresh_token: masterSession.refresh_token,
-      });
-    }
-
-    if (rpcError) throw rpcError;
-
-    return { id: newUserId, username: nickname };
-  } finally {
-    setRerenderSuppressed(false);
-  }
+  const m = new Map();
+  for (const r of data || []) m.set(r.campaign_id, (m.get(r.campaign_id) || 0) + 1);
+  return m;
 }

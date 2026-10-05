@@ -2,6 +2,7 @@ import './styles/theme.css';
 import './styles/auth.css';
 import './styles/campaign-strip.css';
 import './styles/admin.css';
+import './styles/accounts.css';
 import './styles/publicArea.css';
 import './styles/combat.css';
 import './styles/ficha.css';

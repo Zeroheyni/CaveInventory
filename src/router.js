@@ -1,11 +1,23 @@
 import { supabase } from './supabaseClient.js';
 import { getMyProfile, getCampaign, applyGlobalTheme } from './campaign.js';
+import { listMyMemberships, listMyCharacters, effectiveProfile, rememberCharacter, lastCharacter } from './accounts.js';
 import { renderLogin } from './screens/login.js';
 import { renderOnboarding } from './screens/onboarding.js';
 import { renderCharacterScreen } from './screens/character.js';
+import { renderCharacterPicker } from './screens/characterPicker.js';
 import { renderAdminScreen } from './screens/admin.js';
 
 const app = document.getElementById('app');
+
+// Trocar de personagem/mesa sem recarregar a página: derruba TODOS os canais realtime
+// (combate, dados, ficha, banco de NPCs, tabuleiro... alguns nunca eram removidos) e monta de novo.
+export async function switchContext() {
+  try {
+    // não deixa a tela esperando o ack de cada canal (sem rede, cada um demora até estourar o timeout)
+    await Promise.race([supabase.removeAllChannels(), new Promise((r) => setTimeout(r, 600))]);
+  } catch (_) { /* canais já fechados */ }
+  return renderApp();
+}
 
 export async function renderApp() {
   const {
@@ -27,25 +39,65 @@ export async function renderApp() {
 
   applyGlobalTheme(profile && profile.theme);
 
-  if (profile && profile.is_superadmin) {
-    renderAdminScreen(app, { session, profile });
-    return;
-  }
-
-  if (!profile || !profile.campaign_id) {
+  if (!profile) {
     renderOnboarding(app, renderApp);
     return;
   }
 
-  let campaign;
+  let memberships = [];
+  let characters = [];
   try {
-    campaign = await getCampaign(profile.campaign_id);
+    [memberships, characters] = await Promise.all([listMyMemberships(profile.id), listMyCharacters(profile.id)]);
   } catch (err) {
     renderFatalError(err);
     return;
   }
 
-  renderCharacterScreen(app, { session, profile, campaign });
+  // jogar um personagem: o perfil entregue às telas é o "efetivo" (papel/flags da mesa dele)
+  async function play(character) {
+    let campaign;
+    try {
+      campaign = await getCampaign(character.campaign_id);
+    } catch (err) {
+      renderFatalError(err);
+      return;
+    }
+    if (!campaign) {
+      renderFatalError(new Error('campanha desse personagem não encontrada'));
+      return;
+    }
+    const membership = memberships.find((m) => m.campaign_id === campaign.id) || null;
+    rememberCharacter(profile.id, character.id);
+    renderCharacterScreen(app, {
+      session,
+      profile: effectiveProfile(profile, campaign, membership, { asPlayer: true }),
+      campaign,
+      playCharacterId: character.id,
+      // com um personagem só não há o que trocar; conta de mestre volta pro painel dela
+      onSwitchCharacter: characters.length > 1 || isMasterAccount ? switchContext : null,
+    });
+  }
+
+  const isMasterAccount =
+    !!profile.is_superadmin || profile.role === 'master' || memberships.some((m) => m.role === 'master');
+
+  // ADM e contas de mestre: painel (ADM vê tudo; mestre vê só as próprias mesas -- o banco filtra)
+  if (isMasterAccount) {
+    renderAdminScreen(app, { session, profile, memberships, characters, onPlayCharacter: play });
+    return;
+  }
+
+  // conta de jogador: escolhe quem joga (entra direto se só tiver um)
+  if (characters.length === 0 && memberships.length === 0) {
+    renderOnboarding(app, renderApp);
+    return;
+  }
+  const last = lastCharacter(profile.id);
+  if (characters.length === 1) {
+    play(characters[0]);
+    return;
+  }
+  renderCharacterPicker(app, { profile, characters, lastId: last, onPick: play });
 }
 
 function renderFatalError(err) {
