@@ -71,8 +71,8 @@ export async function setCharacterDiscordChannel(characterId, channelId) {
   await setCharacterDiscordChannelRpc(characterId, channelId); // grava e já pede a sincronização
 }
 
-export async function createCampaignAsAdmin(name, masterId = null) {
-  return createCampaignRpc(name, masterId);
+export async function createCampaignAsAdmin(name, masterId = null, system = 'cave-story') {
+  return createCampaignRpc(name, masterId, system);
 }
 
 export async function deleteCampaignAsAdmin(campaignId) {

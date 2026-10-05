@@ -6,7 +6,7 @@
 // (atribuição a um personagem específico + valor atual, que o dono do
 // personagem também pode ajustar).
 import { supabase } from './supabaseClient.js';
-import { STATUS_STATS } from './characterSheet.js';
+import { statusStats } from './characterSheet.js';
 
 export async function listCustomBars(campaignId) {
   const { data, error } = await supabase.from('custom_bars').select('*').eq('campaign_id', campaignId).order('created_at');
@@ -104,7 +104,7 @@ export function customBarMax(bar, character) {
 export function customBarFormulaLabel(bar) {
   if (!bar) return '';
   if (bar.mode === 'manual') return `máx ${bar.manual_max ?? 0} (fixo)`;
-  const stat = STATUS_STATS.find((s) => s.key === bar.formula_stat);
+  const stat = statusStats().find((s) => s.key === bar.formula_stat);
   const statLabel = stat ? stat.label : bar.formula_stat;
   return bar.formula_op === 'div' ? `${statLabel} ÷ ${bar.formula_value}` : `${statLabel} × ${bar.formula_value}`;
 }

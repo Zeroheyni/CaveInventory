@@ -32,9 +32,12 @@ import {
   listMyMemberships,
   listPlayerAccounts,
   displayNameOf,
+  listGameSystems,
+  setCampaignSystem,
 } from '../accounts.js';
 import { renderCharacterScreen } from './character.js';
 import { renderMasterCampaignHub } from './masterCampaignHub.js';
+import { knownSystemIds } from '../systems/index.js';
 
 function escapeHtml(str) {
   const d = document.createElement('div');
@@ -59,6 +62,7 @@ export function renderAdminScreen(app, opts) {
   let memberships = opts.memberships || [];
   let campaigns = []; // só as mesas que ESSA conta administra
   let accounts = []; // ADM: todas as contas
+  let gameSystems = []; // sistemas de regras liberados (e que este cliente sabe usar)
   let playerAccounts = []; // contas de jogador (não pertencem a mesa; o personagem é que vincula)
   let memberCounts = new Map();
   let view = 'mesas'; // 'mesas' | 'jogadores' | 'contas'
@@ -91,6 +95,7 @@ export function renderAdminScreen(app, opts) {
     campaigns = camps.filter(isMasterOf);
     if (isAdmin) accounts = await listAllProfiles();
     playerAccounts = await listPlayerAccounts();
+    gameSystems = (await listGameSystems()).filter((s) => knownSystemIds().includes(s.id));
     memberCounts = counts;
     discordChannelByCampaign = new Map(discordConfigs.map((c) => [c.campaign_id, c.channel_id]));
     combatChannelByCampaign = new Map(discordConfigs.map((c) => [c.campaign_id, c.combat_channel_id]));
@@ -157,6 +162,8 @@ export function renderAdminScreen(app, opts) {
     return list;
   }
 
+  const systemLabel = (id) => (gameSystems.find((s) => s.id === id) || { label: id || 'Cave Story' }).label;
+
   function topBar() {
     const name = displayNameOf(profile);
     return `
@@ -189,6 +196,9 @@ export function renderAdminScreen(app, opts) {
         <h3 class="mg-card-title">Nova mesa</h3>
         <label class="pf-label" for="new-camp-name">Nome da mesa</label>
         <input type="text" id="new-camp-name" class="pf-input" placeholder="Ex.: Crônicas de Verdemar" maxlength="60" />
+        <label class="pf-label" for="new-camp-system">Sistema de regras</label>
+        <select id="new-camp-system" class="pf-input">${gameSystems.map((s) => `<option value="${s.id}">${escapeHtml(s.label)}</option>`).join('')}</select>
+        <p class="pf-hint">${escapeHtml((gameSystems[0] && gameSystems[0].description) || '')} O sistema não muda depois que a mesa tem personagens.</p>
         ${
           isAdmin
             ? `<label class="pf-label" for="new-camp-owner">Mestre da mesa</label>
@@ -296,6 +306,14 @@ export function renderAdminScreen(app, opts) {
     return `
       ${
         isAdmin
+          ? `<div class="mg-char-opts mg-stack"><label>Sistema de regras</label>
+          <select class="pf-input" id="system-${c.id}">${gameSystems.map((s) => `<option value="${s.id}" ${s.id === c.system ? 'selected' : ''}>${escapeHtml(s.label)}</option>`).join('')}</select>
+          <button type="button" class="btn btn-ghost" data-act="set-system" data-cid="${c.id}">trocar sistema</button>
+          <span class="mg-fb">só funciona em mesa sem personagens</span></div>`
+          : ''
+      }
+      ${
+        isAdmin
           ? `<div class="mg-char-opts mg-stack"><label>Mestre da mesa</label>
           <select class="pf-input" id="owner-${c.id}">${masterOptions(c.master_id)}</select>
           <button type="button" class="btn btn-ghost" data-act="set-owner" data-cid="${c.id}">passar a mesa</button></div>`
@@ -335,6 +353,7 @@ export function renderAdminScreen(app, opts) {
             <div class="mg-chips">
               <span class="mg-chip">👥 ${Math.max(0, (memberCounts.get(c.id) || 1) - 1)} jogador(es)</span>
               ${owner ? `<span class="mg-chip">♛ ${escapeHtml(owner)}</span>` : ''}
+              <span class="mg-chip">🎲 ${escapeHtml(systemLabel(c.system))}</span>
               <span class="mg-chip">criada em ${created}</span>
               ${c.discord_live_session ? '<span class="mg-chip mg-chip-live">🟢 em sessão</span>' : ''}
             </div>
@@ -498,7 +517,8 @@ export function renderAdminScreen(app, opts) {
       if (!name) return $('#new-camp-name').focus();
       const ownerSel = $('#new-camp-owner');
       return guarded(async () => {
-        await createCampaignAsAdmin(name, ownerSel ? ownerSel.value : null);
+        const sysSel = $('#new-camp-system');
+        await createCampaignAsAdmin(name, ownerSel ? ownerSel.value : null, sysSel ? sysSel.value : 'cave-story');
         newCampOpen = false;
       }, 'mesa criada ✓');
     },
@@ -538,6 +558,11 @@ export function renderAdminScreen(app, opts) {
       const toMaster = el.dataset.kind === 'master';
       if (!window.confirm(toMaster ? 'Transformar em conta de MESTRE (pode criar mesas)?' : 'Voltar essa conta pra JOGADOR?')) return;
       return guarded(() => setAccountKind(el.dataset.uid, el.dataset.kind), 'tipo da conta alterado ✓');
+    },
+    'set-system': (el) => {
+      const cid = el.dataset.cid;
+      const sel = $(`#system-${cid}`);
+      return guarded(() => setCampaignSystem(cid, sel.value), 'sistema da mesa alterado ✓');
     },
     'set-owner': (el) => {
       const cid = el.dataset.cid;

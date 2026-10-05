@@ -1,5 +1,6 @@
-import { hpMax, hpBarClass, xpNeeded, sheetDataOf } from '../characterSheet.js';
+import { hpBarClass, sheetDataOf } from '../characterSheet.js';
 import { displayNameOf } from '../accounts.js';
+import { getRuleset } from '../systems/index.js';
 
 function escapeHtml(str) {
   const d = document.createElement('div');
@@ -12,10 +13,11 @@ const pct = (v, max) => (max > 0 ? Math.max(0, Math.min(100, Math.round((v / max
 function characterCard(c, lastId) {
   const sheet = sheetDataOf(c);
   const level = Number(c.level) || 1;
-  const maxHp = hpMax(c);
+  const rs = getRuleset(c.campaigns && c.campaigns.system); // cada personagem pelas regras da SUA mesa
+  const maxHp = rs.hpMax(c);
   const hp = Math.max(0, Number(c.hp_current) || 0);
   const hpPct = pct(hp, maxHp);
-  const need = xpNeeded(level);
+  const need = rs.xpNeeded(level);
   const xpPct = pct(Number(c.xp) || 0, need);
   const subtitle = [sheet.raca, sheet.trabalho].filter(Boolean).join(' · ');
   const portrait = c.avatar_url

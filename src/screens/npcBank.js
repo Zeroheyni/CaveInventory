@@ -14,7 +14,7 @@ import {
   hpMax,
   estaminaMax,
   hpBarClass,
-  STATUS_STATS,
+  statusStats,
 } from '../characterSheet.js';
 import { renderFichaScreen } from './ficha.js';
 import { renderCharacterScreen } from './character.js';
@@ -166,7 +166,7 @@ export function renderNpcBankScreen(app, { session, profile, campaign, topApp, o
         <div class="ficha-dash-bar-row"><span class="ficha-dash-bar-icon">⚡</span><div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${ePct}%"></div></div></div>
         ${
           showStatus
-            ? `<div class="combat-master-stat-row">${STATUS_STATS.map((s) => `<span class="combat-master-stat-chip" style="--stat-color:${s.color};" title="${s.label}">${s.icon}${npc[s.key] ?? '—'}</span>`).join('')}</div>`
+            ? `<div class="combat-master-stat-row">${statusStats().map((s) => `<span class="combat-master-stat-chip" style="--stat-color:${s.color};" title="${s.label}">${s.icon}${npc[s.key] ?? '—'}</span>`).join('')}</div>`
             : `<div class="npc-bank-damage-preview">⚔ ${npc.npc_damage ? escapeHtml(npc.npc_damage) : 'sem dano definido'}</div>`
         }
         <div class="npc-bank-card-actions">

@@ -19,7 +19,7 @@ export async function listMyMemberships(userId) {
 export async function listMyCharacters(userId) {
   const { data, error } = await supabase
     .from('characters')
-    .select('id, name, campaign_id, avatar_url, level, xp, vitalidade, hp_current, hp_max_override, sheet_data, updated_at, campaigns(id, name)')
+    .select('id, name, campaign_id, avatar_url, level, xp, vitalidade, hp_current, hp_max_override, sheet_data, updated_at, campaigns(id, name, system)')
     .eq('owner_id', userId)
     .eq('is_npc', false)
     .order('name');
@@ -79,7 +79,15 @@ export const setMemberFlags = (campaignId, userId, flags) =>
     p_can_see_hidden_initiative: flags.can_see_hidden_initiative ?? null,
     p_is_transport_admin: flags.is_transport_admin ?? null,
   });
-export const createCampaignRpc = (name, masterId = null) => rpc('master_create_campaign', { p_name: name, p_master_id: masterId });
+export const createCampaignRpc = (name, masterId = null, system = 'cave-story') =>
+  rpc('master_create_campaign', { p_name: name, p_master_id: masterId, p_system: system });
+export const setCampaignSystem = (campaignId, system) => rpc('admin_set_campaign_system', { p_campaign_id: campaignId, p_system: system });
+// sistemas de regras cadastrados e liberados (db/071); o cliente só sabe usar os que estão em src/systems/
+export async function listGameSystems() {
+  const { data, error } = await supabase.from('game_systems').select('id, label, description').eq('enabled', true).order('label');
+  if (error) throw error;
+  return data || [];
+}
 export const deleteCampaignRpc = (campaignId) => rpc('master_delete_campaign', { p_campaign_id: campaignId });
 export const addMemberByNickname = (campaignId, nickname) => rpc('add_member_by_nickname', { p_campaign_id: campaignId, p_nickname: nickname });
 export const removeMember = (campaignId, userId) => rpc('remove_member', { p_campaign_id: campaignId, p_user_id: userId });

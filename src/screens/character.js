@@ -17,12 +17,14 @@ import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormul
 import { updateProfileTheme } from '../campaign.js';
 import { listUnlockedGameThemes } from '../games.js';
 import { themeTraysHtml, toggleThemeTray } from '../themes.js';
+import { activeRuleset, setActiveSystem } from '../systems/index.js';
 
 let activeChannel = null;
 
 // characterId: o MESTRE/ADM abrindo o personagem de outra pessoa (modo admin, tem onBack).
 // playCharacterId: o DONO jogando o próprio personagem (escolhido na tela de seleção; onSwitchCharacter volta pra ela).
 export function renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, playCharacterId, ownerName, onBack, onSwitchCharacter }) {
+  setActiveSystem(campaign.system);
   const campaignId = campaign.id;
   const userId = session.user.id;
   const isAdminView = !!presetCharacterId;
@@ -573,7 +575,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     // capacidade máxima é fórmula (3x Força + adicional do mestre), não
     // mais um número livre -- ver db/028_patch_max_carga_formula.sql.
     state.maxCargaBonus = (typeof row.max_carga_bonus === 'number') ? row.max_carga_bonus : 0;
-    state.maxCarga = 3 * (typeof row.forca === 'number' ? row.forca : 10) + state.maxCargaBonus;
+    state.maxCarga = activeRuleset().carryMax(typeof row.forca === 'number' ? row.forca : 10, state.maxCargaBonus);
     state.currency = (row.currency && typeof row.currency === 'object') ? row.currency : { bronze:0, silver:0, gold:0, platinum:0 };
     ['vitalidade','forca','agilidade','destreza','inteligencia','estamina','observacao'].forEach(k => {
       if(typeof row[k] === 'number') state.status[k] = row[k];
@@ -679,7 +681,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       }
     });
     if(!changed) return;
-    state.maxCarga = 3 * (typeof state.status.forca === 'number' ? state.status.forca : 10) + state.maxCargaBonus;
+    state.maxCarga = activeRuleset().carryMax(typeof state.status.forca === 'number' ? state.status.forca : 10, state.maxCargaBonus);
     renderAll();
   }
 
@@ -704,7 +706,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     state.transportPersonal = Array.isArray(d.transportPersonal) ? d.transportPersonal : [];
     state.transportPersonalMaxCarga = d.transportPersonalMaxCarga !== undefined ? d.transportPersonalMaxCarga : 100;
     state.maxCargaBonus = (typeof row.max_carga_bonus === 'number') ? row.max_carga_bonus : 0;
-    state.maxCarga = 3 * (typeof row.forca === 'number' ? row.forca : 10) + state.maxCargaBonus;
+    state.maxCarga = activeRuleset().carryMax(typeof row.forca === 'number' ? row.forca : 10, state.maxCargaBonus);
     state.currency = (row.currency && typeof row.currency === 'object') ? row.currency : { bronze:0, silver:0, gold:0, platinum:0 };
     ['vitalidade','forca','agilidade','destreza','inteligencia','estamina','observacao'].forEach(k => {
       if(typeof row[k] === 'number') state.status[k] = row[k];
@@ -2385,7 +2387,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   const maxCargaBonusInput = document.getElementById('max-carga-bonus-input');
   if(maxCargaBonusInput) maxCargaBonusInput.addEventListener('input', (e)=>{
     state.maxCargaBonus = Math.max(0, parseFloat(e.target.value) || 0);
-    state.maxCarga = 3 * (state.status.forca || 0) + state.maxCargaBonus;
+    state.maxCarga = activeRuleset().carryMax(state.status.forca || 0, state.maxCargaBonus);
     renderGauge(); saveState();
   });
   document.getElementById('max-carga-input-personal').addEventListener('input', (e)=>{

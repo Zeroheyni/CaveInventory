@@ -3,38 +3,20 @@
 // única de verdade aqui -- o rastreador de combate (src/combat.js)
 // grava de volta pra cá quando o participante tem character_id.
 import { supabase } from './supabaseClient.js';
+import { activeRuleset } from './systems/index.js';
 
 export const SHEET_FIELDS =
   'id, campaign_id, owner_id, name, avatar_url, level, xp, status_points_unspent, status_confirmed, ' +
   'vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, hp_current, estamina_current, sheet_data, ' +
   'is_npc, npc_sheet_type, npc_has_status, hp_max_override, estamina_max_override, npc_damage, theme';
 
-// os 7 atributos de status com ícone/cor -- usado por ficha.js (cards
-// de status) e combat.js (resumo de status do mestre no combate).
-export const STATUS_STATS = [
-  { key: 'vitalidade', label: 'Vitalidade', icon: '❤', color: '#ff5a5a' },
-  { key: 'forca', label: 'Força', icon: '💪', color: '#ff8a4c' },
-  { key: 'agilidade', label: 'Agilidade', icon: '🏃', color: '#5ad4ff' },
-  { key: 'destreza', label: 'Destreza', icon: '🎯', color: '#4ade80' },
-  { key: 'inteligencia', label: 'Inteligência', icon: '🧠', color: '#b98bff' },
-  { key: 'estamina', label: 'Estamina', icon: '⚡', color: '#ffd93d' },
-  { key: 'observacao', label: 'Observação', icon: '👁', color: '#2dd4bf' },
-];
-
-// NPC de ficha simples sem status não tem vitalidade/estamina pra
-// calcular pela fórmula -- hp_max_override/estamina_max_override
-// (digitados direto pelo mestre) vencem quando presentes.
-export function hpMax(char) {
-  if (char.hp_max_override !== undefined && char.hp_max_override !== null) return char.hp_max_override;
-  return (char.vitalidade || 0) * 4;
-}
-export function estaminaMax(char) {
-  if (char.estamina_max_override !== undefined && char.estamina_max_override !== null) return char.estamina_max_override;
-  return char.estamina || 0;
-}
-export function xpNeeded(level) {
-  return 10 * level;
-}
+// atributos, vida, estamina e XP vêm do SISTEMA DE REGRAS da campanha atual (src/systems/); aqui ficam só os atalhos
+// que o resto do app já usava. (As regras do Cave Story foram extraídas pra src/systems/cave-story.js sem mudar nada.)
+// statusStats() -- atributos de status com ícone/cor: usado por ficha.js, combat.js, boardHud.js, npcBank.js, customBars.js.
+export const statusStats = () => activeRuleset().attributes;
+export const hpMax = (char) => activeRuleset().hpMax(char);
+export const estaminaMax = (char) => activeRuleset().estaminaMax(char);
+export const xpNeeded = (level) => activeRuleset().xpNeeded(level);
 // classe da barra de HP (combat.css) por faixa de porcentagem --
 // usada por ficha.js, masterFicha.js e combat.js, todos com a mesma
 // barra .combat-hp-fill.

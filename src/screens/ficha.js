@@ -16,7 +16,7 @@ import {
   estaminaMax,
   xpNeeded,
   hpBarClass,
-  STATUS_STATS as STATS,
+  statusStats,
   sheetDataOf,
   updateSheetData,
   updateHpCurrent,
@@ -98,7 +98,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
     sheet = await getCharacterSheet(characterId);
     customBars = await listCharacterCustomBarsFor(characterId);
     if (sheet && sheet.status_points_unspent > 0 && !draftStats) {
-      draftStats = Object.fromEntries(STATS.map((s) => [s.key, sheet[s.key]]));
+      draftStats = Object.fromEntries(statusStats().map((s) => [s.key, sheet[s.key]]));
     }
     // NPC com tema próprio (db/050) -- aplica só enquanto essa ficha
     // está aberta; volta pro tema da conta ao clicar em "voltar" (ver
@@ -134,10 +134,10 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
   // soma de tudo que já foi distribuído ACIMA da base 10 em cada
   // status (item pedido pelo usuário: "ignorando os 10 pontos base").
   function totalStatusDistributed() {
-    return STATS.reduce((sum, s) => sum + (sheet[s.key] - 10), 0);
+    return statusStats().reduce((sum, s) => sum + (sheet[s.key] - 10), 0);
   }
   function draftSpent() {
-    return STATS.reduce((sum, s) => sum + (draftStats[s.key] - sheet[s.key]), 0);
+    return statusStats().reduce((sum, s) => sum + (draftStats[s.key] - sheet[s.key]), 0);
   }
   function draftRemaining() {
     return sheet.status_points_unspent - draftSpent();
@@ -211,7 +211,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
           ${isMaster ? '<span class="ficha-master-badge">edição livre (mestre)</span>' : ''}
         </div>
         <div class="ficha-status-grid">
-          ${STATS.map((s) => statCard(s, editingStatus)).join('')}
+          ${statusStats().map((s) => statCard(s, editingStatus)).join('')}
         </div>
         ${statusError ? `<p class="admin-error" style="display:block; margin-bottom:8px;">${escapeHtml(statusError)}</p>` : ''}
         ${
@@ -347,7 +347,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
             ? `<input type="number" id="ficha-custom-bar-manual-max" placeholder="máximo (ex: 20)" min="1" value="${escapeHtml(customBarFormManualMax)}">`
             : `<div class="combat-condition-custom-row">
                 <select id="ficha-custom-bar-formula-stat">
-                  ${STATS.map((s) => `<option value="${s.key}" ${customBarFormStat === s.key ? 'selected' : ''}>${s.icon} ${s.label}</option>`).join('')}
+                  ${statusStats().map((s) => `<option value="${s.key}" ${customBarFormStat === s.key ? 'selected' : ''}>${s.icon} ${s.label}</option>`).join('')}
                 </select>
                 <select id="ficha-custom-bar-formula-op">
                   <option value="mult" ${customBarFormOp === 'mult' ? 'selected' : ''}>×</option>
@@ -632,7 +632,7 @@ export function renderFichaScreen(app, { session, profile, campaign, characterId
     }
     const resetBtn = e.target.closest('#ficha-reset-status');
     if (resetBtn) {
-      draftStats = Object.fromEntries(STATS.map((s) => [s.key, sheet[s.key]]));
+      draftStats = Object.fromEntries(statusStats().map((s) => [s.key, sheet[s.key]]));
       statusError = '';
       render();
       return;

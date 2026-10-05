@@ -5,20 +5,13 @@
 import { supabase } from './supabaseClient.js';
 import { logEvent } from './battleLog.js';
 import { setMemberFlags } from './accounts.js';
+import { activeRuleset } from './systems/index.js';
 
 // catálogo fixo de condições (Fase 8, db/031_patch_combat_conditions.sql) --
 // fórmula/catálogo em vez de texto livre, mesmo espírito de STATUS_STATS
 // (characterSheet.js). Só o mestre aplica/remove (ver RPCs abaixo).
-export const CONDITION_TYPES = [
-  { key: 'envenenado', label: 'Envenenado', icon: '☠', color: '#4ade80' },
-  { key: 'atordoado', label: 'Atordoado', icon: '💫', color: '#ffd93d' },
-  { key: 'sangrando', label: 'Sangrando', icon: '🩸', color: '#ff5a5a' },
-  { key: 'queimando', label: 'Queimando', icon: '🔥', color: '#ff8a4c' },
-  { key: 'congelado', label: 'Congelado', icon: '❄', color: '#5ad4ff' },
-  { key: 'amedrontado', label: 'Amedrontado', icon: '😨', color: '#b98bff' },
-  { key: 'cego', label: 'Cego', icon: '🙈', color: '#9db4c7' },
-  { key: 'imobilizado', label: 'Imobilizado', icon: '⛓', color: '#c9b878' },
-];
+// (o catálogo mora no sistema de regras da campanha: src/systems/)
+export const conditionTypes = () => activeRuleset().conditions;
 
 export async function getCombatState(campaignId) {
   const { data, error } = await supabase.from('campaign_combat').select('*').eq('campaign_id', campaignId).maybeSingle();
@@ -178,7 +171,7 @@ export async function deleteCustomCondition(id) {
 // pra uuid de condição customizada, sem quem chama precisar saber qual
 // é qual.
 export function resolveCondition(tipo, customConditions) {
-  const preset = CONDITION_TYPES.find((c) => c.key === tipo);
+  const preset = conditionTypes().find((c) => c.key === tipo);
   if (preset) return { key: preset.key, label: preset.label, icon: preset.icon, color: preset.color, bar: null };
   const custom = (customConditions || []).find((c) => c.id === tipo);
   if (custom) return { key: custom.id, label: custom.label, icon: custom.icon, color: custom.color, bar: custom.bar };

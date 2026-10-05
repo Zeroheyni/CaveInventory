@@ -32,7 +32,8 @@ import { escapeHtml } from '../shared/gameData.js';
 import { getCombatState, getParticipants, subscribeCombat, isVisibleToPlayer, updateParticipantHp, updateParticipantStamina } from '../combat.js';
 import { renderCombatScreen } from './combat.js';
 import { renderDiceScreen } from './dice.js';
-import { hpMax, estaminaMax, STATUS_STATS } from '../characterSheet.js';
+import { hpMax, estaminaMax, statusStats } from '../characterSheet.js';
+import { activeRuleset } from '../systems/index.js';
 import { listCharacterCustomBarsFor, customBarMax, updateCharacterCustomBarValue } from '../customBars.js';
 import { rollDice, subscribeDiceRolls, DICE_PRESETS, sidesFromDie } from '../dice.js';
 
@@ -110,7 +111,6 @@ function flipChildren(container, mutate) {
   });
 }
 
-const STAT_ABBR = { vitalidade: 'VIT', forca: 'FOR', agilidade: 'AGI', destreza: 'DES', inteligencia: 'INT', estamina: 'EST', observacao: 'OBS' };
 const pctOf = (cur, max) => (max > 0 ? Math.max(0, Math.min(100, Math.round((cur / max) * 100))) : 0);
 function hpTone(pct) {
   if (pct < 20) return 'low';
@@ -867,9 +867,9 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
         <div class="dock-group dock-attrs">
           <span class="dock-group-label">ATRIBUTOS</span>
           <div class="dock-chips">
-            ${STATUS_STATS.map((s) => {
+            ${statusStats().map((s) => {
               const val = char[s.key] || 0;
-              return `<button type="button" class="dock-chip dock-stat" data-stat="${s.key}" style="--c:${s.color};" title="${escapeHtml(s.label)} — rolar d20 ${signed(val)}"><span class="dock-stat-ico">${s.icon}</span><b>${STAT_ABBR[s.key]}</b><i>${val}</i></button>`;
+              return `<button type="button" class="dock-chip dock-stat" data-stat="${s.key}" style="--c:${s.color};" title="${escapeHtml(s.label)} — rolar ${activeRuleset().attributeTestDie} ${signed(val)}"><span class="dock-stat-ico">${s.icon}</span><b>${s.abbr}</b><i>${val}</i></button>`;
             }).join('')}
           </div>
         </div>
@@ -940,9 +940,9 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
 
     el.querySelectorAll('.dock-stat').forEach((btn) => {
       btn.addEventListener('click', () => {
-        const s = STATUS_STATS.find((x) => x.key === btn.dataset.stat);
+        const s = statusStats().find((x) => x.key === btn.dataset.stat);
         if (!s || !char) return;
-        doRoll(btn, { die: 'd20', qty: 1, mod: char[s.key] || 0, label: s.label });
+        doRoll(btn, { die: activeRuleset().attributeTestDie, qty: 1, mod: char[s.key] || 0, label: s.label });
       });
     });
     el.querySelectorAll('.dock-die').forEach((btn) => {

@@ -5,6 +5,7 @@
 // global e clicar de novo. Esse hub dá o mesmo menu retrátil à
 // esquerda (e o mesmo seletor de tema) que o mestre de campanha já
 // tem em character.js, só que reaproveitando as telas já prontas.
+import { setActiveSystem } from '../systems/index.js';
 import { escapeHtml } from '../shared/gameData.js';
 import { applyGlobalTheme, updateProfileTheme } from '../campaign.js';
 import { themeTraysHtml, toggleThemeTray } from '../themes.js';
@@ -60,6 +61,7 @@ const MODES = ['inventory', 'combat', 'board', 'ficha', 'npcs', 'dice', 'journal
 const MODE_TITLES = { inventory: 'INVENTÁRIO', combat: 'COMBATE', board: 'TABULEIRO', ficha: 'FICHA', npcs: 'BANCO DE NPCS', dice: 'DADOS', journal: 'DIÁRIO' };
 
 export function renderMasterCampaignHub(app, { session, profile, campaign, onBack, initialMode }) {
+  setActiveSystem(campaign.system);
   let mode = initialMode || 'ficha';
   let theme = profile.theme || 'caverna-azul';
   const mounted = Object.fromEntries(MODES.map((m) => [m, false]));

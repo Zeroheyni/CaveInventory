@@ -28,7 +28,7 @@ import {
   reorderParticipants,
   setPlayerCombatPermission,
   isVisibleToPlayer,
-  CONDITION_TYPES,
+  conditionTypes,
   applyCondition,
   removeCondition,
   listCustomConditions,
@@ -36,7 +36,8 @@ import {
   resolveCondition,
 } from '../combat.js';
 import { listCampaignMembers } from '../accounts.js';
-import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, STATUS_STATS } from '../characterSheet.js';
+import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, statusStats } from '../characterSheet.js';
+import { activeRuleset } from '../systems/index.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 import { rollDice, listRecentRolls, subscribeDiceRolls, DICE_PRESETS, normalizeCustomDie } from '../dice.js';
 import {
@@ -267,7 +268,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
               ? `
           <div class="combat-dice-tray-stat-row">
             <select id="combat-tray-stat-select" title="escolher status pra testar">
-              ${STATUS_STATS.map((s) => {
+              ${statusStats().map((s) => {
                 const value = myStatusStats[s.key] ?? 0;
                 return `<option value="${s.key}" ${mySelectedStat === s.key ? 'selected' : ''}>${s.icon} ${s.label} (${value >= 0 ? '+' : ''}${value})</option>`;
               }).join('')}
@@ -372,7 +373,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       <div class="combat-condition-picker" data-pid="${p.id}">
         <select class="combat-condition-select">
           <optgroup label="Catálogo">
-            ${CONDITION_TYPES.map((t) => `<option value="${t.key}">${t.icon} ${t.label}</option>`).join('')}
+            ${conditionTypes().map((t) => `<option value="${t.key}">${t.icon} ${t.label}</option>`).join('')}
           </optgroup>
           ${
             customConditions.length > 0
@@ -616,7 +617,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         ${
           showStatusChips
             ? `<div class="combat-master-stat-row">
-                ${STATUS_STATS.map((s) => `<span class="combat-master-stat-chip" style="--stat-color:${s.color};" title="${s.label}">${s.icon}${char[s.key] ?? '—'}</span>`).join('')}
+                ${statusStats().map((s) => `<span class="combat-master-stat-chip" style="--stat-color:${s.color};" title="${s.label}">${s.icon}${char[s.key] ?? '—'}</span>`).join('')}
               </div>`
             : ''
         }
@@ -936,7 +937,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             ? `<input type="number" id="custom-bar-manual-max" placeholder="máximo (ex: 20)" min="1" value="${escapeHtml(customBarFormManualMax)}">`
             : `<div class="combat-condition-custom-row">
                 <select id="custom-bar-formula-stat">
-                  ${STATUS_STATS.map((s) => `<option value="${s.key}" ${customBarFormStat === s.key ? 'selected' : ''}>${s.icon} ${s.label}</option>`).join('')}
+                  ${statusStats().map((s) => `<option value="${s.key}" ${customBarFormStat === s.key ? 'selected' : ''}>${s.icon} ${s.label}</option>`).join('')}
                 </select>
                 <select id="custom-bar-formula-op">
                   <option value="mult" ${customBarFormOp === 'mult' ? 'selected' : ''}>×</option>
@@ -1109,14 +1110,14 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       const trayStatRollBtn = e.target.closest('#combat-tray-stat-roll-btn');
       if (trayStatRollBtn) {
         if (diceRolling || !myStatusStats) return;
-        const stat = STATUS_STATS.find((s) => s.key === mySelectedStat);
+        const stat = statusStats().find((s) => s.key === mySelectedStat);
         if (!stat) return;
         const mod = myStatusStats[stat.key] || 0;
         diceRolling = true;
         diceError = '';
         render();
         try {
-          const roll = await rollDice(campaignId, rollerId, characterName || rollerName, 'd20', 1, mod, stat.label);
+          const roll = await rollDice(campaignId, rollerId, characterName || rollerName, activeRuleset().attributeTestDie, 1, mod, stat.label);
           diceRolls = [roll, ...diceRolls];
         } catch (err) {
           diceError = err.message;
