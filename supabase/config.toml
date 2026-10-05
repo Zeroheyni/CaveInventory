@@ -27,3 +27,8 @@ verify_jwt = false
 
 [functions.discord-notify-roll]
 verify_jwt = false
+
+# account-admin é chamada pelo app com o JWT do usuário (supabase.functions.invoke): aqui o gateway
+# VALIDA o JWT (diferente das do Discord) e a function ainda confere ADM/mestre da campanha.
+[functions.account-admin]
+verify_jwt = true
