@@ -44,17 +44,20 @@ function characterCard(c, lastId) {
 
 function masterCard(campaign) {
   return `
-    <button type="button" class="pk-card pk-master" data-master="${campaign.id}">
-      <span class="pk-portrait pk-master-art">
-        <span class="pk-crown">♛</span>
-        <span class="pk-master-role">MESTRE</span>
-        <span class="pk-play">abrir painel →</span>
-      </span>
-      <span class="pk-body">
-        <span class="pk-name">Painel do mestre</span>
-        <span class="pk-sub">combate · fichas · NPCs</span>
-      </span>
-    </button>`;
+    <div class="pk-card pk-master">
+      <button type="button" class="pk-master-open" data-master="${campaign.id}">
+        <span class="pk-portrait pk-master-art">
+          <span class="pk-crown">♛</span>
+          <span class="pk-master-role">MESTRE</span>
+          <span class="pk-play">abrir painel →</span>
+        </span>
+        <span class="pk-body">
+          <span class="pk-name">Painel do mestre</span>
+          <span class="pk-sub">combate · fichas · NPCs</span>
+        </span>
+      </button>
+      <button type="button" class="pk-master-manage" data-manage-camp="${campaign.id}">⚙ gerenciar esta mesa</button>
+    </div>`;
 }
 
 // Tela inicial de TODA conta (jogador, mestre ou ADM): a conta não pertence a mesa nenhuma, quem pertence são os
@@ -65,6 +68,15 @@ function masterCard(campaign) {
 //   onOpenManage()          gestão (mestre: as mesas dele; ADM: tudo) -- só pra mestre/ADM
 //   onOpenProfile()         perfil da conta
 export function renderHome(app, { profile, characters, masterCampaigns = [], isAdmin = false, lastId, onPick, onOpenMaster, onOpenManage, onOpenProfile }) {
+  const manageBanner = () => `
+    <button type="button" class="pk-banner" id="home-manage">
+      <span class="pk-banner-icon">⚙</span>
+      <span class="pk-banner-text">
+        <b>${isAdmin ? 'Painel do ADM' : 'Gerenciar mesas'}</b>
+        <span>${isAdmin ? 'Mesas, mestres, jogadores e contas de todo o site' : 'Crie mesas, contas de jogadores e personagens; configure o Discord'}</span>
+      </span>
+      <span class="pk-banner-go">abrir →</span>
+    </button>`;
   const groups = new Map();
   const ensure = (id, name) => {
     if (!groups.has(id)) groups.set(id, { name, master: null, list: [] });
@@ -106,10 +118,11 @@ export function renderHome(app, { profile, characters, masterCampaigns = [], isA
       <header class="pk-top">
         <div class="title"><span class="dot"></span>INÍCIO</div>
         <div class="pk-top-actions">
-          ${isMasterish ? `<button type="button" class="campaign-strip-signout pk-manage" id="home-manage">${isAdmin ? '⚙ painel do ADM' : '⚙ gerenciar mesas'}</button>` : ''}
           <button type="button" class="pk-chipbtn" id="home-profile" title="meu perfil">${chip}<span class="pk-chip-name">${escapeHtml(name)}</span></button>
         </div>
       </header>
+
+      ${isMasterish ? manageBanner() : ''}
 
       <div class="pk-hero">
         <p class="pk-hello">Bem-vindo(a),</p>
@@ -126,6 +139,9 @@ export function renderHome(app, { profile, characters, masterCampaigns = [], isA
       if (c) onPick(c);
     });
   });
+  app.querySelectorAll('button[data-manage-camp]').forEach((btn) => {
+    btn.addEventListener('click', () => onOpenManage(btn.dataset.manageCamp));
+  });
   app.querySelectorAll('button[data-master]').forEach((btn) => {
     btn.addEventListener('click', () => {
       const c = masterCampaigns.find((x) => x.id === btn.dataset.master);
@@ -133,6 +149,6 @@ export function renderHome(app, { profile, characters, masterCampaigns = [], isA
     });
   });
   const manage = app.querySelector('#home-manage');
-  if (manage) manage.addEventListener('click', onOpenManage);
+  if (manage) manage.addEventListener('click', () => onOpenManage());
   app.querySelector('#home-profile').addEventListener('click', onOpenProfile);
 }

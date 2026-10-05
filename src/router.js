@@ -102,8 +102,8 @@ export async function renderApp() {
     renderProfileScreen(app, { session, profile, kinds, onBack: switchContext });
   }
 
-  function openManage() {
-    renderAdminScreen(app, { session, profile, memberships, characters, onHome: switchContext, onOpenProfile: openProfile });
+  function openManage(focusCampaignId = null) {
+    renderAdminScreen(app, { session, profile, memberships, characters, focusCampaignId, onHome: switchContext, onOpenProfile: openProfile });
   }
 
   // tela inicial: todo mundo (jogador, mestre, ADM) cai na escolha de personagem; mestre ganha o cartão do painel da mesa

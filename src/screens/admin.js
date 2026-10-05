@@ -54,7 +54,7 @@ export function renderAdminScreen(app, opts) {
   const { session, profile, onHome, onOpenProfile } = opts;
   const isAdmin = !!profile.is_superadmin;
   const myId = profile.id;
-  const reopen = () => renderAdminScreen(app, opts);
+  const reopen = () => renderAdminScreen(app, { ...opts, focusCampaignId: null });
 
   let memberships = opts.memberships || [];
   let campaigns = []; // só as mesas que ESSA conta administra
@@ -63,7 +63,7 @@ export function renderAdminScreen(app, opts) {
   let memberCounts = new Map();
   let view = 'mesas'; // 'mesas' | 'jogadores' | 'contas'
   let newCampOpen = false;
-  let expanded = new Set();
+  let expanded = new Set(opts.focusCampaignId ? [opts.focusCampaignId] : []); // vindo de "gerenciar esta mesa" no início, a mesa já abre
   let campTab = new Map(); // campaignId -> 'personagens' | 'jogadores' | 'discord' | 'mais'
   let membersByCampaign = new Map();
   let charactersByCampaign = new Map();
@@ -76,6 +76,7 @@ export function renderAdminScreen(app, opts) {
   let syncingLiveSession = null;
   let lastCreatedAccount = null; // { nickname, password, kind }
   let banner = null; // { text, error }
+  let focusPending = !!opts.focusCampaignId;
 
   const isMasterOf = (c) => isAdmin || c.master_id === myId || memberships.some((m) => m.campaign_id === c.id && m.role === 'master');
   const effFor = (campaign) => effectiveProfile(profile, campaign, memberships.find((m) => m.campaign_id === campaign.id) || null);
@@ -98,6 +99,11 @@ export function renderAdminScreen(app, opts) {
     for (const id of expanded) if (!campaigns.some((c) => c.id === id)) expanded.delete(id);
     await Promise.all([...expanded].map(loadCampaignDetails));
     render();
+    if (focusPending) {
+      focusPending = false;
+      const el = app.querySelector(`[data-camp="${opts.focusCampaignId}"]`);
+      if (el) el.scrollIntoView({ block: 'start' });
+    }
   }
 
   async function loadCampaignDetails(campaignId) {
@@ -321,7 +327,7 @@ export function renderAdminScreen(app, opts) {
       }
     }
     return `
-      <article class="mg-card mg-camp ${isOpen ? 'open' : ''}">
+      <article class="mg-card mg-camp ${isOpen ? 'open' : ''}" data-camp="${c.id}">
         <div class="mg-camp-head">
           <span class="mg-camp-icon">${escapeHtml((c.name || '?').charAt(0).toUpperCase())}</span>
           <div class="mg-camp-id">
@@ -338,7 +344,7 @@ export function renderAdminScreen(app, opts) {
           <button type="button" class="btn" data-act="open-hub" data-cid="${c.id}" data-mode="ficha">Abrir painel da mesa</button>
           <button type="button" class="btn btn-ghost" data-act="open-hub" data-cid="${c.id}" data-mode="combat">⚔ Combate</button>
           <button type="button" class="btn btn-ghost" data-act="open-hub" data-cid="${c.id}" data-mode="ficha">📋 Fichas</button>
-          <button type="button" class="btn btn-ghost mg-manage" data-act="toggle-camp" data-cid="${c.id}">${isOpen ? 'fechar ▴' : 'gerenciar ▾'}</button>
+          <button type="button" class="btn btn-ghost mg-manage" data-act="toggle-camp" data-cid="${c.id}">${isOpen ? 'fechar ▴' : '⚙ gerenciar ▾'}</button>
         </div>
         ${detail}
       </article>`;
