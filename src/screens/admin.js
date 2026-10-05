@@ -20,8 +20,6 @@ import {
   listCampaignMembers,
   effectiveProfile,
   setMemberFlags,
-  addMemberByNickname,
-  removeMember,
   createCharacterFor,
   assignCharacterOwner,
   deleteCharacterRpc,
@@ -32,6 +30,7 @@ import {
   setAccountKind,
   deleteAccount,
   listMyMemberships,
+  listPlayerAccounts,
 } from '../accounts.js';
 import { renderCharacterScreen } from './character.js';
 import { renderMasterCampaignHub } from './masterCampaignHub.js';
@@ -53,6 +52,7 @@ export function renderAdminScreen(app, opts) {
   let memberships = opts.memberships || [];
   let campaigns = []; // só as mesas que ESSA conta administra
   let accounts = []; // ADM: todas as contas
+  let playerAccounts = []; // contas de jogador (não pertencem a mesa; o personagem é que vincula)
   let memberCounts = new Map();
   let expanded = new Set();
   let membersByCampaign = new Map();
@@ -79,6 +79,7 @@ export function renderAdminScreen(app, opts) {
     if (!isAdmin) memberships = await listMyMemberships(myId);
     campaigns = camps.filter(isMasterOf);
     if (isAdmin) accounts = await listAllProfiles();
+    playerAccounts = await listPlayerAccounts();
     memberCounts = counts;
     discordChannelByCampaign = new Map(discordConfigs.map((c) => [c.campaign_id, c.channel_id]));
     combatChannelByCampaign = new Map(discordConfigs.map((c) => [c.campaign_id, c.combat_channel_id]));
@@ -159,8 +160,40 @@ export function renderAdminScreen(app, opts) {
       </div>`;
   }
 
+  // contas que podem ser dono de um personagem: todas as de jogador (+ o dono atual, se for outro tipo de conta)
+  function ownerChoices(currentId, members) {
+    const list = playerAccounts.slice();
+    if (currentId && !list.some((a) => a.id === currentId)) {
+      const m = members.find((x) => x.id === currentId);
+      list.push({ id: currentId, username: m ? m.username : 'conta atual' });
+    }
+    return list;
+  }
+
+  function playersCard() {
+    const list = isAdmin
+      ? ''
+      : `<div style="margin-top:10px;">${
+          playerAccounts
+            .map(
+              (a) => `<div class="acc-row"><span>${escapeHtml(a.username)}</span><div class="acc-row-actions"><button type="button" class="btn btn-ghost" data-act="reset-pw" data-uid="${a.id}" data-name="${escapeHtml(a.username)}">nova senha</button></div></div>`
+            )
+            .join('') || '<p class="admin-empty">Nenhuma conta de jogador ainda.</p>'
+        }</div>`;
+    return `
+      <div class="admin-card">
+        <h3 class="admin-card-title">CONTAS DE JOGADOR</h3>
+        <p class="admin-empty" style="margin:0 0 8px;">A conta não pertence a mesa nenhuma: depois de criar, é só atribuir personagens a ela em cada campanha.</p>
+        <div class="acc-inline" style="margin-top:0;">
+          <input type="text" id="pl-nick" placeholder="apelido do jogador" />
+          <input type="text" id="pl-pass" placeholder="senha" />
+          <button type="button" class="btn" data-act="create-player-acct">+ conta de jogador</button>
+        </div>
+        ${list}
+      </div>`;
+  }
+
   function memberRow(c, m) {
-    const isOwner = c.master_id === m.id;
     const isM = m.role === 'master';
     const perms = isM
       ? ''
@@ -173,7 +206,6 @@ export function renderAdminScreen(app, opts) {
         <div class="acc-row-actions">
           ${perms}
           ${!isM ? `<button type="button" class="btn btn-ghost" data-act="reset-pw" data-uid="${m.id}" data-name="${escapeHtml(m.username)}">nova senha</button>` : ''}
-          ${!isM && !isOwner ? `<button type="button" class="admin-danger-btn" data-act="remove-member" data-cid="${c.id}" data-uid="${m.id}" data-name="${escapeHtml(m.username)}" title="tira da mesa (não apaga a conta nem os personagens)">tirar da mesa</button>` : ''}
         </div>
       </div>
       ${!isM ? `<div class="admin-discord-row">
@@ -187,7 +219,7 @@ export function renderAdminScreen(app, opts) {
   function characterRow(c, ch, members) {
     const owner = members.find((m) => m.id === ch.owner_id);
     const ownerLabel = owner ? owner.username : 'sem dono';
-    const players = members.filter((m) => m.role !== 'master' || m.id === ch.owner_id);
+    const players = ownerChoices(ch.owner_id, members);
     return `
       <div class="admin-character-row">
         <span>${escapeHtml(ch.name || 'Personagem')} <span class="admin-owner-tag">(${escapeHtml(ownerLabel)})</span></span>
@@ -214,20 +246,12 @@ export function renderAdminScreen(app, opts) {
     const members = membersByCampaign.get(c.id);
     const chars = charactersByCampaign.get(c.id);
     if (!members || !chars) return '<div class="acc-sub"><p class="admin-empty">Carregando...</p></div>';
-    const players = members.filter((m) => m.role !== 'master');
+    const players = playerAccounts;
+    const seated = members.filter((m) => m.role !== 'master');
     return `
       <div class="acc-sub">
-        <h4>MEMBROS</h4>
-        ${members.map((m) => memberRow(c, m)).join('') || '<p class="admin-empty">Ninguém ainda.</p>'}
-        <div class="acc-inline">
-          <input type="text" id="nm-nick-${c.id}" placeholder="apelido" />
-          <input type="text" id="nm-pass-${c.id}" placeholder="senha (conta nova)" />
-          <button type="button" class="btn" data-act="create-player" data-cid="${c.id}">criar conta de jogador</button>
-        </div>
-        <div class="acc-inline">
-          <input type="text" id="lk-nick-${c.id}" placeholder="apelido de uma conta que já existe" />
-          <button type="button" class="btn btn-ghost" data-act="link-player" data-cid="${c.id}">vincular à mesa</button>
-        </div>
+        <h4>JOGADORES DESTA MESA</h4>
+        ${seated.map((m) => memberRow(c, m)).join('') || '<p class="admin-empty">Ninguém tem personagem aqui ainda -- crie um personagem abaixo e escolha a conta do jogador.</p>'}
       </div>
       <div class="acc-sub">
         <h4>PERSONAGENS</h4>
@@ -239,7 +263,7 @@ export function renderAdminScreen(app, opts) {
           <select id="ncp-owner-${c.id}">${players.map((m) => `<option value="${m.id}">${escapeHtml(m.username)}</option>`).join('')}</select>
           <button type="button" class="btn" data-act="create-char" data-cid="${c.id}">+ criar e atribuir</button>
         </div>`
-            : '<p class="admin-empty">Vincule ou crie uma conta de jogador pra poder criar personagens.</p>'
+            : '<p class="admin-empty">Crie uma conta de jogador (card "Contas de jogador", lá em cima) pra poder criar personagens.</p>'
         }
       </div>
       ${
@@ -335,6 +359,7 @@ export function renderAdminScreen(app, opts) {
             <button type="button" class="btn" data-act="create-campaign">criar</button>
           </div>
         </div>
+        ${playersCard()}
         ${accountsCard()}
         <div class="admin-list">
           ${campaigns.length ? campaigns.map(campaignCard).join('') : '<p class="admin-empty">Nenhuma campanha ainda.</p>'}
@@ -399,25 +424,14 @@ export function renderAdminScreen(app, opts) {
         lastCreatedAccount = { nickname, password, kind: 'master' };
       });
     },
-    'create-player': (el) => {
-      const cid = el.dataset.cid;
-      const nickname = $(`#nm-nick-${cid}`).value.trim();
-      const password = $(`#nm-pass-${cid}`).value;
+    'create-player-acct': () => {
+      const nickname = $('#pl-nick').value.trim();
+      const password = $('#pl-pass').value;
       if (!nickname || !password) return flash('Preencha apelido e senha.', true);
       return guarded(async () => {
-        await createPlayerAccountFn(nickname, password, cid);
+        await createPlayerAccountFn(nickname, password);
         lastCreatedAccount = { nickname, password, kind: 'player' };
       });
-    },
-    'link-player': (el) => {
-      const cid = el.dataset.cid;
-      const nickname = $(`#lk-nick-${cid}`).value.trim();
-      if (!nickname) return $(`#lk-nick-${cid}`).focus();
-      return guarded(() => addMemberByNickname(cid, nickname), `${nickname} vinculado à mesa ✓`);
-    },
-    'remove-member': (el) => {
-      if (!window.confirm(`Tirar ${el.dataset.name} da mesa? A conta e os personagens não são apagados.`)) return;
-      return guarded(() => removeMember(el.dataset.cid, el.dataset.uid), 'removido da mesa ✓');
     },
     perm: async (el) => {
       try {

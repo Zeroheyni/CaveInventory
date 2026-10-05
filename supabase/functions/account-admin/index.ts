@@ -4,7 +4,8 @@
 // Quem pode o quê (sempre validado AQUI, com o JWT do chamador; nunca confia no cliente):
 //   ADM                 create_master, create_player (qualquer campanha), reset_password (qualquer um),
 //                       set_account_kind, delete_account
-//   Mestre da campanha  create_player (só nas campanhas DELE), reset_password (só de jogadores das mesas DELE)
+//   Mestre              create_player (conta de jogador SEM mesa; campaign_id é opcional e, se vier, tem que ser mesa DELE),
+//                       reset_password (jogadores das mesas DELE ou contas ainda sem mesa)
 //   Jogador             nada
 // O papel dentro de cada campanha vem de campaign_members (db/062); profiles.role = 'master' | 'player' é só o
 // TIPO da conta (conta de mestre pode criar campanhas).
@@ -77,6 +78,14 @@ Deno.serve(async (req) => {
     return m?.role === 'master';
   }
 
+  async function isAnyMaster(): Promise<boolean> {
+    if (isAdmin || me!.role === 'master') return true;
+    const { count: a } = await svc.from('campaign_members').select('campaign_id', { count: 'exact', head: true }).eq('user_id', me!.id).eq('role', 'master');
+    if ((a ?? 0) > 0) return true;
+    const { count: b } = await svc.from('campaigns').select('id', { count: 'exact', head: true }).eq('master_id', me!.id);
+    return (b ?? 0) > 0;
+  }
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -117,14 +126,18 @@ Deno.serve(async (req) => {
       }
 
       case 'create_player': {
+        // conta de jogador não é vinculada a mesa; quem vincula à mesa é o personagem (db/069)
         const campaignId = String(body.campaign_id ?? '');
-        if (!campaignId) return json(400, { error: 'faltou a campanha' });
-        if (!(await isMasterOf(campaignId))) return json(403, { error: 'só o mestre da campanha cria jogadores nela' });
+        if (campaignId) {
+          if (!(await isMasterOf(campaignId))) return json(403, { error: 'só o mestre da campanha cria jogadores nela' });
+        } else if (!(await isAnyMaster())) {
+          return json(403, { error: 'só mestre ou ADM cria contas de jogador' });
+        }
         const r = await createAccount(String(body.nickname ?? ''), String(body.password ?? ''), 'player');
         if (r.error) return json(r.status, { error: r.error });
-        const { error: mErr } = await svc
-          .from('campaign_members')
-          .insert({ campaign_id: campaignId, user_id: r.id, role: 'player' });
+        const { error: mErr } = campaignId
+          ? await svc.from('campaign_members').insert({ campaign_id: campaignId, user_id: r.id, role: 'player' })
+          : { error: null };
         if (mErr) {
           await svc.auth.admin.deleteUser(r.id!);
           return json(500, { error: 'não consegui vincular à campanha: ' + mErr.message });
@@ -142,7 +155,8 @@ Deno.serve(async (req) => {
           const { data: target } = await svc.from('profiles').select('role, is_superadmin').eq('id', userId).maybeSingle();
           if (!target || target.is_superadmin || target.role !== 'player') return json(403, { error: 'sem permissão pra mexer nessa conta' });
           const { data: shared } = await svc.from('campaign_members').select('campaign_id').eq('user_id', userId);
-          let allowed = false;
+          // conta ainda sem mesa (recém-criada): qualquer mestre pode ajustar a senha
+          let allowed = (shared ?? []).length === 0 && (await isAnyMaster());
           for (const row of shared ?? []) {
             if (await isMasterOf(row.campaign_id)) { allowed = true; break; }
           }

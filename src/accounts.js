@@ -18,7 +18,7 @@ export async function listMyMemberships(userId) {
 export async function listMyCharacters(userId) {
   const { data, error } = await supabase
     .from('characters')
-    .select('id, name, campaign_id, avatar_url, level, updated_at, campaigns(id, name)')
+    .select('id, name, campaign_id, avatar_url, level, xp, vitalidade, hp_current, hp_max_override, sheet_data, updated_at, campaigns(id, name)')
     .eq('owner_id', userId)
     .eq('is_npc', false)
     .order('name');
@@ -110,8 +110,14 @@ export async function accountAdmin(action, body) {
 }
 
 export const createMasterAccount = (nickname, password) => accountAdmin('create_master', { nickname, password });
-export const createPlayerAccountFn = (nickname, password, campaignId) =>
+// conta de jogador NÃO é de mesa: campaignId é opcional (db/069); quem vincula à mesa é o personagem
+export const createPlayerAccountFn = (nickname, password, campaignId = null) =>
   accountAdmin('create_player', { nickname, password, campaign_id: campaignId });
+export async function listPlayerAccounts() {
+  const { data, error } = await supabase.rpc('list_player_accounts');
+  if (error) throw error;
+  return data || [];
+}
 export const resetAccountPassword = (userId, password) => accountAdmin('reset_password', { user_id: userId, password });
 export const setAccountKind = (userId, kind) => accountAdmin('set_account_kind', { user_id: userId, kind });
 export const deleteAccount = (userId) => accountAdmin('delete_account', { user_id: userId });

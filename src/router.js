@@ -2,7 +2,6 @@ import { supabase } from './supabaseClient.js';
 import { getMyProfile, getCampaign, applyGlobalTheme } from './campaign.js';
 import { listMyMemberships, listMyCharacters, effectiveProfile, rememberCharacter, lastCharacter } from './accounts.js';
 import { renderLogin } from './screens/login.js';
-import { renderOnboarding } from './screens/onboarding.js';
 import { renderCharacterScreen } from './screens/character.js';
 import { renderCharacterPicker } from './screens/characterPicker.js';
 import { renderAdminScreen } from './screens/admin.js';
@@ -40,7 +39,7 @@ export async function renderApp() {
   applyGlobalTheme(profile && profile.theme);
 
   if (!profile) {
-    renderOnboarding(app, renderApp);
+    renderFatalError(new Error('conta sem perfil -- fale com o mestre'));
     return;
   }
 
@@ -73,8 +72,7 @@ export async function renderApp() {
       profile: effectiveProfile(profile, campaign, membership, { asPlayer: true }),
       campaign,
       playCharacterId: character.id,
-      // com um personagem só não há o que trocar; conta de mestre volta pro painel dela
-      onSwitchCharacter: characters.length > 1 || isMasterAccount ? switchContext : null,
+      onSwitchCharacter: switchContext,
     });
   }
 
@@ -87,17 +85,8 @@ export async function renderApp() {
     return;
   }
 
-  // conta de jogador: escolhe quem joga (entra direto se só tiver um)
-  if (characters.length === 0 && memberships.length === 0) {
-    renderOnboarding(app, renderApp);
-    return;
-  }
-  const last = lastCharacter(profile.id);
-  if (characters.length === 1) {
-    play(characters[0]);
-    return;
-  }
-  renderCharacterPicker(app, { profile, characters, lastId: last, onPick: play });
+  // a conta de jogador não pertence a mesa nenhuma: a tela inicial é sempre a escolha de personagem
+  renderCharacterPicker(app, { profile, characters, lastId: lastCharacter(profile.id), onPick: play });
 }
 
 function renderFatalError(err) {
