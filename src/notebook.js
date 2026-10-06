@@ -206,6 +206,65 @@ export async function uploadNotebookImage(characterId, file) {
   return data.publicUrl;
 }
 
+// Desenho a lápis/caneta feito num papel que não é o da página (ex.: papel bege) fica com um "retângulo" em volta. Aqui o papel
+// da imagem vira transparência: (1) estima a cor do papel (percentil alto de cada canal), (2) divide a imagem por ela -- o papel
+// vira branco e o grafite fica como estava ("flat-field"), (3) converte claridade em opacidade de um grafite escuro. O traço
+// passa a valer em QUALQUER página (clara, escura, quadriculada) e o papel some de verdade. Devolve um File PNG.
+export async function paperlessImageFile(src, maxSide = 1800) {
+  const img = await new Promise((resolve, reject) => {
+    const im = new Image();
+    im.crossOrigin = 'anonymous'; // o storage público libera CORS; sem isso o canvas ficaria "sujo" e não leríamos os pixels
+    im.onload = () => resolve(im);
+    im.onerror = () => reject(new Error('não consegui abrir a imagem'));
+    im.src = src + (src.includes('?') ? '&' : '?') + 'cb=' + Date.now(); // evita pegar a cópia em cache sem CORS
+  });
+  const k = Math.min(1, maxSide / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.max(1, Math.round(img.naturalWidth * k));
+  const h = Math.max(1, Math.round(img.naturalHeight * k));
+  const canvas = document.createElement('canvas');
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, w, h);
+  const data = ctx.getImageData(0, 0, w, h);
+  const px = data.data;
+
+  // cor do papel: percentil 88 de cada canal numa amostra (o papel é a maior parte da imagem)
+  const sample = [[], [], []];
+  const step = Math.max(1, Math.floor((w * h) / 40000));
+  for (let i = 0; i < w * h; i += step) {
+    sample[0].push(px[i * 4]);
+    sample[1].push(px[i * 4 + 1]);
+    sample[2].push(px[i * 4 + 2]);
+  }
+  const pct = (arr) => {
+    arr.sort((a, b) => a - b);
+    return Math.max(60, arr[Math.min(arr.length - 1, Math.floor(arr.length * 0.88))]);
+  };
+  const paper = [pct(sample[0]), pct(sample[1]), pct(sample[2])];
+
+  const BLACK = 0.1; // abaixo disso é grafite cheio
+  const WHITE = 0.93; // acima disso é papel (some) -- engole o grão do papel
+  const [gr, gg, gb] = [48, 42, 36]; // cor do grafite
+  for (let i = 0; i < w * h; i++) {
+    const o = i * 4;
+    const r = Math.min(255, (px[o] * 255) / paper[0]);
+    const g = Math.min(255, (px[o + 1] * 255) / paper[1]);
+    const b = Math.min(255, (px[o + 2] * 255) / paper[2]);
+    const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    const L = Math.max(0, Math.min(1, (lum - BLACK) / (WHITE - BLACK)));
+    const alpha = Math.pow(1 - L, 0.9) * (px[o + 3] / 255);
+    px[o] = gr;
+    px[o + 1] = gg;
+    px[o + 2] = gb;
+    px[o + 3] = Math.round(alpha * 255);
+  }
+  ctx.putImageData(data, 0, 0);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+  if (!blob) throw new Error('não consegui gerar a imagem');
+  return new File([blob], 'sem-fundo.png', { type: 'image/png' });
+}
+
 export function getFontFamily(notebook) {
   if (notebook.customFont) return `'${notebook.customFont}', ${themeDef(notebook.themeId).family === 'digital' ? 'monospace' : 'cursive'}`;
   return notebook.font;
@@ -250,6 +309,13 @@ export function sanitizeNotebookHtml(html) {
         const name = attr.name.toLowerCase();
         if (child.tagName === 'IMG' && (name === 'src' || name === 'alt')) return;
         if (child.tagName === 'FONT' && name === 'color' && SAFE_COLOR.test(attr.value)) return;
+        if (name === 'class' && child.tagName === 'IMG') {
+          // acabamento da figura: sem sombra (desenho sem fundo) ou mesclada com o papel da página
+          const cls = attr.value.split(/\s+/).find((c) => c === 'notebook-img-flat' || c === 'notebook-img-blend');
+          if (cls) child.setAttribute('class', cls);
+          else child.removeAttribute('class');
+          return;
+        }
         if (name === 'class') {
           // única classe permitida -- e sempre grava só ela, nunca junto
           // com "revealed" (classe que o clique de "revelar" adiciona só

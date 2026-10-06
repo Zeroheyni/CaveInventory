@@ -12,6 +12,7 @@ import {
   saveOwnNotebookData,
   loadSharedNotebooks,
   uploadNotebookImage,
+  paperlessImageFile,
   sanitizeNotebookHtml,
   newPage,
   newNotebook,
@@ -426,6 +427,64 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
     return lastFocusedSide === 'right' && $('notebook-page-surface-right') ? 'notebook-page-surface-right' : 'notebook-page-surface';
   }
 
+  // ---- acabamento da imagem (barra flutuante) ----
+  let imageBar = null;
+  function hideImageBar() {
+    if (imageBar) imageBar.remove();
+    imageBar = null;
+  }
+  function showImageBar(img) {
+    hideImageBar();
+    const bar = document.createElement('div');
+    bar.className = 'notebook-img-bar';
+    const isFlat = img.classList.contains('notebook-img-flat');
+    const isBlend = img.classList.contains('notebook-img-blend');
+    bar.innerHTML = `
+      <button type="button" data-img-act="paper" title="transforma o papel do desenho em transparência: o traço fica direto na página">🪄 tirar o papel do desenho</button>
+      <button type="button" data-img-act="blend" class="${isBlend ? 'on' : ''}" title="funde a imagem com a cor da página (some o branco)">🎨 mesclar</button>
+      <button type="button" data-img-act="plain" class="${!isFlat && !isBlend ? 'on' : ''}" title="volta ao normal (com moldura)">▭ normal</button>
+      <span class="notebook-img-bar-msg"></span>`;
+    document.body.appendChild(bar);
+    const r = img.getBoundingClientRect();
+    bar.style.left = Math.max(8, Math.min(window.innerWidth - bar.offsetWidth - 8, r.left + r.width / 2 - bar.offsetWidth / 2)) + 'px';
+    bar.style.top = Math.max(8, r.top - bar.offsetHeight - 8) + 'px';
+    imageBar = bar;
+    const msg = bar.querySelector('.notebook-img-bar-msg');
+    const finish = () => {
+      capture();
+      scheduleSave();
+      hideImageBar();
+    };
+    bar.addEventListener('mousedown', (e) => e.preventDefault()); // não rouba o foco do editor
+    bar.querySelector('[data-img-act="plain"]').addEventListener('click', () => {
+      img.classList.remove('notebook-img-flat', 'notebook-img-blend');
+      img.classList.add('notebook-img');
+      finish();
+    });
+    bar.querySelector('[data-img-act="blend"]').addEventListener('click', () => {
+      const on = img.classList.contains('notebook-img-blend');
+      img.classList.remove('notebook-img', 'notebook-img-flat', 'notebook-img-blend');
+      img.classList.add(on ? 'notebook-img' : 'notebook-img-blend');
+      finish();
+    });
+    bar.querySelector('[data-img-act="paper"]').addEventListener('click', async () => {
+      msg.textContent = 'processando…';
+      try {
+        const file = await paperlessImageFile(img.getAttribute('src'));
+        const url = await uploadNotebookImage(characterId, file);
+        img.setAttribute('src', url);
+        img.classList.remove('notebook-img', 'notebook-img-blend');
+        img.classList.add('notebook-img-flat');
+        finish();
+      } catch (err) {
+        msg.textContent = 'não deu: ' + err.message;
+      }
+    });
+  }
+  document.addEventListener('mousedown', (e) => {
+    if (imageBar && !imageBar.contains(e.target) && e.target.tagName !== 'IMG') hideImageBar();
+  });
+
   function startImageResize(img, e) {
     e.preventDefault();
     const startX = e.clientX;
@@ -689,6 +748,9 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         document.execCommand('insertHTML', false, `<img class="notebook-img" src="${url}" style="width:220px">`);
         capture();
         scheduleSave();
+        // oferece na hora o acabamento (desenho em papel diferente da página é o caso comum)
+        const added = Array.from(app.querySelectorAll('.notebook-page img')).find((im) => im.getAttribute('src') === url);
+        if (added) showImageBar(added);
       } catch (err) {
         imgUploadError = 'erro ao enviar imagem: ' + err.message;
         render();
@@ -771,6 +833,13 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         (async () => {
           for (const f of imgs) await insertImageFile(f, () => editor.focus());
         })();
+      });
+      // clique numa imagem: barrinha com os acabamentos (tirar o papel, mesclar, normal)
+      editor.addEventListener('click', (e) => {
+        if (e.target.tagName !== 'IMG') return;
+        const rect = e.target.getBoundingClientRect();
+        if (e.clientX > rect.right - 16 && e.clientY > rect.bottom - 16) return; // canto = redimensionar
+        showImageBar(e.target);
       });
       editor.addEventListener('mousedown', (e) => {
         if (e.target.tagName !== 'IMG') return;

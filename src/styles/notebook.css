@@ -404,3 +404,18 @@ body.notebook-focus-mode #backpack-return-btn{ display:none !important; }
   background:#f7f1e3; color:#4a3f2a; box-shadow:0 10px 30px rgba(0,0,0,0.25); text-shadow:none;
 }
 .notebook-theme-digital .notebook-page:empty::before{ content:'> escreva aqui...'; }
+
+/* acabamento de imagens do caderno */
+.notebook-img-flat{ max-width:100%; box-shadow:none; border-radius:0; cursor:default; }
+.notebook-img-blend{ max-width:100%; box-shadow:none; border-radius:0; mix-blend-mode:multiply; cursor:default; }
+.notebook-img-bar{
+  position:fixed; z-index:200; display:flex; align-items:center; gap:4px; padding:5px; border-radius:12px;
+  background: var(--stone-900); border:1px solid var(--accent-core); box-shadow:0 8px 24px rgba(0,0,0,0.5);
+}
+.notebook-img-bar button{
+  padding:6px 10px; border-radius:8px; border:1px solid var(--stone-line); background: var(--stone-800); color: var(--ink-dim);
+  font-size:11.5px; cursor:pointer; white-space:nowrap; font-family:inherit;
+}
+.notebook-img-bar button:hover{ color: var(--accent); border-color: var(--accent-core); }
+.notebook-img-bar button.on{ color: var(--accent); border-color: var(--accent-core); background: var(--accent-faint); }
+.notebook-img-bar-msg{ font-size:11px; color: var(--ink-faint); padding:0 6px; }
