@@ -824,3 +824,12 @@
 .board-fx-sw{ width:18px; height:18px; border-radius:50%; border:2px solid rgba(255,255,255,0.25); background: var(--c); cursor:pointer; padding:0; transition: transform .12s ease; }
 .board-fx-sw:hover{ transform: scale(1.18); }
 .board-fx-sw.on{ border-color:#fff; box-shadow: 0 0 8px var(--c); transform: scale(1.12); }
+
+/* cursor dos amigos: seta + bolinha com a foto (borda na cor da conta) + nome */
+.board-cursor-who{ display:flex; align-items:center; gap:5px; margin-left:12px; margin-top:-2px; }
+.board-cursor-pic{
+  width:22px; height:22px; border-radius:50%; object-fit:cover; flex-shrink:0; box-sizing:border-box;
+  border:2px solid var(--cc, #5ad4ff); background: var(--stone-800); box-shadow: 0 0 8px var(--cc, #5ad4ff), 0 2px 6px rgba(0,0,0,0.55);
+}
+.board-cursor-ph{ display:flex; align-items:center; justify-content:center; font:700 11px var(--font-display); color: var(--cc, #5ad4ff); }
+.board-cursor-who .board-cursor-label{ margin-left:0; }

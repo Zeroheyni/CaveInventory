@@ -1,5 +1,5 @@
 import { signOut } from '../auth.js';
-import { displayNameOf, updateMyProfile, uploadProfileAvatar, changeMyPassword } from '../accounts.js';
+import { displayNameOf, updateMyProfile, uploadProfileAvatar, changeMyPassword, ACCOUNT_COLORS, setMyColor, accountColorOf } from '../accounts.js';
 
 function escapeHtml(str) {
   const d = document.createElement('div');
@@ -49,6 +49,26 @@ export function renderProfileScreen(app, { session, profile, kinds = [], onBack 
         </section>
 
         <section class="pf-card">
+          <h2 class="pf-title">Cor da conta</h2>
+          <p class="pf-hint" style="margin:0 0 12px;">Sua cor aparece no tabuleiro: borda dos seus tokens, ping, desenhos e o cursor que seus amigos veem.</p>
+          <div class="pf-swatches">
+            ${ACCOUNT_COLORS.map((c) => `<button type="button" class="pf-sw ${(accountColorOf(current) || '') === c ? 'on' : ''}" data-color="${c}" style="--c:${c}" title="${c}"></button>`).join('')}
+            <label class="pf-sw pf-sw-custom ${accountColorOf(current) && !ACCOUNT_COLORS.includes(accountColorOf(current)) ? 'on' : ''}" title="outra cor" style="--c:${accountColorOf(current) || '#888888'}">
+              <input type="color" id="pf-color-input" value="${accountColorOf(current) || '#5ad4ff'}">
+              <span>+</span>
+            </label>
+          </div>
+          <div class="pf-cursor-preview" style="--cc:${accountColorOf(current) || '#5ad4ff'}">
+            <svg viewBox="0 0 24 24" width="22" height="22" style="fill:var(--cc);"><path d="M4 2l16 7.5-6.8 1.7L11 18z"/></svg>
+            <span class="pf-cursor-who">
+              ${current.avatar_url ? `<img class="pf-cursor-pic" src="${escapeHtml(current.avatar_url)}" alt="">` : `<span class="pf-cursor-pic pf-cursor-ph">${escapeHtml(displayNameOf(current).charAt(0).toUpperCase() || '?')}</span>`}
+              <span class="pf-cursor-label">${escapeHtml(displayNameOf(current))}</span>
+            </span>
+            <span class="pf-cursor-note">assim seus amigos veem seu cursor <span class="pf-msg" id="pf-color-msg"></span></span>
+          </div>
+        </section>
+
+        <section class="pf-card">
           <h2 class="pf-title">Sobre você</h2>
           <label class="pf-label" for="pf-display">Nome de exibição</label>
           <input type="text" id="pf-display" class="pf-input" maxlength="40" value="${escapeHtml(current.display_name || '')}" placeholder="${escapeHtml(current.username || '')}">
@@ -92,6 +112,22 @@ export function renderProfileScreen(app, { session, profile, kinds = [], onBack 
       await signOut();
       window.location.reload();
     });
+
+    async function pickColor(c) {
+      try {
+        await setMyColor(c);
+        current.color = c.toLowerCase();
+        render();
+        const m = app.querySelector('#pf-color-msg');
+        if (m) { m.textContent = 'cor salva ✓'; m.className = 'pf-msg pf-ok'; }
+      } catch (err) {
+        const m = app.querySelector('#pf-color-msg');
+        if (m) { m.textContent = err.message; m.className = 'pf-msg pf-err'; }
+      }
+    }
+    app.querySelectorAll('[data-color]').forEach((b) => b.addEventListener('click', () => pickColor(b.dataset.color)));
+    const colorInput = $('pf-color-input');
+    if (colorInput) colorInput.addEventListener('change', () => pickColor(colorInput.value));
 
     $('pf-avatar-btn').addEventListener('click', () => $('pf-avatar-input').click());
     $('pf-avatar-input').addEventListener('change', async (e) => {

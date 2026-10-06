@@ -353,12 +353,14 @@ export function createBoardFx(host) {
   // ---- barra de ferramentas ----
   function barHtml() {
     const active = (k) => (tool === k ? 'on' : '');
+    // a cor da conta vem primeiro (é o padrão); as outras são trocas rápidas
+    const palette = [myColor().toLowerCase(), ...SWATCHES.filter((c) => c !== myColor().toLowerCase())];
     return `
       <div class="board-fx-tools">
         ${TOOLS.map((t) => `<button type="button" class="board-fx-btn ${active(t.key)}" data-fx-tool="${t.key}" title="${t.label}">${t.icon}</button>`).join('')}
       </div>
       <div class="board-fx-colors ${tool && tool !== 'ping' ? 'show' : ''}">
-        ${SWATCHES.map((c) => `<button type="button" class="board-fx-sw ${myColor().toLowerCase() === c ? 'on' : ''}" data-fx-color="${c}" style="--c:${c}" title="cor"></button>`).join('')}
+        ${palette.map((c) => `<button type="button" class="board-fx-sw ${myColor().toLowerCase() === c ? 'on' : ''}" data-fx-color="${c}" style="--c:${c}" title="cor"></button>`).join('')}
       </div>`;
   }
   function renderBar() {

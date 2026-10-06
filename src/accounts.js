@@ -175,3 +175,9 @@ export async function changeMyPassword(email, currentPassword, newPassword) {
   const { error } = await supabase.auth.updateUser({ password: padPassword(newPassword) });
   if (error) throw error;
 }
+
+// ---- cor da conta (db/073) ----
+// vale como cor padrão da borda dos tokens, do desenho/ping e do cursor da pessoa no tabuleiro
+export const ACCOUNT_COLORS = ['#ff5a5a', '#ff8a4c', '#ffcf7a', '#facc15', '#a3e635', '#4ade80', '#2dd4bf', '#5ad4ff', '#60a5fa', '#b98bff', '#f472b6', '#ffffff'];
+export const setMyColor = (color) => rpc('set_my_color', { p_color: color });
+export const accountColorOf = (p) => (p && /^#[0-9a-f]{6}$/i.test(p.color || '') ? p.color.toLowerCase() : null);

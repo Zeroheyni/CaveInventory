@@ -1043,6 +1043,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     startCursorPruneTimer();
     await loadMemory();
     startMemoryTimer();
+    loadMyCursorAvatar();
     hud.setVisible(true);
   }
 
@@ -1156,7 +1157,10 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     }
     const color = /^#[0-9a-fA-F]{3,8}$/.test(payload.color) ? payload.color : '#5ad4ff';
     const name = String(payload.name || 'alguém').slice(0, 40);
+    // só aceita endereço http(s) pra foto (o canal aceita qualquer coisa de quem tem acesso)
+    const avatar = typeof payload.avatar === 'string' && /^https?:\/\//i.test(payload.avatar) && payload.avatar.length < 600 ? payload.avatar : null;
     remoteCursors.set(payload.userId, {
+      avatar,
       x: Math.max(0, Math.min(100, Number(payload.x) || 0)),
       y: Math.max(0, Math.min(100, Number(payload.y) || 0)),
       color,
@@ -1217,15 +1221,27 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   // de inventar uma UI de escolher cor de cursor, cada um já "tem"
   // uma cor (a do tema que escolheu em character.js/masterCampaignHub.js).
   function myCursorColor() {
+    // cor escolhida no perfil da conta (db/073); sem escolha, a cor de destaque do tema
+    if (/^#[0-9a-f]{6}$/i.test(profile.color || '')) return profile.color.toLowerCase();
     const v = getComputedStyle(document.documentElement).getPropertyValue('--accent').trim();
     return v || '#5ad4ff';
+  }
+
+  // foto que aparece no cursor pros outros: a do personagem que estou jogando, ou a da conta (mestre)
+  let myCursorAvatar = profile.avatar_url || null;
+  async function loadMyCursorAvatar() {
+    if (!characterId) return;
+    try {
+      const { data } = await supabase.from('characters').select('avatar_url').eq('id', characterId).maybeSingle();
+      if (data && data.avatar_url) myCursorAvatar = data.avatar_url;
+    } catch (_) { /* fica com a foto da conta */ }
   }
 
   function maybeBroadcastCursor(x, y) {
     const now = Date.now();
     if (now - lastCursorSendAt < LIVE_THROTTLE_MS) return;
     lastCursorSendAt = now;
-    broadcastCursor(tokensChannel, { userId: session.user.id, name: myDisplayName(), color: myCursorColor(), x, y });
+    broadcastCursor(tokensChannel, { userId: session.user.id, name: myDisplayName(), color: myCursorColor(), avatar: myCursorAvatar, x, y });
   }
 
   function maybeBroadcastDrag(tokenId, { x, y, size } = {}) {
@@ -1250,9 +1266,12 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     layer.innerHTML = Array.from(remoteCursors.values())
       .map(
         (c) => `
-      <div class="board-cursor" style="left:${c.x}%; top:${c.y}%;">
+      <div class="board-cursor" style="left:${c.x}%; top:${c.y}%; --cc:${escapeHtml(c.color)};">
         <svg viewBox="0 0 24 24" width="18" height="18" style="fill:${escapeHtml(c.color)};"><path d="M4 2l16 7.5-6.8 1.7L11 18z"/></svg>
-        <span class="board-cursor-label" style="color:${escapeHtml(c.color)}; border-color:${escapeHtml(c.color)};">${escapeHtml(c.name)}</span>
+        <span class="board-cursor-who">
+          ${c.avatar ? `<img class="board-cursor-pic" src="${escapeHtml(c.avatar)}" alt="">` : `<span class="board-cursor-pic board-cursor-ph">${escapeHtml((c.name || '?').charAt(0).toUpperCase())}</span>`}
+          <span class="board-cursor-label" style="color:${escapeHtml(c.color)}; border-color:${escapeHtml(c.color)};">${escapeHtml(c.name)}</span>
+        </span>
       </div>`
       )
       .join('');

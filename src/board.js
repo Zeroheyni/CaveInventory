@@ -205,8 +205,14 @@ export async function listBoardTokens(boardId) {
 // (Igual ao display_name do combate, o snapshot não atualiza sozinho
 // se o personagem mudar de nome/foto depois -- aceitável por ora.)
 export async function createTokenForCharacter(boardId, campaignId, characterId, { x, y } = {}) {
-  const { data: char, error: charError } = await supabase.from('characters').select('name, avatar_url').eq('id', characterId).single();
+  const { data: char, error: charError } = await supabase.from('characters').select('name, avatar_url, owner_id').eq('id', characterId).single();
   if (charError) throw charError;
+  // borda padrão = cor da conta do dono do personagem (db/073); sem cor escolhida, fica a padrão do sistema
+  let borderColor = null;
+  if (char.owner_id) {
+    const { data: prof } = await supabase.from('profiles').select('color').eq('id', char.owner_id).maybeSingle();
+    if (prof && /^#[0-9a-f]{6}$/i.test(prof.color || '')) borderColor = prof.color.toLowerCase();
+  }
   const { data, error } = await supabase
     .from('board_tokens')
     .insert({
@@ -215,6 +221,7 @@ export async function createTokenForCharacter(boardId, campaignId, characterId, 
       character_id: characterId,
       label: char.name,
       image_url: char.avatar_url || null,
+      ...(borderColor ? { border_color: borderColor } : {}),
       x: x ?? 50,
       y: y ?? 50,
     })

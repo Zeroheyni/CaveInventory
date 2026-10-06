@@ -213,3 +213,19 @@
 .pk-master-manage{ width:100%; padding:10px 0; border:none; border-top:1px solid rgba(var(--warn-rgb),0.3); background: rgba(var(--warn-rgb),0.07); color: var(--warn);
   font-family:inherit; font-size:11.5px; letter-spacing:0.06em; cursor:pointer; transition: background .15s; }
 .pk-master-manage:hover{ background: rgba(var(--warn-rgb),0.18); }
+
+/* ---- cor da conta (perfil) ---- */
+.pf-swatches{ display:flex; flex-wrap:wrap; gap:10px; }
+.pf-sw{ position:relative; width:34px; height:34px; border-radius:50%; background: var(--c); border:3px solid rgba(255,255,255,0.18); cursor:pointer; padding:0; transition: transform .15s ease, box-shadow .15s ease; }
+.pf-sw:hover{ transform: scale(1.12); }
+.pf-sw.on{ border-color:#fff; box-shadow: 0 0 14px var(--c), 0 0 0 2px var(--stone-900) inset; transform: scale(1.1); }
+.pf-sw-custom{ display:flex; align-items:center; justify-content:center; overflow:hidden; background: conic-gradient(#ff5a5a, #ffcf7a, #4ade80, #5ad4ff, #b98bff, #ff5a5a); }
+.pf-sw-custom.on{ background: var(--c); }
+.pf-sw-custom span{ font:700 16px var(--font-mono); color:#fff; text-shadow:0 1px 3px rgba(0,0,0,0.7); pointer-events:none; }
+.pf-sw-custom input{ position:absolute; inset:0; opacity:0; cursor:pointer; width:100%; height:100%; }
+.pf-cursor-preview{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:16px; padding:14px; border-radius:12px; background: var(--stone-900); border:1px dashed var(--stone-line); }
+.pf-cursor-who{ display:flex; align-items:center; gap:6px; margin-left:-4px; }
+.pf-cursor-pic{ width:28px; height:28px; border-radius:50%; object-fit:cover; box-sizing:border-box; border:2.5px solid var(--cc); box-shadow: 0 0 10px var(--cc); background: var(--stone-800); }
+.pf-cursor-ph{ display:flex; align-items:center; justify-content:center; font:700 13px var(--font-display); color: var(--cc); }
+.pf-cursor-label{ font:12px var(--font-mono); padding:3px 8px; border-radius:5px; background: var(--stone-800); border:1px solid var(--cc); color: var(--cc); }
+.pf-cursor-note{ font-size:11px; color: var(--ink-faint); margin-left:auto; }
