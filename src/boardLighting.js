@@ -166,13 +166,20 @@ export function createLighting(host) {
         y = l.y;
       }
       if (!Number.isFinite(x) || !Number.isFinite(y)) continue;
-      out.push({ l, x, y, tokenId });
+      out.push({ l, x, y, tokenId, rot: l.token_id ? byId.get(l.token_id).rotation : null });
     }
     return out;
   }
 
   // pra onde a lanterna aponta: ângulo salvo (direction) ou o último movimento do token
   function facingFor(entry, aspect) {
+    // pin girado de propósito (db/074): o feixe aponta pra onde ele está virado (0° = pra cima; no canvas, y cresce pra baixo)
+    if (entry.tokenId && Number.isFinite(entry.rot)) {
+      const ang = ((entry.rot - 90) * Math.PI) / 180;
+      facing.set(entry.tokenId, ang);
+      lastPos.set(entry.tokenId, { x: entry.x, y: entry.y });
+      return ang;
+    }
     if (!entry.tokenId) return entry.l.direction != null ? (entry.l.direction * Math.PI) / 180 : Math.PI / 2;
     const prev = lastPos.get(entry.tokenId);
     if (prev) {

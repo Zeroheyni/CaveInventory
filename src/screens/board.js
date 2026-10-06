@@ -63,6 +63,7 @@ import { wallsLayerHtml, createWallEditor } from '../boardWalls.js';
 import { mountSceneryPanel } from '../boardScenery.js';
 import { createLighting, LIGHT_PRESETS } from '../boardLighting.js';
 import { createBoardFx, FX_STAGE_HTML, FX_BAR_HTML } from '../boardFx.js';
+import { createTokenSelection } from '../boardSelect.js';
 
 // throttle do que é mandado por Broadcast (Fase 3) -- cursor e preview
 // de arrasto/redimensionar não precisam (nem devem) mandar uma
@@ -152,6 +153,9 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   let moveWallsCache = { version: -1, aspect: 0, list: [] };
   let wallsReloadTimer = null;
   let sceneryPanel = null;
+  let dragRotX = 0; // pin com feixe: de onde medir pra onde ele está andando (vira junto)
+  let dragRotY = 0;
+  let dragRotChanged = false;
   let dragLastX = 0; // última posição VÁLIDA do token arrastado (colisão varre desse ponto até o ponteiro)
   let dragLastY = 0;
 
@@ -240,6 +244,56 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       if (t && wallTool) setWallTool(null);
     },
   });
+
+  // ---- seleção de pin: alças de redimensionar/girar (boardSelect.js) ----
+  const tokenElOf = (id) => Array.from(app.querySelectorAll('.board-token')).find((n) => n.dataset.tokenId === id) || null;
+  const normDeg = (d) => ((d % 360) + 360) % 360;
+  function setRotDom(el, rot) {
+    if (!el) return;
+    if (rot === null || rot === undefined) {
+      el.style.removeProperty('--rot');
+      delete el.dataset.rot;
+    } else {
+      el.style.setProperty('--rot', rot + 'deg');
+      el.dataset.rot = '1';
+    }
+  }
+  // aplica na hora (sem gravar): DOM, luz, outros jogadores
+  function applyTokenLive(t, fields) {
+    const el = tokenElOf(t.id);
+    if ('size' in fields) {
+      t.size = fields.size;
+      if (el) el.style.width = fields.size + '%';
+    }
+    if ('rotation' in fields) {
+      t.rotation = fields.rotation;
+      setRotDom(el, fields.rotation);
+    }
+    lighting.update();
+    maybeBroadcastDrag(t.id, { size: fields.size, rotation: fields.rotation });
+  }
+  const sel = createTokenSelection({
+    stage: () => $('board-stage'),
+    tokens: () => tokens,
+    canEdit: (t) => canMoveToken(t),
+    live: applyTokenLive,
+    commit: async (t, fields) => {
+      try {
+        await updateTokenAppearance(t.id, fields);
+      } catch (err) {
+        error = err.message;
+        render();
+      }
+      persistFacing(t);
+    },
+  });
+  const onBoardKeyDown = (e) => {
+    if (sel.onKey(e)) e.preventDefault();
+  };
+  const hasBeam = (t) => {
+    const l = lightOfToken(t.id);
+    return !!(l && l.enabled && l.angle < 359.5);
+  };
 
   // ---- MEMÓRIA DO MAPA (db/072): o mestre liga por tabuleiro; cada jogador guarda o próprio explorado ----
   let memEpoch = 0; // época da memória que está carregada (o mestre sobe ao zerar)
@@ -902,6 +956,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       return;
     }
     if (!isBackgroundTarget(e)) return;
+    sel.deselect();
     e.preventDefault();
     const area = e.currentTarget;
     try {
@@ -1044,6 +1099,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     await loadMemory();
     startMemoryTimer();
     loadMyCursorAvatar();
+    document.addEventListener('keydown', onBoardKeyDown);
     hud.setVisible(true);
   }
 
@@ -1054,6 +1110,8 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     }
     flushMemory();
     stopMemoryTimer();
+    document.removeEventListener('keydown', onBoardKeyDown);
+    sel.deselect();
     fx.setTool(null, { silent: true });
     fx.clearAll();
     panPointers.clear();
@@ -1111,6 +1169,10 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   let tokensReloadTimer = null;
   async function reloadTokens() {
     if (!viewBoardId) return;
+    if (sel.dragging()) {
+      tokensReloadTimer = setTimeout(reloadTokens, 400);
+      return;
+    }
     try {
       const fresh = await listBoardTokens(viewBoardId);
       // preserva a posição/tamanho local otimista do token que ESTOU
@@ -1211,6 +1273,15 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
         if (el) el.style.width = size + '%';
       }
     }
+    if (payload.rotation !== undefined) {
+      const rot = payload.rotation === null ? null : normDeg(Number(payload.rotation));
+      if (rot === null || Number.isFinite(rot)) {
+        if (token) token.rotation = rot;
+        setRotDom(el, rot);
+        lighting.update();
+      }
+    }
+    if (token && sel.selectedId() === token.id) sel.refresh();
   }
 
   function myDisplayName() {
@@ -1244,7 +1315,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     broadcastCursor(tokensChannel, { userId: session.user.id, name: myDisplayName(), color: myCursorColor(), avatar: myCursorAvatar, x, y });
   }
 
-  function maybeBroadcastDrag(tokenId, { x, y, size } = {}) {
+  function maybeBroadcastDrag(tokenId, { x, y, size, rotation } = {}) {
     const now = Date.now();
     if (now - lastDragSendAt < LIVE_THROTTLE_MS) return;
     lastDragSendAt = now;
@@ -1252,6 +1323,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     if (x !== undefined) payload.x = x;
     if (y !== undefined) payload.y = y;
     if (size !== undefined) payload.size = size;
+    if (rotation !== undefined) payload.rotation = rotation;
     broadcastDrag(tokensChannel, payload);
   }
 
@@ -1493,6 +1565,9 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     dragStartYPct = token.y;
     dragLastX = token.x;
     dragLastY = token.y;
+    dragRotX = token.x;
+    dragRotY = token.y;
+    dragRotChanged = false;
     dragBoardRect = boardArea.getBoundingClientRect();
     el.setPointerCapture(e.pointerId);
     el.classList.add('dragging');
@@ -1512,23 +1587,42 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     if (token) {
       token.x = x;
       token.y = y;
+      // pin com luz em feixe: ao andar, ele (e o feixe) viram pra onde vai
+      if (hasBeam(token)) {
+        const asp = stageAspect();
+        const dxw = ((x - dragRotX) / 100) * asp;
+        const dyw = (y - dragRotY) / 100;
+        if (Math.hypot(dxw, dyw) > 0.008) {
+          token.rotation = Math.round(normDeg((Math.atan2(dxw, -dyw) * 180) / Math.PI) * 10) / 10;
+          setRotDom(dragEl, token.rotation);
+          dragRotX = x;
+          dragRotY = y;
+          dragRotChanged = true;
+        }
+      }
     }
     lighting.update();
-    maybeBroadcastDrag(dragTokenId, { x, y });
+    maybeBroadcastDrag(dragTokenId, { x, y, rotation: token && dragRotChanged ? token.rotation : undefined });
+    if (token && sel.selectedId() === token.id) sel.refresh();
   }
 
   async function onTokenPointerUp(e) {
     if (!dragTokenId || e.pointerId !== dragPointerId) return;
     const tokenId = dragTokenId;
     const token = tokens.find((t) => t.id === tokenId);
+    const tapped = Math.hypot(e.clientX - dragStartClientX, e.clientY - dragStartClientY) < 5; // toque sem arrastar = selecionar
+    const rotChanged = dragRotChanged;
+    dragRotChanged = false;
     if (dragEl) dragEl.classList.remove('dragging');
     dragTokenId = null;
     dragPointerId = null;
     dragEl = null;
     dragBoardRect = null;
+    if (token && tapped) sel.select(tokenId);
     if (token) {
       try {
         await updateTokenPosition(tokenId, token.x, token.y);
+        if (rotChanged) await updateTokenAppearance(tokenId, { rotation: token.rotation });
       } catch (err) {
         error = err.message;
         render();
@@ -1608,12 +1702,12 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     return `
       <div class="board-token ${shapeClass} ${movable ? 'movable' : ''}" data-token-id="${t.id}"
         ${t.character_id ? 'data-character-id="' + escapeHtml(t.character_id) + '"' : ''}
-        style="left:${t.x}%; top:${t.y}%; width:${t.size}%; border-color:${escapeHtml(t.border_color)}; z-index:${t.z_index};"
+        ${Number.isFinite(t.rotation) ? 'data-rot="1"' : ''}
+        style="left:${t.x}%; top:${t.y}%; width:${t.size}%; border-color:${escapeHtml(t.border_color)}; z-index:${t.z_index}; --rot:${Number.isFinite(t.rotation) ? t.rotation : 0}deg;"
         title="${escapeHtml(t.label || '?')}">
         ${avatarOrLetter(t)}
         ${isMaster ? `<button type="button" class="board-token-edit-btn" data-token-edit-open="${t.id}" title="editar aparência">⚙</button>` : ''}
         ${movable ? `<button type="button" class="board-token-del" data-token-del="${t.id}" title="tirar do tabuleiro">×</button>` : ''}
-        ${movable ? `<div class="board-token-resize" data-token-resize="${t.id}" title="redimensionar"></div>` : ''}
         ${tokenLightButtonHtml(t)}
         ${tokenEditPopoverHtml(t)}
       </div>`;
@@ -1812,6 +1906,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     syncWallCapture();
     lighting.attach($('board-light-layer'));
     fx.mount({ stageEl: $('board-stage'), barEl: $('board-fx-bar') });
+    sel.mount();
     // o board-area acabou de ser reconstruído do zero (innerHTML) --
     // redesenha os cursores que eu já conhecia na camada nova, senão
     // eles ficam "invisíveis" até a próxima mensagem de Broadcast

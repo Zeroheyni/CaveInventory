@@ -280,7 +280,7 @@ export async function uploadTokenImage(boardId, file) {
 // pro marcador solto, nome/imagem. Um update só serve pra todos esses
 // campos em vez de uma função por campo -- quem chama manda só o que
 // mudou.
-export async function updateTokenAppearance(tokenId, { size, shape, borderColor, zIndex, label, imageUrl } = {}) {
+export async function updateTokenAppearance(tokenId, { size, shape, borderColor, zIndex, label, imageUrl, rotation } = {}) {
   const payload = { updated_at: new Date().toISOString() };
   if (size !== undefined) payload.size = size;
   if (shape !== undefined) payload.shape = shape;
@@ -288,6 +288,7 @@ export async function updateTokenAppearance(tokenId, { size, shape, borderColor,
   if (zIndex !== undefined) payload.z_index = zIndex;
   if (label !== undefined) payload.label = label;
   if (imageUrl !== undefined) payload.image_url = imageUrl;
+  if (rotation !== undefined) payload.rotation = rotation; // graus (0 = pra cima); null = sem rotação (db/074)
   const { error } = await supabase.from('board_tokens').update(payload).eq('id', tokenId);
   if (error) throw error;
 }
