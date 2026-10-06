@@ -296,3 +296,7 @@ body.notebook-focus-mode .nb-desk{ min-height: calc(100vh - 150px); display:flex
 
 /* exportação limpa: só o conteúdo das páginas (sem "PÁGINA 1", número de folha, fita nem cantos) */
 .nb-exporting .nb-runhead, .nb-exporting .nb-folio, .nb-exporting .nb-ribbon, .nb-exporting .nb-curl{ display:none !important; }
+
+/* os menus (exportar, configurações) abrem pra dentro da mesa: a barra precisa ficar por cima do livro */
+.nb-top{ position:relative; z-index:30; }
+.nb-export-menu{ z-index:31; }
