@@ -58,11 +58,15 @@ body.notebook-focus-mode .nb-desk{ min-height: calc(100vh - 150px); display:flex
   box-shadow:
     0 1px 0 #efe9da, 0 2px 0 #cfc7b4, 0 3px 0 #f0ead8, 0 4px 0 #bab29e, 0 5px 0 #e4decd, 0 6px 0 #a9a18d, 0 9px 12px rgba(0,0,0,0.55);
 }
+.nb-spread{ container-type:inline-size; }
 .nb-spread-single{ grid-template-columns:1fr; }
-.nb-sheet{ position:relative; min-width:0; transform-style:preserve-3d; backface-visibility:hidden; }
+.nb-spread-single .nb-sheet .notebook-page{ min-height: calc(100cqw * 1.3333); }
+.nb-sheet{ position:relative; min-width:0; transform-style:preserve-3d; backface-visibility:hidden; display:flex; }
+.nb-sheet > .notebook-page{ flex:1 1 auto; min-width:0; }
 .nb-sheet .notebook-page,
 .nb-sheet .notebook-page.nb-blank-page{
-  width:100%; max-width:none; margin:0; aspect-ratio:3/4; border-radius:0; box-shadow:none !important;
+  width:100%; max-width:none; margin:0; aspect-ratio:auto; border-radius:0; box-shadow:none !important;
+  min-height: calc(50cqw * 1.3333); /* proporção 3:4 da folha; passou disso, a folha cresce com o texto e a outra acompanha */
   padding:46px 40px 50px; --nb-lh:32px; line-height:var(--nb-lh);
 }
 .nb-sheet-l .notebook-page{ border-radius:9px 0 0 9px; padding-right:50px; }
@@ -280,6 +284,7 @@ body.notebook-focus-mode .nb-desk{ min-height: calc(100vh - 150px); display:flex
 
 @media (max-width: 760px){
   .nb-spread{ grid-template-columns:1fr; }
+  .nb-spread .nb-sheet .notebook-page{ min-height: calc(100cqw * 1.3333); }
   .nb-spread .nb-sheet-r{ margin-top:10px; }
   .nb-gutter, .nb-ribbon{ display:none; }
   .nb-pagebar{ grid-template-columns:1fr; justify-items:center; }

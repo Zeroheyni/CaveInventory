@@ -253,8 +253,8 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
   function exportMenu(nb, theme) {
     let items;
     if (theme.family === 'digital') items = [['term', 'A janela do terminal']];
-    else if (nb.pageViewMode === 'spread') items = [['sheet-l', 'Página esquerda'], ['sheet-r', 'Página direita'], ['book', 'Caderno aberto (as duas, com capa, só o conteúdo)']];
-    else items = [['sheet-l', 'Só a folha'], ['book', 'Caderno (folha com capa, só o conteúdo)']];
+    else if (nb.pageViewMode === 'spread') items = [['sheet-l', 'Página esquerda'], ['sheet-r', 'Página direita'], ['book', 'As duas páginas (caderno aberto, só o conteúdo)']];
+    else items = [['sheet-l', 'A folha']];
     return `
       <div class="notebook-settings-panel nb-export-menu">
         <div class="notebook-settings-row"><label>Exportar como imagem</label></div>
@@ -726,9 +726,46 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
   }
 
   // PNG do que está na tela (folha, página, livro aberto ou janela do terminal). Fontes e imagens vão embutidas.
+  // A fonte do caderno vem do Google Fonts (CSS de outro domínio): o html-to-image não consegue ler/embutir sozinho e a imagem sairia com a fonte
+  // padrão. Aqui busco o CSS, fico só com as faces das famílias usadas e troco cada url() por data: URI.
+  const fontCssCache = new Map();
+  async function embeddedFontCss(fontFamilyValue) {
+    const names = String(fontFamilyValue || '')
+      .split(',')
+      .map((f) => f.trim().replace(/^['"]|['"]$/g, '').toLowerCase())
+      .filter(Boolean);
+    const key = names.join('|');
+    if (fontCssCache.has(key)) return fontCssCache.get(key);
+    const toData = (blob) => new Promise((res, rej) => { const r = new FileReader(); r.onload = () => res(r.result); r.onerror = rej; r.readAsDataURL(blob); });
+    let out = '';
+    try {
+      const links = [...document.querySelectorAll('link[rel="stylesheet"][href*="fonts.googleapis.com"]')];
+      for (const l of links) {
+        const css = await (await fetch(l.href)).text();
+        const faces = (css.match(/@font-face\s*\{[^}]*\}/g) || []).filter((b) => {
+          const m = /font-family:\s*['"]?([^;'"]+)['"]?/i.exec(b);
+          return m && names.includes(m[1].trim().toLowerCase());
+        });
+        for (let face of faces) {
+          for (const u of [...face.matchAll(/url\(([^)]+)\)/g)]) {
+            const url = u[1].replace(/^['"]|['"]$/g, '');
+            const data = await toData(await (await fetch(url)).blob());
+            face = face.split(u[0]).join('url(' + data + ')');
+          }
+          out += face + '\n';
+        }
+      }
+    } catch (_) {
+      out = ''; // sem internet/CORS: deixa o html-to-image tentar sozinho
+    }
+    fontCssCache.set(key, out);
+    return out;
+  }
+
   async function exportImage(kind, mode) {
     capture();
-    const node = kind === 'sheet-l' ? app.querySelector('.nb-sheet-l') : kind === 'sheet-r' ? app.querySelector('.nb-sheet-r') : app.querySelector('#nb-book');
+    // 'book' = as duas páginas lado a lado, exatamente como na tela (sem a capa); 'term' = a janela do terminal
+    const node = kind === 'sheet-l' ? app.querySelector('.nb-sheet-l') : kind === 'sheet-r' ? app.querySelector('.nb-sheet-r') : kind === 'term' ? app.querySelector('#nb-book') : app.querySelector('.nb-spread');
     if (!node) return;
     setStatus('gerando imagem…');
     const book = app.querySelector('#nb-book');
@@ -737,9 +774,12 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
       const { toBlob } = await import('html-to-image');
       // espera as fontes do caderno carregarem antes de fotografar
       if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const pageEl = app.querySelector('.notebook-page');
+      const fontEmbedCSS = pageEl ? await embeddedFontCss(getComputedStyle(pageEl).fontFamily) : '';
       const blob = await Promise.race([toBlob(node, {
         pixelRatio: 2,
         cacheBust: true,
+        ...(fontEmbedCSS ? { fontEmbedCSS } : {}),
         filter: (n) => !(n.dataset && n.dataset.exportSkip !== undefined),
       }), new Promise((_, rej) => setTimeout(() => rej(new Error('demorou demais -- tente de novo com a aba em primeiro plano')), 25000))]);
       if (!blob) throw new Error('não consegui gerar a imagem');
