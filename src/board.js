@@ -297,7 +297,7 @@ export async function deleteToken(tokenId) {
 // onCursor/onDrag são opcionais -- quem só quer ouvir mudança
 // persistida (ex: nenhum caso hoje, mas deixa a função flexível)
 // simplesmente não passa.
-export function subscribeBoard(boardId, { onChange, onCursor, onDrag, onWalls, onLights } = {}) {
+export function subscribeBoard(boardId, { onChange, onCursor, onDrag, onWalls, onLights, onFx } = {}) {
   const channel = supabase.channel('board-tokens-' + boardId);
   if (onChange) {
     channel.on('postgres_changes', { event: '*', schema: 'public', table: 'board_tokens', filter: `board_id=eq.${boardId}` }, onChange);
@@ -310,6 +310,7 @@ export function subscribeBoard(boardId, { onChange, onCursor, onDrag, onWalls, o
   }
   if (onCursor) channel.on('broadcast', { event: 'cursor' }, ({ payload }) => onCursor(payload));
   if (onDrag) channel.on('broadcast', { event: 'drag' }, ({ payload }) => onDrag(payload));
+  if (onFx) channel.on('broadcast', { event: 'fx' }, ({ payload }) => onFx(payload)); // ping e desenhos temporários (boardFx.js)
   channel.subscribe();
   return channel;
 }
@@ -329,6 +330,29 @@ export function broadcastCursor(channel, payload) {
 export function broadcastDrag(channel, payload) {
   if (!channel) return;
   channel.send({ type: 'broadcast', event: 'drag', payload }).catch(() => {});
+}
+
+// ping / desenho temporário -- efêmero, não toca no banco (ver boardFx.js)
+export function broadcastFx(channel, payload) {
+  if (!channel) return;
+  channel.send({ type: 'broadcast', event: 'fx', payload }).catch(() => {});
+}
+
+// ---- memória do mapa (db/072): o que ESTE jogador já explorou ----
+export async function getMyBoardMemory(boardId, userId) {
+  const { data, error } = await supabase.from('board_memory').select('epoch, cells').eq('board_id', boardId).eq('user_id', userId).maybeSingle();
+  if (error) throw error;
+  return data;
+}
+export async function saveMyBoardMemory(boardId, userId, epoch, cells) {
+  const { error } = await supabase
+    .from('board_memory')
+    .upsert({ board_id: boardId, user_id: userId, epoch, cells, updated_at: new Date().toISOString() }, { onConflict: 'board_id,user_id' });
+  if (error) throw error;
+}
+export async function resetBoardMemory(boardId) {
+  const { error } = await supabase.rpc('reset_board_memory', { p_board_id: boardId });
+  if (error) throw error;
 }
 
 export function subscribeCampaignBoards(campaignId, onChange) {

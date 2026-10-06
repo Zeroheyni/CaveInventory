@@ -29,7 +29,7 @@
 // do board.js) em board.css.
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
-import { getCombatState, getParticipants, subscribeCombat, isVisibleToPlayer, updateParticipantHp, updateParticipantStamina } from '../combat.js';
+import { getCombatState, getParticipants, subscribeCombat, isVisibleToPlayer, updateParticipantHp, updateParticipantStamina, resolveCondition, listCustomConditions } from '../combat.js';
 import { renderCombatScreen } from './combat.js';
 import { renderDiceScreen } from './dice.js';
 import { hpMax, estaminaMax, statusStats } from '../characterSheet.js';
@@ -567,8 +567,75 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
     t.classList.add('hud-ping');
     setTimeout(() => t.classList.remove('hud-ping'), 1500);
   }
+  // ---- condições no token (db/031, db/037): fichas redondas de vidro com o ícone e a cor da condição, flutuando em cima
+  // do token. Vivem numa camada própria do palco (o token tem overflow:hidden e cortaria); um MutationObserver nos
+  // tokens mantém cada fileira grudada no token (arrasto, redimensionar) e some junto quando a luz esconde o token. ----
+  let customConditions = [];
+  const MAX_CHIPS = 3;
+  function condLeft(c) {
+    if (c.round_expira === null || c.round_expira === undefined) return null;
+    return c.round_expira - (combat.state.round || 1);
+  }
+  function condLabel(c, meta) {
+    const left = condLeft(c);
+    return meta.label + (left === null ? ' — até o mestre remover' : left > 0 ? ` — ${left} rodada${left === 1 ? '' : 's'}` : ' — acabando');
+  }
+  function syncCondWrap(wrap, tokenEl) {
+    wrap.style.left = tokenEl.style.left;
+    wrap.style.top = tokenEl.style.top;
+    wrap.style.width = tokenEl.style.width;
+    wrap.hidden = tokenEl.dataset.unseen === '1';
+  }
+  let condObserver = null;
+  function decorateConditions() {
+    const stage = document.getElementById('board-stage');
+    if (!stage) return;
+    let layer = stage.querySelector('.board-cond-layer');
+    if (!layer) {
+      layer = document.createElement('div');
+      layer.className = 'board-cond-layer';
+      stage.appendChild(layer);
+    }
+    if (condObserver) condObserver.disconnect();
+    layer.innerHTML = '';
+    const visible = visibleParticipants();
+    const pairs = [];
+    document.querySelectorAll('.board-token[data-character-id]').forEach((tokenEl) => {
+      const p = visible.find((x) => x.character_id === tokenEl.dataset.characterId);
+      const conds = p && Array.isArray(p.conditions) ? p.conditions : [];
+      if (!conds.length) return;
+      const shown = conds.slice(0, MAX_CHIPS);
+      const extra = conds.length - shown.length;
+      const chips = shown
+        .map((c, i) => {
+          const meta = resolveCondition(c.tipo, customConditions);
+          const left = condLeft(c);
+          const badge = left === null ? '' : `<i class="cn">${left > 0 ? left : '!'}</i>`;
+          return `<span class="board-cond-chip" style="--c:${escapeHtml(meta.color)}; --i:${i};" title="${escapeHtml(condLabel(c, meta))}"><span class="ci">${escapeHtml(meta.icon)}</span>${badge}</span>`;
+        })
+        .join('');
+      const more = extra > 0 ? `<span class="board-cond-more" title="${extra} condição(ões) a mais">+${extra}</span>` : '';
+      const wrap = document.createElement('div');
+      wrap.className = 'board-cond-wrap';
+      wrap.innerHTML = `<div class="board-cond-row">${chips}${more}</div>`;
+      layer.appendChild(wrap);
+      syncCondWrap(wrap, tokenEl);
+      pairs.push([wrap, tokenEl]);
+    });
+    if (pairs.length && typeof MutationObserver !== 'undefined') {
+      condObserver = new MutationObserver((muts) => {
+        const touched = new Set(muts.map((m) => m.target));
+        pairs.forEach(([wrap, tokenEl]) => {
+          if (touched.has(tokenEl)) syncCondWrap(wrap, tokenEl);
+        });
+      });
+      pairs.forEach(([, tokenEl]) => condObserver.observe(tokenEl, { attributes: true, attributeFilter: ['style', 'data-unseen'] }));
+    }
+  }
+
   const deco = { current: undefined };
   function decorate() {
+    decorateConditions();
     const active = combat.state.active;
     const allSorted = active ? combat.participants.slice().sort((a, b) => a.position - b.position) : [];
     const current = active ? currentTurnOf(allSorted) : null;
@@ -608,6 +675,11 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
       const [cs, ps] = await Promise.all([getCombatState(campaignId), getParticipants(campaignId)]);
       combat.state = cs;
       combat.participants = ps;
+      try {
+        customConditions = await listCustomConditions(campaignId);
+      } catch (_) {
+        customConditions = []; // sem as customizadas, mostra só o catálogo
+      }
     } catch (_) {
       // painel compacto -- se falhar, só fica com o último estado conhecido
     }

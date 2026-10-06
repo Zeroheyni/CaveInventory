@@ -8,6 +8,10 @@
 // exceto o dele); o mestre vê tudo com a escuridão bem leve e pode "ver como
 // jogador". É efeito visual: a imagem do mapa continua acessível pela URL.
 //
+// Memória do mapa (db/072, o mestre liga por tabuleiro): tudo que o JOGADOR já viu iluminado fica gravado numa máscara
+// 100x100 (1 célula = 1% x 1% do palco) e é desenhado "meio apagado" por baixo da luz de agora -- o mapa explorado não
+// volta ao preto total. Os tokens continuam só aparecendo dentro da luz de AGORA (inimigo em área só lembrada fica oculto).
+//
 // Custo: o polígono de cada luz é cacheado e só recalcula quando a luz, o
 // token que a carrega ou as paredes mudam; a animação (tremida, pulso, névoa)
 // só mexe no gradiente e só roda enquanto houver algo animado (~30 fps).
@@ -24,6 +28,9 @@ export const LIGHT_PRESETS = {
 };
 export const LIGHT_KINDS = Object.keys(LIGHT_PRESETS);
 
+const MEM_N = 100; // grade da memória (células)
+const MEMORY_REVEAL = 0.5; // área lembrada fica com (1 - isso) da escuridão normal
+const MEMORY_RADIUS_FACTOR = 0.85; // só conta como "visto" o miolo da penumbra, não a borda quase escura
 const MASTER_DARK_FACTOR = 0.4; // o mestre vê a escuridão a 40% do valor do jogador
 const HALO_PCT = 4.5; // a lanterna também ilumina um halo curto em volta de quem carrega
 const FRAME_MS = 33;
@@ -74,6 +81,60 @@ export function createLighting(host) {
   let quality = 1; // fração da resolução máxima; cai sozinha se o desenho demorar
   let drawEma = 0;
   let drawSamples = 0;
+
+  // ---- memória do mapa ----
+  let mem = null; // máscara 100x100 (alpha > 0 = explorado)
+  let memCtx = null;
+  let memBlur = null; // a máscara ampliada e suavizada, do tamanho dos canvases (refeita só quando muda)
+  let memBlurDirty = true;
+  let memTouched = false; // mudou desde o último exportMemory()
+  let memSavedKey = '';
+  const memMarkKey = new Map(); // luz -> última posição marcada (evita repintar parado)
+  function ensureMem() {
+    if (mem) return;
+    mem = document.createElement('canvas');
+    mem.width = mem.height = MEM_N;
+    memCtx = mem.getContext('2d', { willReadFrequently: true });
+  }
+  function markExplored(poly, entry, aspect, radiusPct, keyExtra) {
+    ensureMem();
+    const key = `${entry.x.toFixed(2)},${entry.y.toFixed(2)},${radiusPct.toFixed(1)},${keyExtra}`;
+    if (memMarkKey.get(entry.l.id + ':' + keyExtra.split('|')[0]) === key) return;
+    memMarkKey.set(entry.l.id + ':' + keyExtra.split('|')[0], key);
+    memCtx.save();
+    memCtx.beginPath();
+    poly.forEach((p, i) => {
+      const px = (p.x / aspect) * MEM_N;
+      const py = p.y * MEM_N;
+      if (i === 0) memCtx.moveTo(px, py);
+      else memCtx.lineTo(px, py);
+    });
+    memCtx.closePath();
+    memCtx.clip();
+    // o polígono pode ser maior que o círculo da luz (raio máximo): limita ao miolo
+    memCtx.beginPath();
+    memCtx.ellipse(entry.x, entry.y, radiusPct * MEMORY_RADIUS_FACTOR, radiusPct * MEMORY_RADIUS_FACTOR * aspect, 0, 0, Math.PI * 2);
+    memCtx.fillStyle = '#fff';
+    memCtx.fill();
+    memCtx.restore();
+    memBlurDirty = true;
+    memTouched = true;
+  }
+  function renderMemBlur() {
+    if (!mem) return;
+    if (!memBlur) memBlur = document.createElement('canvas');
+    if (memBlur.width !== backW || memBlur.height !== backH) {
+      memBlur.width = backW;
+      memBlur.height = backH;
+    }
+    const c = memBlur.getContext('2d');
+    c.clearRect(0, 0, backW, backH);
+    c.imageSmoothingEnabled = true;
+    c.imageSmoothingQuality = 'high';
+    if ('filter' in c) c.filter = `blur(${Math.max(1, (backW / MEM_N) * 0.9)}px)`;
+    c.drawImage(mem, 0, 0, MEM_N, MEM_N, 0, 0, backW, backH);
+    memBlurDirty = false;
+  }
 
   function lightWalls(aspect) {
     const v = host.wallsVersion();
@@ -154,6 +215,7 @@ export function createLighting(host) {
     if (w !== backW || h !== backH) {
       backW = w;
       backH = h;
+      memBlurDirty = true;
       dark.width = glow.width = gray.width = w;
       dark.height = glow.height = gray.height = h;
       polyCache.clear();
@@ -256,6 +318,19 @@ export function createLighting(host) {
       dctx.restore();
     }
 
+    // 1b) memória: o que já foi explorado fica meio apagado (a luz de agora ainda apaga o resto por cima)
+    const memActive = asPlayer && !!b.memory_enabled;
+    if (memActive && mem) {
+      if (memBlurDirty) renderMemBlur();
+      if (memBlur) {
+        dctx.save();
+        dctx.globalCompositeOperation = 'destination-out';
+        dctx.globalAlpha = MEMORY_REVEAL;
+        dctx.drawImage(memBlur, 0, 0);
+        dctx.restore();
+      }
+    }
+
     // 2) cada luz apaga a escuridão no polígono dela e solta um brilho colorido
     const lit = []; // pra decidir quais tokens aparecem
     for (const e of entries) {
@@ -325,11 +400,13 @@ export function createLighting(host) {
       };
 
       paint(poly, dimPx, brightPx, 1, l.kind === 'magia');
+      if (memActive) markExplored(poly, e, aspect, dimPct, 'main|' + dir.toFixed(2) + '|' + host.wallsVersion());
       lit.push({ poly, x: e.x, y: e.y, dimPct: dimPct * scale });
       if (isCone) {
         // halo curto em volta de quem carrega a lanterna (círculo completo)
         const halo = polygonFor(e, aspect, 'halo', HALO_PCT, Math.PI * 2, 0);
         paint(halo, HALO_PCT * pxPerPct, HALO_PCT * pxPerPct * 0.5, 0.85);
+        if (memActive) markExplored(halo, e, aspect, HALO_PCT, 'halo|' + host.wallsVersion());
         lit.push({ poly: halo, x: e.x, y: e.y, dimPct: HALO_PCT });
       }
     }
@@ -432,6 +509,56 @@ export function createLighting(host) {
     // pra onde a lanterna do token aponta agora (rad) -- o board.js grava ao soltar o token
     getFacing(tokenId) {
       return facing.has(tokenId) ? facing.get(tokenId) : null;
+    },
+    // ---- memória do mapa: persistência fica com quem chama (screens/board.js) ----
+    // base64 de 1 bit por célula (100x100); null se nada mudou desde a última exportação/importação
+    exportMemory(force = false) {
+      if (!mem) return null;
+      if (!memTouched && !force) return null;
+      const px = memCtx.getImageData(0, 0, MEM_N, MEM_N).data;
+      const bytes = new Uint8Array(Math.ceil((MEM_N * MEM_N) / 8));
+      for (let i = 0; i < MEM_N * MEM_N; i++) if (px[i * 4 + 3] > 96) bytes[i >> 3] |= 1 << (i & 7);
+      let bin = '';
+      for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+      const out = btoa(bin);
+      memTouched = false;
+      if (out === memSavedKey) return null;
+      memSavedKey = out;
+      return out;
+    },
+    importMemory(b64) {
+      ensureMem();
+      memCtx.clearRect(0, 0, MEM_N, MEM_N);
+      memMarkKey.clear();
+      if (b64) {
+        try {
+          const bin = atob(b64);
+          const img = memCtx.createImageData(MEM_N, MEM_N);
+          for (let i = 0; i < MEM_N * MEM_N; i++) {
+            if ((bin.charCodeAt(i >> 3) >> (i & 7)) & 1) {
+              img.data[i * 4] = img.data[i * 4 + 1] = img.data[i * 4 + 2] = 255;
+              img.data[i * 4 + 3] = 255;
+            }
+          }
+          memCtx.putImageData(img, 0, 0);
+        } catch (_) {
+          memCtx.clearRect(0, 0, MEM_N, MEM_N); // cópia corrompida: começa do zero
+        }
+      }
+      memSavedKey = b64 || '';
+      memTouched = false;
+      memBlurDirty = true;
+      dirty = true;
+      schedule();
+    },
+    clearMemory() {
+      if (mem) memCtx.clearRect(0, 0, MEM_N, MEM_N);
+      memMarkKey.clear();
+      memSavedKey = '';
+      memTouched = false;
+      memBlurDirty = true;
+      dirty = true;
+      schedule();
     },
     invalidate() {
       polyCache.clear();

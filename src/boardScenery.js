@@ -154,6 +154,11 @@ export function mountSceneryPanel(container, api) {
         <label class="scn-inline">cor da escuridão <input type="color" value="${escapeHtml(s.ambientColor)}" data-scn-ambcolor></label>
       </div>
       <div class="scn-section">
+        <label class="scn-check"><input type="checkbox" data-scn-memory ${s.memory ? 'checked' : ''}> <b>memória do mapa</b> <small>(o que o jogador já explorou fica meio apagado, em vez de voltar ao preto)</small></label>
+        <p class="scn-hint">Cada jogador guarda o próprio mapa explorado. Os inimigos continuam só aparecendo dentro da luz de agora.</p>
+        <button type="button" class="btn btn-ghost" data-scn-memreset ${s.memory ? '' : 'disabled'}>🧽 zerar a memória de todos</button>
+      </div>
+      <div class="scn-section">
         <label class="scn-check"><input type="checkbox" data-scn-asplayer ${s.viewAsPlayer ? 'checked' : ''}> ver como jogador</label>
         <p class="scn-hint">Você (mestre) vê o mapa só levemente escurecido; marque pra enxergar o que os jogadores enxergam. É efeito visual: a imagem do mapa continua acessível pela URL dela.</p>
       </div>`;
@@ -195,6 +200,10 @@ export function mountSceneryPanel(container, api) {
   function wireAmbient() {
     const lg = container.querySelector('[data-scn-lighting]');
     if (lg) lg.addEventListener('change', () => api.setLighting(lg.checked));
+    const mm = container.querySelector('[data-scn-memory]');
+    if (mm) mm.addEventListener('change', () => api.setMemory(mm.checked));
+    const mr = container.querySelector('[data-scn-memreset]');
+    if (mr) mr.addEventListener('click', () => { if (window.confirm('Zerar o mapa explorado de TODOS os jogadores neste tabuleiro?')) api.resetMemory(); });
     const am = container.querySelector('[data-scn-ambient]');
     if (am) {
       am.addEventListener('input', () => {

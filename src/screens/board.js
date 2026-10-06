@@ -40,6 +40,10 @@ import {
   subscribeCampaignBoards,
   broadcastCursor,
   broadcastDrag,
+  broadcastFx,
+  getMyBoardMemory,
+  saveMyBoardMemory,
+  resetBoardMemory,
   readImageSize,
   updateBoardDims,
   listBoardWalls,
@@ -58,6 +62,7 @@ import { blockingWalls, resolveMove, toWorld, toPct } from '../boardGeometry.js'
 import { wallsLayerHtml, createWallEditor } from '../boardWalls.js';
 import { mountSceneryPanel } from '../boardScenery.js';
 import { createLighting, LIGHT_PRESETS } from '../boardLighting.js';
+import { createBoardFx, FX_STAGE_HTML, FX_BAR_HTML } from '../boardFx.js';
 
 // throttle do que é mandado por Broadcast (Fase 3) -- cursor e preview
 // de arrasto/redimensionar não precisam (nem devem) mandar uma
@@ -223,6 +228,62 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     viewAsPlayer: () => viewAsPlayer,
     characterId: () => characterId,
   });
+
+  // ---- ping e desenhos temporários (boardFx.js): Broadcast efêmero no canal do tabuleiro ----
+  const fx = createBoardFx({
+    userId: session.user.id,
+    name: () => myDisplayName(),
+    defaultColor: () => myCursorColor(),
+    send: (payload) => broadcastFx(tokensChannel, payload),
+    // ferramenta de desenho e ferramenta de parede disputam o mesmo clique: ligar uma desliga a outra
+    onToolChange: (t) => {
+      if (t && wallTool) setWallTool(null);
+    },
+  });
+
+  // ---- MEMÓRIA DO MAPA (db/072): o mestre liga por tabuleiro; cada jogador guarda o próprio explorado ----
+  let memEpoch = 0; // época da memória que está carregada (o mestre sobe ao zerar)
+  let memSaveTimer = null;
+  const memoryOn = () => !!(currentBoard() && currentBoard().memory_enabled);
+  async function loadMemory() {
+    const b = currentBoard();
+    memEpoch = b ? b.memory_epoch || 0 : 0;
+    lighting.importMemory('');
+    if (isMaster || !b || !b.memory_enabled) return; // o mestre vê tudo: não persiste nada
+    try {
+      const row = await getMyBoardMemory(b.id, session.user.id);
+      if (row && row.epoch === memEpoch) lighting.importMemory(row.cells);
+    } catch (_) {
+      // sem a tabela/permissão: segue sem memória salva (ela ainda funciona na sessão)
+    }
+  }
+  async function flushMemory() {
+    if (isMaster || !viewBoardId || !memoryOn()) return;
+    const cells = lighting.exportMemory();
+    if (!cells) return;
+    try {
+      await saveMyBoardMemory(viewBoardId, session.user.id, memEpoch, cells);
+    } catch (_) {
+      // tenta de novo no próximo ciclo
+    }
+  }
+  function startMemoryTimer() {
+    clearInterval(memSaveTimer);
+    memSaveTimer = setInterval(flushMemory, 5000);
+  }
+  function stopMemoryTimer() {
+    clearInterval(memSaveTimer);
+    memSaveTimer = null;
+  }
+  // o mestre zerou a memória (época nova): quem está com o tabuleiro aberto descarta a cópia local
+  function syncMemoryEpoch() {
+    const b = currentBoard();
+    if (!b || !viewBoardId) return;
+    if ((b.memory_epoch || 0) !== memEpoch) {
+      memEpoch = b.memory_epoch || 0;
+      lighting.clearMemory();
+    }
+  }
 
   const LIGHT_FIELDS = ['kind', 'radius', 'dim_radius', 'color', 'angle', 'flicker', 'pulse', 'intensity'];
   const presetFields = (kind) => {
@@ -548,6 +609,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   }
   function setWallTool(key) {
     wallTool = key && key !== 'mover' && WALL_TOOL_DEFS[key] ? key : null;
+    if (wallTool && fx.getTool()) fx.setTool(null, { silent: true });
     wallEditor.reset();
     if (wallTool !== 'editar') selectedWallId = null;
     const area = $('board-area');
@@ -618,6 +680,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     const b = currentBoard() || {};
     return {
       lighting: !!b.lighting_enabled,
+      memory: !!b.memory_enabled,
       ambient: b.ambient ?? 0.92,
       fogMode: b.fog_mode || 'escuro',
       ambientColor: b.ambient_color || '#05060d',
@@ -636,6 +699,19 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       refreshScenery();
     },
     setLighting: (v) => patchBoard({ lighting_enabled: !!v }),
+    setMemory: (v) => patchBoard({ memory_enabled: !!v }),
+    async resetMemory() {
+      const b = currentBoard();
+      if (!b) return;
+      try {
+        await resetBoardMemory(b.id);
+        b.memory_epoch = (b.memory_epoch || 0) + 1;
+        syncMemoryEpoch();
+      } catch (err) {
+        error = err.message;
+        render();
+      }
+    },
     setAmbient: (v) => patchBoard({ ambient: Math.max(0, Math.min(1, Number(v))) }),
     setFogMode: (v) => patchBoard({ fog_mode: v === 'neblina' ? 'neblina' : 'escuro' }),
     setAmbientColor: (v) => patchBoard({ ambient_color: v }),
@@ -810,12 +886,12 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
 
   // pan/pinça só começam no "fundo" (nada de token, botão ou painel por baixo)
   function isBackgroundTarget(e) {
-    if (e.target.closest('.board-wall-capture')) return e.button === 1; // ferramenta ativa: só o botão do meio arrasta o mapa
-    return !e.target.closest('.board-token, button, input, label, .board-add-token-picker, .board-zoom-ctl');
+    if (e.target.closest('.board-wall-capture, .board-fx-capture')) return e.button === 1; // ferramenta ativa: só o botão do meio arrasta o mapa
+    return !e.target.closest('.board-token, button, input, label, .board-add-token-picker, .board-zoom-ctl, .board-fx-bar');
   }
   function onAreaPointerDown(e) {
     if (e.pointerType === 'mouse' && e.button !== 0 && e.button !== 1) return;
-    const inCapture = !!e.target.closest('.board-wall-capture');
+    const inCapture = !!e.target.closest('.board-wall-capture, .board-fx-capture');
     if (inCapture && e.pointerType === 'touch') {
       // ferramenta de parede ativa: um dedo desenha (o editor cuida), dois dedos fazem pinça/pan
       panPointers.set(e.pointerId, { x: e.clientX, y: e.clientY, passive: true });
@@ -913,6 +989,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       // cliente), volta sozinho pra lista em vez de ficar preso numa
       // tela cheia órfã.
       if (viewBoardId && !boards.some((b) => b.id === viewBoardId)) closeBoard();
+      else syncMemoryEpoch();
       if (isMaster) {
         const { data: chars } = await supabase
           .from('characters')
@@ -964,6 +1041,8 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     render();
     resubscribeTokens();
     startCursorPruneTimer();
+    await loadMemory();
+    startMemoryTimer();
     hud.setVisible(true);
   }
 
@@ -972,6 +1051,10 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       areaResizeObserver.disconnect();
       areaResizeObserver = null;
     }
+    flushMemory();
+    stopMemoryTimer();
+    fx.setTool(null, { silent: true });
+    fx.clearAll();
     panPointers.clear();
     wallEditor.detach();
     lighting.stop();
@@ -1012,6 +1095,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       },
       onCursor: handleRemoteCursor,
       onDrag: handleRemoteDrag,
+      onFx: (payload) => fx.receive(payload),
       onWalls: () => {
         clearTimeout(wallsReloadTimer);
         wallsReloadTimer = setTimeout(reloadWalls, 300);
@@ -1689,6 +1773,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
             <div class="board-light-markers" id="board-light-markers">${fixedLightMarkersHtml()}</div>
             <div class="board-walls-layer" id="board-walls-layer">${showWallsLayer() ? wallsLayerHtml(visibleWalls(), { selectedId: selectedWallId, editing: wallTool === 'editar', doorButtons: isMaster }) : ''}</div>
             <div class="board-cursor-layer" id="board-cursor-layer"></div>
+            ${FX_STAGE_HTML}
           </div>
           ${isMaster ? `<button type="button" class="board-add-token-fab" id="board-add-token-fab" title="adicionar token de personagem">+ token</button>` : ''}
           ${addTokenPickerHtml()}
@@ -1697,6 +1782,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
             <button type="button" data-zoom="out" title="afastar">−</button>
             <button type="button" data-zoom="reset" title="enquadrar o mapa">⤢</button>
           </div>
+          ${FX_BAR_HTML}
         </div>
       </div>`;
     wireFullscreenEvents();
@@ -1706,6 +1792,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     wireLightMarkers();
     syncWallCapture();
     lighting.attach($('board-light-layer'));
+    fx.mount({ stageEl: $('board-stage'), barEl: $('board-fx-bar') });
     // o board-area acabou de ser reconstruído do zero (innerHTML) --
     // redesenha os cursores que eu já conhecia na camada nova, senão
     // eles ficam "invisíveis" até a próxima mensagem de Broadcast
@@ -1918,6 +2005,17 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     // que já borbulha até aqui) ----
     const boardAreaEl = $('board-area');
     if (boardAreaEl) {
+      boardAreaEl.addEventListener(
+        'pointerdown',
+        (e) => {
+          if (e.altKey && e.button === 0 && !wallTool && !e.target.closest('button, input, .board-fx-bar, .board-zoom-ctl')) {
+            e.preventDefault();
+            e.stopPropagation();
+            fx.pingAtClient(e.clientX, e.clientY);
+          }
+        },
+        true
+      );
       boardAreaEl.addEventListener('pointermove', onBoardAreaPointerMove);
       boardAreaEl.addEventListener('pointerleave', onBoardAreaPointerLeave);
       // zoom (roda/pinça) e pan (arrastar o fundo) -- locais
