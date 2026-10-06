@@ -18,6 +18,8 @@ import {
   newNotebook,
   getFontFamily,
   ensureCustomFontLoaded,
+  RULINGS,
+  coverColorOf,
 } from '../notebook.js';
 
 export function renderNotebookScreen(app, { session, profile, campaign, characterId, isAdminView }) {
@@ -38,6 +40,13 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
   let creatingNotebook = false;
   let lastFocusedSide = 'left'; // qual metade da folha dupla recebeu foco por último
   let docClickWired = false;
+  // corretor ortográfico (os risquinhos vermelhos): vem DESLIGADO; a escolha fica guardada neste navegador
+  const SPELL_KEY = 'cave.notebook.spellcheck';
+  let spellcheckOn = false;
+  try {
+    spellcheckOn = localStorage.getItem(SPELL_KEY) === '1';
+  } catch (_) { /* sem storage: fica desligado */ }
+  let exportMenuOpen = false;
 
   async function load() {
     try {
@@ -104,6 +113,7 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
     }
     app.innerHTML = view === 'list' ? renderListView() : renderNotebookView();
     wireEvents();
+    postRender();
   }
 
   // ---- lista de cadernos ----
@@ -116,7 +126,7 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         <div class="notebook-list-head">
           <div class="ficha-section-title">CADERNOS COMPARTILHADOS</div>
         </div>
-        <div class="notebook-list-grid">${list.map((nb) => notebookCard(nb.notebookId, nb.notebookName, nb.themeId)).join('')}</div>
+        <div class="nb-shelf">${list.map((nb) => notebookCard(nb.notebookId, nb.notebookName, nb.themeId, false, nb.variant)).join('')}</div>
       `;
     }
     const list = notebookData.notebooks;
@@ -126,8 +136,8 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         ${!creatingNotebook ? `<button type="button" class="btn" id="notebook-new-btn">+ novo caderno</button>` : ''}
       </div>
       ${creatingNotebook ? newNotebookPanel() : ''}
-      <div class="notebook-list-grid">
-        ${list.map((nb) => notebookCard(nb.id, nb.name, nb.themeId, true)).join('')}
+      <div class="nb-shelf">
+        ${list.map((nb) => notebookCard(nb.id, nb.name, nb.themeId, true, nb.variant)).join('')}
       </div>
     `;
   }
@@ -154,14 +164,21 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
     `;
   }
 
-  function notebookCard(id, name, themeId, deletable) {
+  // capa de caderno numa estante: couro/pano na cor do material, lombada costurada, fita marcadora e plaquinha com o nome
+  function notebookCard(id, name, themeId, deletable, variant) {
     const theme = themeDef(themeId);
+    const isDigital = theme.family === 'digital';
+    const emblem = isDigital ? '>_' : themeId === 'pergaminho' ? '📜' : '📖';
     return `
-      <div class="notebook-card-wrap">
-        <button type="button" class="notebook-card" data-open-notebook="${id}">
-          <span class="notebook-card-icon">${theme.family === 'digital' ? '💻' : '📖'}</span>
-          <span class="notebook-card-name">${escapeHtml(name)}</span>
-          <span class="notebook-card-theme">${escapeHtml(theme.label)}</span>
+      <div class="notebook-card-wrap nb-book-wrap">
+        <button type="button" class="notebook-card nb-cover ${isDigital ? 'nb-cover-digital' : 'nb-cover-leather'}" data-open-notebook="${id}" style="--cover:${coverColorOf(themeId, variant)};">
+          <span class="nb-cover-spine"></span>
+          ${isDigital ? '' : '<span class="nb-cover-ribbon"></span>'}
+          <span class="nb-cover-plate">
+            <span class="nb-cover-emblem">${emblem}</span>
+            <span class="notebook-card-name">${escapeHtml(name)}</span>
+            <span class="notebook-card-theme">${escapeHtml(theme.label)}</span>
+          </span>
         </button>
         ${isOwner ? `<button type="button" class="notebook-pencil-btn" data-rename-notebook="${id}" title="renomear">✎</button>` : ''}
         ${deletable && isOwner && list().length > 1 ? `<button type="button" class="combat-row-remove notebook-card-delete" data-delete-notebook="${id}" title="apagar caderno">✕</button>` : ''}
@@ -190,22 +207,27 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
     const themeClasses = `notebook-family-${theme.family} notebook-theme-${theme.id} notebook-variant-${nb.variant}${isDigital && nb.expandedView ? ' notebook-expanded' : ''}`;
 
     return `
-      <div class="notebook-wrap ${themeClasses}" style="--notebook-font:${fontFamily};">
-        <div class="notebook-toolbar">
+      <div class="notebook-wrap nb-immersive ${themeClasses}" style="--notebook-font:${fontFamily};">
+        <div class="nb-top">
           <button type="button" class="btn btn-ghost" id="notebook-back-to-list">← cadernos</button>
-          <span class="notebook-name">${escapeHtml(isOwner ? nb.name : nb.name)}</span>
+          <span class="notebook-name">${escapeHtml(nb.name)}</span>
           ${isOwner ? `<button type="button" class="notebook-pencil-btn" id="notebook-rename-current" title="renomear caderno">✎</button>` : ''}
           <span class="notebook-toolbar-sep"></span>
           ${
             isOwner
               ? `
             <div class="notebook-settings-wrap" id="notebook-settings-wrap">
-              <button type="button" class="notebook-fmt-btn" id="notebook-settings-btn" title="personalizar caderno">⚙</button>
+              <button type="button" class="notebook-fmt-btn" id="notebook-settings-btn" title="personalizar caderno (material, fonte, pauta...)">⚙</button>
               ${settingsOpen ? settingsPanel(nb, theme) : ''}
             </div>
+            <button type="button" class="notebook-fmt-btn nb-spell ${spellcheckOn ? 'on' : ''}" id="notebook-spell-btn" title="${spellcheckOn ? 'corretor ortográfico LIGADO (clique pra desligar)' : 'corretor ortográfico desligado (clique pra ligar)'}">${spellcheckOn ? 'abc✓' : 'abc'}</button>
           `
               : ''
           }
+          <div class="notebook-settings-wrap" id="notebook-export-wrap">
+            <button type="button" class="notebook-fmt-btn" id="notebook-export-btn" title="exportar como imagem (pra mandar em outros lugares)">📷</button>
+            ${exportMenuOpen ? exportMenu(nb, theme) : ''}
+          </div>
           <button type="button" class="notebook-fmt-btn" id="notebook-focus-btn" title="modo foco (tela cheia)">⤢</button>
           <span class="notebook-save-status" id="notebook-save-status"></span>
           ${!isOwner ? `<span class="notebook-readonly-badge">📖 modo leitura</span>` : ''}
@@ -219,12 +241,34 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
             ? isOwner
               ? `<p class="admin-empty">nenhuma página ainda.</p><button type="button" class="btn" id="notebook-add-page">+ nova página</button>`
               : `<p class="admin-empty">nenhuma página compartilhada.</p>`
-            : theme.family === 'digital'
+            : isDigital
               ? digitalBody(nb)
               : physicalBody(nb)
         }
       </div>
     `;
+  }
+
+  // o que dá pra exportar: cada item tem baixar (⬇) e copiar (📋)
+  function exportMenu(nb, theme) {
+    let items;
+    if (theme.family === 'digital') items = [['term', 'A janela do terminal']];
+    else if (nb.pageViewMode === 'spread') items = [['sheet-l', 'Página esquerda'], ['sheet-r', 'Página direita'], ['book', 'Caderno aberto (as duas, com capa)']];
+    else items = [['sheet-l', 'Só a folha'], ['book', 'Caderno (folha com capa)']];
+    return `
+      <div class="notebook-settings-panel nb-export-menu">
+        <div class="notebook-settings-row"><label>Exportar como imagem</label></div>
+        ${items
+          .map(
+            ([k, label]) => `
+          <div class="nb-export-item">
+            <span>${label}</span>
+            <button type="button" class="notebook-fmt-btn" data-export="${k}" data-mode="download" title="baixar PNG">⬇</button>
+            <button type="button" class="notebook-fmt-btn" data-export="${k}" data-mode="copy" title="copiar imagem (cole em qualquer lugar)">📋</button>
+          </div>`
+          )
+          .join('')}
+      </div>`;
   }
 
   function settingsPanel(nb, theme) {
@@ -250,6 +294,12 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         ${
           theme.family === 'physical'
             ? `
+          <div class="notebook-settings-row">
+            <label>Folha</label>
+            <select id="notebook-ruling-select">
+              ${RULINGS.map((r) => `<option value="${r.id}" ${r.id === nb.ruling ? 'selected' : ''}>${escapeHtml(r.label)}</option>`).join('')}
+            </select>
+          </div>
           <div class="notebook-settings-row">
             <label>Visualização</label>
             <div class="notebook-view-toggle">
@@ -292,77 +342,136 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
     `;
   }
 
-  function pageTitleWithPencil(page) {
-    if (!isOwner) return escapeHtml(page.title);
-    return `${escapeHtml(page.title)} <button type="button" class="notebook-pencil-btn" data-rename-page="${page.id}" title="renomear página">✎</button><button type="button" class="notebook-pencil-btn notebook-delete-page-btn" data-delete-page="${page.id}" title="apagar página">✕</button>`;
+  // ---- título da página + ações (renomear/apagar), fora da folha pra não sujar a escrita ----
+  function titleControls(page) {
+    if (!page) return '';
+    return `<span class="nb-ptitle" title="${escapeHtml(page.title)}">${escapeHtml(page.title)}</span>${
+      isOwner
+        ? `<button type="button" class="notebook-pencil-btn" data-rename-page="${page.id}" title="renomear página">✎</button><button type="button" class="notebook-pencil-btn notebook-delete-page-btn" data-delete-page="${page.id}" title="apagar página">✕</button>`
+        : ''
+    }`;
+  }
+
+  const slug = (s) =>
+    String(s || '')
+      .normalize('NFD')
+      .replace(/[̀-ͯ]/g, '')
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'pagina';
+
+  const pageEditor = (page, id) =>
+    `<div class="notebook-page" id="${id}" data-page-id="${page.id}" ${isOwner ? `contenteditable="true" spellcheck="${spellcheckOn ? 'true' : 'false'}"` : ''}>${sanitizeNotebookHtml(page.html)}</div>`;
+
+  // uma folha do livro: cabeçalho corrente, texto, número da página e canto que vira a página
+  function sheetHtml(page, side, folio, hasMore) {
+    const curl = hasMore ? `<button type="button" class="nb-curl nb-curl-${side === 'l' ? 'prev' : 'next'}" data-export-skip data-curl="${side === 'l' ? 'prev' : 'next'}" title="${side === 'l' ? 'página anterior' : 'próxima página'}"></button>` : '';
+    return `
+      <section class="nb-sheet nb-sheet-${side}">
+        <div class="nb-runhead">${escapeHtml(page.title)}</div>
+        ${pageEditor(page, side === 'l' ? 'notebook-page-surface' : 'notebook-page-surface-right')}
+        <div class="nb-folio">${folio}</div>
+        ${curl}
+      </section>`;
+  }
+
+  // metade direita sem página ainda: o dono clica e a próxima página nasce ali (antes era um "fim do caderno" morto)
+  function blankSheetHtml() {
+    return `
+      <section class="nb-sheet nb-sheet-r nb-sheet-blank">
+        <div class="notebook-page nb-blank-page">
+          ${
+            isOwner
+              ? `<button type="button" class="nb-blank-add" id="nb-add-right" data-export-skip><span class="nb-blank-plus">＋</span><b>continuar o caderno</b><small>clique para criar a próxima página</small></button>`
+              : `<span class="notebook-blank-half">fim do caderno</span>`
+          }
+        </div>
+      </section>`;
+  }
+
+  function pageBar(nb, leftPage, rightPage, prevDisabled, nextDisabled, countText) {
+    return `
+      <div class="nb-pagebar">
+        <div class="nb-pagebar-side">${titleControls(leftPage)}</div>
+        <div class="nb-pagebar-mid">
+          <button type="button" class="notebook-page-arrow" id="notebook-prev-page" ${prevDisabled ? 'disabled' : ''} title="página anterior (Alt + ←)">‹</button>
+          <span class="notebook-page-count">${countText}</span>
+          <button type="button" class="notebook-page-arrow" id="notebook-next-page" ${nextDisabled ? 'disabled' : ''} title="próxima página (Alt + →)">›</button>
+          ${isOwner ? `<button type="button" class="notebook-tab-add" id="notebook-add-page" title="nova página no fim do caderno">+</button>` : ''}
+        </div>
+        <div class="nb-pagebar-side nb-right">${titleControls(rightPage)}</div>
+      </div>`;
   }
 
   function digitalBody(nb) {
-    const page = nb.pages.find((p) => p.id === nb.activePageId) || nb.pages[0];
+    const idx = Math.max(0, nb.pages.findIndex((p) => p.id === nb.activePageId));
+    const page = nb.pages[idx] || nb.pages[0];
     return `
-      <div class="notebook-tabs">
-        ${nb.pages
-          .map(
-            (p) => `
-          <div class="notebook-tab-item">
-            <button type="button" class="notebook-tab-btn ${p.id === nb.activePageId ? 'active' : ''}" data-page-id="${p.id}">${escapeHtml(p.title)}</button>
-            ${
-              isOwner
-                ? `<button type="button" class="notebook-pencil-btn" data-rename-page="${p.id}" title="renomear">✎</button>
-            <button type="button" class="notebook-pencil-btn notebook-delete-page-btn" data-delete-page="${p.id}" title="apagar página">✕</button>`
-                : ''
-            }
-          </div>`
-          )
-          .join('')}
-        ${isOwner ? `<button type="button" class="notebook-tab-add" id="notebook-add-page" title="nova página">+</button>` : ''}
+      <div class="nb-term" id="nb-book">
+        <div class="nb-term-title">
+          <span class="nb-dots"><i></i><i></i><i></i></span>
+          <span class="nb-term-name">~/cadernos/${slug(nb.name)}/${slug(page ? page.title : '')}</span>
+        </div>
+        <div class="notebook-tabs nb-term-tabs">
+          ${nb.pages
+            .map(
+              (p) => `
+            <div class="notebook-tab-item">
+              <button type="button" class="notebook-tab-btn ${p.id === nb.activePageId ? 'active' : ''}" data-page-id="${p.id}">${escapeHtml(p.title)}</button>
+              ${
+                isOwner
+                  ? `<button type="button" class="notebook-pencil-btn" data-rename-page="${p.id}" title="renomear">✎</button>
+              <button type="button" class="notebook-pencil-btn notebook-delete-page-btn" data-delete-page="${p.id}" title="apagar página">✕</button>`
+                  : ''
+              }
+            </div>`
+            )
+            .join('')}
+          ${isOwner ? `<button type="button" class="notebook-tab-add" id="notebook-add-page" title="nova página" data-export-skip>+</button>` : ''}
+        </div>
+        <div class="nb-term-body">
+          ${page ? pageEditor(page, 'notebook-page-surface') : ''}
+        </div>
+        <div class="nb-term-status"><span>● ${escapeHtml(page ? page.title : '')}</span><span>página ${idx + 1} de ${nb.pages.length}</span></div>
       </div>
       ${isOwner && page ? sharePageToggle(page) : ''}
-      <div class="notebook-stage">
-        <div class="notebook-page" id="notebook-page-surface" data-page-id="${page ? page.id : ''}" ${isOwner ? 'contenteditable="true"' : ''}>${page ? sanitizeNotebookHtml(page.html) : ''}</div>
-      </div>
     `;
   }
 
   function physicalBody(nb) {
     if (nb.pageViewMode === 'spread') return spreadBody(nb);
-    const idx = nb.pages.findIndex((p) => p.id === nb.activePageId);
+    const idx = Math.max(0, nb.pages.findIndex((p) => p.id === nb.activePageId));
     const page = nb.pages[idx];
     return `
-      <div class="notebook-physical-nav">
-        <button type="button" class="notebook-page-arrow" id="notebook-prev-page" ${idx <= 0 ? 'disabled' : ''}>‹</button>
-        <span class="notebook-page-count">${page ? pageTitleWithPencil(page, 'left') : ''} — ${idx + 1} / ${nb.pages.length}</span>
-        <button type="button" class="notebook-page-arrow" id="notebook-next-page" ${idx >= nb.pages.length - 1 ? 'disabled' : ''}>›</button>
-        ${isOwner ? `<button type="button" class="notebook-tab-add" id="notebook-add-page" title="nova página">+</button>` : ''}
+      ${pageBar(nb, page, null, idx <= 0, idx >= nb.pages.length - 1, `${idx + 1} / ${nb.pages.length}`)}
+      <div class="nb-desk">
+        <div class="nb-book nb-book-single" id="nb-book" data-ruling="${nb.ruling}" style="--cover:${coverColorOf(nb.themeId, nb.variant)};">
+          <div class="nb-spread nb-spread-single">
+            ${page ? sheetHtml(page, 'l', idx + 1, idx < nb.pages.length - 1).replace('nb-curl-prev', 'nb-curl-next').replace('data-curl="prev"', 'data-curl="next"').replace('página anterior', 'próxima página') : ''}
+          </div>
+          <span class="nb-ribbon"></span>
+        </div>
       </div>
       ${isOwner && page ? sharePageToggle(page) : ''}
-      <div class="notebook-stage">
-        <div class="notebook-page" id="notebook-page-surface" data-page-id="${page ? page.id : ''}" ${isOwner ? 'contenteditable="true"' : ''}>${page ? sanitizeNotebookHtml(page.html) : ''}</div>
-      </div>
     `;
   }
 
   function spreadBody(nb) {
-    const idx = nb.pages.findIndex((p) => p.id === nb.activePageId);
+    const idx = Math.max(0, nb.pages.findIndex((p) => p.id === nb.activePageId));
     const pairStart = idx - (idx % 2);
     const left = nb.pages[pairStart];
     const right = nb.pages[pairStart + 1];
+    const total = nb.pages.length;
     return `
-      <div class="notebook-physical-nav">
-        <button type="button" class="notebook-page-arrow" id="notebook-prev-page" ${pairStart <= 0 ? 'disabled' : ''}>‹</button>
-        <span class="notebook-page-count">${pairStart + 1}-${pairStart + (right ? 2 : 1)} / ${nb.pages.length}</span>
-        <button type="button" class="notebook-page-arrow" id="notebook-next-page" ${pairStart + 2 >= nb.pages.length ? 'disabled' : ''}>›</button>
-        ${isOwner ? `<button type="button" class="notebook-tab-add" id="notebook-add-page" title="nova página">+</button>` : ''}
-      </div>
-      <div class="notebook-stage notebook-stage-spread">
-        <div class="notebook-page-half">
-          <div class="notebook-page-half-head">${left ? pageTitleWithPencil(left, 'left') : ''}</div>
-          <div class="notebook-page" id="notebook-page-surface" data-page-id="${left ? left.id : ''}" ${isOwner && left ? 'contenteditable="true"' : ''}>${left ? sanitizeNotebookHtml(left.html) : ''}</div>
-        </div>
-        <div class="notebook-spine"></div>
-        <div class="notebook-page-half">
-          <div class="notebook-page-half-head">${right ? pageTitleWithPencil(right, 'right') : ''}</div>
-          <div class="notebook-page" id="notebook-page-surface-right" data-page-id="${right ? right.id : ''}" ${isOwner && right ? 'contenteditable="true"' : ''}>${right ? sanitizeNotebookHtml(right.html) : right ? '' : '<span class="notebook-blank-half">fim do caderno</span>'}</div>
+      ${pageBar(nb, left, right, pairStart <= 0, pairStart + 2 >= total, `${pairStart + 1}${right ? '–' + (pairStart + 2) : ''} / ${total}`)}
+      <div class="nb-desk">
+        <div class="nb-book nb-book-spread" id="nb-book" data-ruling="${nb.ruling}" style="--cover:${coverColorOf(nb.themeId, nb.variant)};">
+          <div class="nb-spread">
+            ${left ? sheetHtml(left, 'l', pairStart + 1, pairStart > 0) : ''}
+            ${right ? sheetHtml(right, 'r', pairStart + 2, pairStart + 2 < total) : blankSheetHtml()}
+            <div class="nb-gutter"></div>
+          </div>
+          <span class="nb-ribbon"></span>
         </div>
       </div>
       ${isOwner && left ? sharePageToggle(left, right) : ''}
@@ -382,23 +491,27 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
 
   // ================= NAVEGAÇÃO / AÇÕES =================
 
+  // virar de página: a folha que está sendo virada gira em torno da lombada (a da direita pra frente, a da esquerda pra trás),
+  // e a nova cai do outro lado. No terminal (digital) só troca.
   function navigateTo(newId, direction) {
     capture();
     const nb = currentNotebook();
     const theme = themeDef(nb.themeId);
-    const stage = app.querySelector('.notebook-stage');
-    if (theme.family === 'physical' && stage && direction) {
-      stage.classList.add(direction === 'next' ? 'notebook-flip-out-next' : 'notebook-flip-out-prev');
+    const spread = app.querySelector('.nb-spread');
+    const out = direction && theme.family === 'physical' && spread ? spread.querySelector(direction === 'next' ? '.nb-sheet-r, .nb-sheet-l:only-of-type' : '.nb-sheet-l') : null;
+    if (out && !reduceMotion()) {
+      out.classList.add(direction === 'next' ? 'nb-turn-out-next' : 'nb-turn-out-prev');
       setTimeout(() => {
         nb.activePageId = newId;
         render();
-        const freshStage = app.querySelector('.notebook-stage');
-        if (freshStage) {
-          const inClass = direction === 'next' ? 'notebook-flip-in-next' : 'notebook-flip-in-prev';
-          freshStage.classList.add(inClass);
-          setTimeout(() => freshStage.classList.remove(inClass), 260);
+        const fresh = app.querySelector('.nb-spread');
+        const into = fresh && fresh.querySelector(direction === 'next' ? '.nb-sheet-l' : '.nb-sheet-r, .nb-sheet-l:only-of-type');
+        if (into) {
+          const cls = direction === 'next' ? 'nb-turn-in-next' : 'nb-turn-in-prev';
+          into.classList.add(cls);
+          setTimeout(() => into.classList.remove(cls), 420);
         }
-      }, 180);
+      }, 230);
     } else {
       nb.activePageId = newId;
       render();
@@ -429,45 +542,131 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
 
   // ---- acabamento da imagem (barra flutuante) ----
   let imageBar = null;
+  let imageBarImg = null;
   function hideImageBar() {
     if (imageBar) imageBar.remove();
     imageBar = null;
+    if (imageBarImg) imageBarImg.classList.remove('nb-img-selected');
+    imageBarImg = null;
   }
   function showImageBar(img) {
     hideImageBar();
+    const pageEl = img.closest('.notebook-page');
+    // largura útil do texto na página (sem o padding), pra trabalhar em % -- vale em qualquer tela e na exportação
+    const contentW = () => {
+      if (!pageEl) return 1;
+      const cs = getComputedStyle(pageEl);
+      return Math.max(1, pageEl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight));
+    };
+    const curPct = () => Math.max(5, Math.min(100, Math.round((img.getBoundingClientRect().width / contentW()) * 100)));
+    const has = (c) => img.classList.contains(c);
+
     const bar = document.createElement('div');
-    bar.className = 'notebook-img-bar';
-    const isFlat = img.classList.contains('notebook-img-flat');
-    const isBlend = img.classList.contains('notebook-img-blend');
+    bar.className = 'notebook-img-bar nb-img-bar';
+    img.classList.add('nb-img-selected');
     bar.innerHTML = `
-      <button type="button" data-img-act="paper" title="transforma o papel do desenho em transparência: o traço fica direto na página">🪄 tirar o papel do desenho</button>
-      <button type="button" data-img-act="blend" class="${isBlend ? 'on' : ''}" title="funde a imagem com a cor da página (some o branco)">🎨 mesclar</button>
-      <button type="button" data-img-act="plain" class="${!isFlat && !isBlend ? 'on' : ''}" title="volta ao normal (com moldura)">▭ normal</button>
+      <div class="nb-ib-row">
+        <span class="nb-ib-label">tamanho</span>
+        ${[25, 50, 75, 100].map((n) => `<button type="button" data-img-size="${n}">${n}%</button>`).join('')}
+        <input type="range" min="10" max="100" step="1" value="${curPct()}" data-img-range title="arraste pra ajustar o tamanho">
+        <output class="nb-ib-out">${curPct()}%</output>
+      </div>
+      <div class="nb-ib-row">
+        <button type="button" data-img-act="full" class="${has('notebook-img-full') ? 'on' : ''}" title="a imagem ocupa a página inteira, de ponta a ponta">⛶ página inteira</button>
+        <button type="button" data-img-act="center" class="${has('notebook-img-center') ? 'on' : ''}" title="centraliza a imagem">↔ centralizar</button>
+        <span class="nb-ib-sep"></span>
+        <button type="button" data-img-act="paper" title="transforma o papel do desenho em transparência: o traço fica direto na página">🪄 tirar o papel</button>
+        <button type="button" data-img-act="blend" class="${has('notebook-img-blend') ? 'on' : ''}" title="funde a imagem com a cor da página (some o branco)">🎨 mesclar</button>
+        <button type="button" data-img-act="plain" class="${!has('notebook-img-flat') && !has('notebook-img-blend') ? 'on' : ''}" title="com moldura e sombra">▭ normal</button>
+        <span class="nb-ib-sep"></span>
+        <button type="button" data-img-act="remove" class="nb-ib-danger" title="apagar a imagem">🗑</button>
+      </div>
       <span class="notebook-img-bar-msg"></span>`;
     document.body.appendChild(bar);
-    const r = img.getBoundingClientRect();
-    bar.style.left = Math.max(8, Math.min(window.innerWidth - bar.offsetWidth - 8, r.left + r.width / 2 - bar.offsetWidth / 2)) + 'px';
-    bar.style.top = Math.max(8, r.top - bar.offsetHeight - 8) + 'px';
+
+    const place = () => {
+      const r = img.getBoundingClientRect();
+      const below = r.top < bar.offsetHeight + 24;
+      bar.style.left = Math.max(8, Math.min(window.innerWidth - bar.offsetWidth - 8, r.left + r.width / 2 - bar.offsetWidth / 2)) + 'px';
+      bar.style.top = Math.max(8, Math.min(window.innerHeight - bar.offsetHeight - 8, below ? Math.min(r.bottom + 10, window.innerHeight - bar.offsetHeight - 8) : r.top - bar.offsetHeight - 10)) + 'px';
+    };
+    place();
     imageBar = bar;
+    imageBarImg = img;
+
     const msg = bar.querySelector('.notebook-img-bar-msg');
-    const finish = () => {
+    const out = bar.querySelector('.nb-ib-out');
+    const range = bar.querySelector('[data-img-range]');
+    const commit = () => {
       capture();
       scheduleSave();
-      hideImageBar();
     };
-    bar.addEventListener('mousedown', (e) => e.preventDefault()); // não rouba o foco do editor
-    bar.querySelector('[data-img-act="plain"]').addEventListener('click', () => {
+    const refreshButtons = () => {
+      bar.querySelector('[data-img-act="full"]').classList.toggle('on', has('notebook-img-full'));
+      bar.querySelector('[data-img-act="center"]').classList.toggle('on', has('notebook-img-center'));
+      bar.querySelector('[data-img-act="blend"]').classList.toggle('on', has('notebook-img-blend'));
+      bar.querySelector('[data-img-act="plain"]').classList.toggle('on', !has('notebook-img-flat') && !has('notebook-img-blend'));
+      range.value = String(curPct());
+      out.textContent = curPct() + '%';
+    };
+    const setWidthPct = (p) => {
+      img.classList.remove('notebook-img-full'); // escolher um tamanho tira o "página inteira"
+      img.style.width = p + '%';
+      img.style.height = 'auto';
+      out.textContent = p + '%';
+      place();
+    };
+    bar.addEventListener('mousedown', (e) => {
+      if (e.target !== range) e.preventDefault(); // não rouba o foco do editor
+    });
+    bar.querySelectorAll('[data-img-size]').forEach((b) =>
+      b.addEventListener('click', () => {
+        setWidthPct(Number(b.dataset.imgSize));
+        refreshButtons();
+        commit();
+      })
+    );
+    range.addEventListener('input', () => setWidthPct(Number(range.value)));
+    range.addEventListener('change', () => {
+      refreshButtons();
+      commit();
+    });
+    const act = (name, fn) => bar.querySelector(`[data-img-act="${name}"]`).addEventListener('click', fn);
+    act('full', () => {
+      img.classList.toggle('notebook-img-full');
+      img.classList.add('notebook-img-center');
+      if (has('notebook-img-full')) {
+        img.style.removeProperty('width');
+        img.style.removeProperty('height');
+      } else if (!img.style.width) img.style.width = '100%';
+      refreshButtons();
+      place();
+      commit();
+    });
+    act('center', () => {
+      img.classList.toggle('notebook-img-center');
+      refreshButtons();
+      commit();
+    });
+    act('plain', () => {
       img.classList.remove('notebook-img-flat', 'notebook-img-blend');
       img.classList.add('notebook-img');
-      finish();
+      refreshButtons();
+      commit();
     });
-    bar.querySelector('[data-img-act="blend"]').addEventListener('click', () => {
-      const on = img.classList.contains('notebook-img-blend');
+    act('blend', () => {
+      const on = has('notebook-img-blend');
       img.classList.remove('notebook-img', 'notebook-img-flat', 'notebook-img-blend');
       img.classList.add(on ? 'notebook-img' : 'notebook-img-blend');
-      finish();
+      refreshButtons();
+      commit();
     });
-    bar.querySelector('[data-img-act="paper"]').addEventListener('click', async () => {
+    act('remove', () => {
+      img.remove();
+      commit();
+      hideImageBar();
+    });
+    act('paper', async () => {
       msg.textContent = 'processando…';
       try {
         const file = await paperlessImageFile(img.getAttribute('src'));
@@ -475,7 +674,9 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         img.setAttribute('src', url);
         img.classList.remove('notebook-img', 'notebook-img-blend');
         img.classList.add('notebook-img-flat');
-        finish();
+        msg.textContent = 'papel removido ✓';
+        refreshButtons();
+        commit();
       } catch (err) {
         msg.textContent = 'não deu: ' + err.message;
       }
@@ -485,13 +686,18 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
     if (imageBar && !imageBar.contains(e.target) && e.target.tagName !== 'IMG') hideImageBar();
   });
 
+  // puxar o canto inferior direito da imagem muda o tamanho -- guarda em % da página (vale em qualquer tela)
   function startImageResize(img, e) {
     e.preventDefault();
+    const pageEl = img.closest('.notebook-page');
+    const cs = pageEl ? getComputedStyle(pageEl) : null;
+    const contentW = pageEl ? Math.max(1, pageEl.clientWidth - parseFloat(cs.paddingLeft) - parseFloat(cs.paddingRight)) : 1;
     const startX = e.clientX;
     const startWidth = img.getBoundingClientRect().width;
+    img.classList.remove('notebook-img-full');
     function onMove(ev) {
-      const next = Math.max(40, Math.round(startWidth + (ev.clientX - startX)));
-      img.style.width = next + 'px';
+      const pct = Math.max(5, Math.min(100, ((startWidth + (ev.clientX - startX)) / contentW) * 100));
+      img.style.width = pct.toFixed(1) + '%';
       img.style.height = 'auto';
     }
     function onUp() {
@@ -504,7 +710,140 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
     document.addEventListener('mouseup', onUp);
   }
 
+  // ---- extras do livro: corretor, exportar como imagem, virar página pelo canto, atalhos ----
+  const reduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+
+  function setStatus(text) {
+    const el = $('notebook-save-status');
+    if (el) el.textContent = text;
+  }
+
+  // PNG do que está na tela (folha, página, livro aberto ou janela do terminal). Fontes e imagens vão embutidas.
+  async function exportImage(kind, mode) {
+    capture();
+    const node = kind === 'sheet-l' ? app.querySelector('.nb-sheet-l') : kind === 'sheet-r' ? app.querySelector('.nb-sheet-r') : app.querySelector('#nb-book');
+    if (!node) return;
+    setStatus('gerando imagem…');
+    const book = app.querySelector('#nb-book');
+    if (book) book.classList.add('nb-exporting'); // some com placeholders/contornos de edição
+    try {
+      const { toBlob } = await import('html-to-image');
+      // espera as fontes do caderno carregarem antes de fotografar
+      if (document.fonts && document.fonts.ready) await document.fonts.ready;
+      const blob = await Promise.race([toBlob(node, {
+        pixelRatio: 2,
+        cacheBust: true,
+        filter: (n) => !(n.dataset && n.dataset.exportSkip !== undefined),
+      }), new Promise((_, rej) => setTimeout(() => rej(new Error('demorou demais -- tente de novo com a aba em primeiro plano')), 25000))]);
+      if (!blob) throw new Error('não consegui gerar a imagem');
+      const nb = currentNotebook();
+      const name = `${slug(nb ? nb.name : 'caderno')}-${kind === 'book' || kind === 'term' ? 'caderno' : 'pagina'}.png`;
+      if (mode === 'copy') {
+        if (!navigator.clipboard || !window.ClipboardItem) throw new Error('seu navegador não deixa copiar imagem -- use o botão de baixar');
+        await navigator.clipboard.write([new window.ClipboardItem({ 'image/png': blob })]);
+        setStatus('imagem copiada ✓');
+      } else {
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = name;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 4000);
+        setStatus('imagem baixada ✓');
+      }
+    } catch (err) {
+      setStatus('erro ao exportar: ' + err.message);
+    } finally {
+      if (book) book.classList.remove('nb-exporting');
+      setTimeout(() => setStatus(''), 3500);
+    }
+  }
+
+  let keyWired = false;
+  function wireBookExtras() {
+    const rulingSelect = $('notebook-ruling-select');
+    if (rulingSelect) {
+      rulingSelect.addEventListener('change', () => {
+        capture();
+        currentNotebook().ruling = rulingSelect.value;
+        settingsOpen = true;
+        render();
+        scheduleSave();
+      });
+    }
+    const spellBtn = $('notebook-spell-btn');
+    if (spellBtn) {
+      spellBtn.addEventListener('click', () => {
+        spellcheckOn = !spellcheckOn;
+        try {
+          localStorage.setItem(SPELL_KEY, spellcheckOn ? '1' : '0');
+        } catch (_) { /* sem storage: vale só nessa sessão */ }
+        capture();
+        render();
+      });
+    }
+    const exportBtn = $('notebook-export-btn');
+    if (exportBtn) {
+      exportBtn.addEventListener('click', () => {
+        exportMenuOpen = !exportMenuOpen;
+        capture();
+        render();
+      });
+    }
+    app.querySelectorAll('[data-export]').forEach((b) => {
+      b.addEventListener('click', async () => {
+        exportMenuOpen = false;
+        render();
+        await exportImage(b.dataset.export, b.dataset.mode);
+      });
+    });
+    // canto da folha vira a página
+    app.querySelectorAll('[data-curl]').forEach((b) => {
+      b.addEventListener('click', () => {
+        const target = $(b.dataset.curl === 'prev' ? 'notebook-prev-page' : 'notebook-next-page');
+        if (target && !target.disabled) target.click();
+      });
+    });
+    // metade direita vazia: cria a próxima página e já põe o cursor nela
+    const addRight = $('nb-add-right');
+    if (addRight) {
+      addRight.addEventListener('click', () => {
+        capture();
+        const nb = currentNotebook();
+        const p = newPage(`Página ${nb.pages.length + 1}`);
+        nb.pages.push(p);
+        nb.activePageId = p.id;
+        lastFocusedSide = 'right';
+        render();
+        scheduleSave();
+        const surf = $('notebook-page-surface-right') || $('notebook-page-surface');
+        if (surf) surf.focus();
+      });
+    }
+    if (!keyWired) {
+      keyWired = true;
+      document.addEventListener('keydown', (e) => {
+        if (!e.altKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') || view !== 'notebook' || !app.isConnected) return;
+        const btn = $(e.key === 'ArrowLeft' ? 'notebook-prev-page' : 'notebook-next-page');
+        if (btn && !btn.disabled) {
+          e.preventDefault();
+          btn.click();
+        }
+      });
+    }
+  }
+
+  // depois de cada render: a cor do texto da folha vira variável (cabeçalho, número de página e pauta usam a mesma cor)
+  function postRender() {
+    const pg = app.querySelector('.notebook-page');
+    const book = app.querySelector('#nb-book');
+    if (pg && book) book.style.setProperty('--nb-fg', getComputedStyle(pg).color);
+  }
+
   function wireEvents() {
+    wireBookExtras();
     // --- lista ---
     app.querySelectorAll('button[data-open-notebook]').forEach((btn) => {
       btn.addEventListener('click', () => {
@@ -614,6 +953,10 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
       document.addEventListener('click', (e) => {
         if (settingsOpen && !e.target.closest('#notebook-settings-wrap')) {
           settingsOpen = false;
+          render();
+        }
+        if (exportMenuOpen && !e.target.closest('#notebook-export-wrap')) {
+          exportMenuOpen = false;
           render();
         }
         if (colorPopoverOpen && !e.target.closest('#notebook-color-wrap')) {
@@ -817,8 +1160,13 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
           return;
         }
         e.preventDefault();
-        const html = e.clipboardData.getData('text/html');
+        let html = e.clipboardData.getData('text/html');
         const text = e.clipboardData.getData('text/plain');
+        if (html) {
+          // só o que está entre as marcas de fragmento (o resto é a casca <html><body> do copiar do Windows/Word)
+          const m = html.match(/<!--\s*StartFragment\s*-->([\s\S]*?)<!--\s*EndFragment\s*-->/i);
+          if (m) html = m[1];
+        }
         const clean = html ? sanitizeNotebookHtml(html) : escapeHtml(text).replace(/\n/g, '<br>');
         document.execCommand('insertHTML', false, clean);
       });

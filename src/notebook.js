@@ -115,11 +115,30 @@ export function newNotebook(name, themeId) {
     variant: theme.defaultVariant,
     font: theme.fonts[0].family,
     customFont: null,
-    pageViewMode: 'single',
+    pageViewMode: 'spread', // caderno aberto por padrão: é o que dá a sensação de livro
+    ruling: 'lisa',
     expandedView: false,
     activePageId: null,
     pages: [newPage('Página 1')],
   };
+}
+
+// pauta da folha (desenhada por CSS, alinhada à altura da linha do texto)
+export const RULINGS = [
+  { id: 'lisa', label: 'Lisa' },
+  { id: 'pautada', label: 'Pautada' },
+  { id: 'quadriculada', label: 'Quadriculada' },
+  { id: 'pontilhada', label: 'Pontilhada' },
+];
+
+// cor da CAPA de cada caderno (lista de cadernos + moldura do livro aberto)
+const COVERS = {
+  papel: { 'branco-liso': '#2f4a73', 'amarelado-liso': '#6b4426', reciclado: '#4d6a47', craft: '#8a6238', couro: '#4a2a17', marmorizado: '#2d5f80', jornal: '#4b4d52', linho: '#7a6b54', aquarela: '#2f7a7a', grafite: '#33363b' },
+  pergaminho: { velho: '#5a3a1e', novo: '#7a5a34', rasgado: '#3d2814', elfico: '#2f5a3a', real: '#5a2670', queimado: '#241610', amaldicoado: '#5a1a1f', gelido: '#2f4f66', nautico: '#1f5a60', arcano: '#3d2a66' },
+};
+export function coverColorOf(themeId, variant) {
+  const t = COVERS[themeId];
+  return (t && t[variant]) || '#4a2a17';
 }
 
 function normalizePage(p) {
@@ -143,7 +162,8 @@ function normalizeNotebook(nb) {
     variant,
     font: typeof nb.font === 'string' && nb.font ? nb.font : theme.fonts[0].family,
     customFont: typeof nb.customFont === 'string' ? nb.customFont : null,
-    pageViewMode: nb.pageViewMode === 'spread' ? 'spread' : 'single',
+    pageViewMode: nb.pageViewMode === 'single' ? 'single' : 'spread',
+    ruling: ['lisa', 'pautada', 'quadriculada', 'pontilhada'].includes(nb.ruling) ? nb.ruling : 'lisa',
     expandedView: !!nb.expandedView,
     activePageId,
     pages,
@@ -189,12 +209,11 @@ export async function loadSharedNotebooks(characterId) {
   const { data, error } = await supabase.rpc('get_notebook_shared_pages', { p_character_id: characterId });
   if (error) throw error;
   if (!Array.isArray(data)) return [];
-  return data.map((nb) => ({
-    notebookId: nb.notebookId,
-    notebookName: nb.notebookName || 'Caderno',
-    themeId: NOTEBOOK_THEMES.some((t) => t.id === nb.themeId) ? nb.themeId : 'papel',
-    pages: Array.isArray(nb.pages) ? nb.pages.map(normalizePage) : [],
-  }));
+  return data.map((nb) => {
+    const pages = Array.isArray(nb.pages) ? nb.pages.map(normalizePage) : [];
+    const norm = normalizeNotebook({ ...nb, id: nb.notebookId, name: nb.notebookName, pages: pages.length ? pages : null, activePageId: pages[0] && pages[0].id });
+    return { ...norm, notebookId: nb.notebookId, notebookName: nb.notebookName || 'Caderno', pages };
+  });
 }
 
 export async function uploadNotebookImage(characterId, file) {
@@ -290,7 +309,9 @@ export function ensureCustomFontLoaded(fontName) {
 // quanto ao exibir (defesa em profundidade -- alguém podia adulterar
 // o próprio registro via devtools pra tentar atacar quem lê a página).
 const ALLOWED_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'UL', 'OL', 'LI', 'BR', 'P', 'DIV', 'SPAN', 'FONT', 'IMG']);
-const SAFE_STYLE_DECL = /^(width|height)\s*:\s*[\d.]+(px|%)$/i;
+const SAFE_STYLE_DECL = /^(width|height)\s*:\s*([\d.]+(px|%)|auto)$/i;
+// acabamento da figura: sem sombra (desenho sem fundo), mesclada, ocupando a página, centralizada
+const IMG_CLASSES = new Set(['notebook-img-flat', 'notebook-img-blend', 'notebook-img-full', 'notebook-img-center']);
 const SAFE_COLOR = /^#[0-9a-f]{3,8}$/i;
 
 export function sanitizeNotebookHtml(html) {
@@ -300,6 +321,10 @@ export function sanitizeNotebookHtml(html) {
   function clean(node) {
     [...node.childNodes].forEach((child) => {
       if (child.nodeType === Node.TEXT_NODE) return;
+      if (child.nodeType === Node.COMMENT_NODE) {
+        child.remove(); // <!--StartFragment--> / <!--EndFragment--> do clipboard: nunca pode virar texto
+        return;
+      }
       if (child.nodeType !== Node.ELEMENT_NODE || !ALLOWED_TAGS.has(child.tagName)) {
         const text = doc.createTextNode(child.textContent || '');
         child.replaceWith(text);
@@ -311,8 +336,8 @@ export function sanitizeNotebookHtml(html) {
         if (child.tagName === 'FONT' && name === 'color' && SAFE_COLOR.test(attr.value)) return;
         if (name === 'class' && child.tagName === 'IMG') {
           // acabamento da figura: sem sombra (desenho sem fundo) ou mesclada com o papel da página
-          const cls = attr.value.split(/\s+/).find((c) => c === 'notebook-img-flat' || c === 'notebook-img-blend');
-          if (cls) child.setAttribute('class', cls);
+          const cls = attr.value.split(/\s+/).filter((c) => IMG_CLASSES.has(c));
+          if (cls.length) child.setAttribute('class', [...new Set(cls)].join(' '));
           else child.removeAttribute('class');
           return;
         }
