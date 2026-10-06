@@ -310,6 +310,12 @@ export function ensureCustomFontLoaded(fontName) {
 // o próprio registro via devtools pra tentar atacar quem lê a página).
 const ALLOWED_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'UL', 'OL', 'LI', 'BR', 'P', 'DIV', 'SPAN', 'FONT', 'IMG']);
 const SAFE_STYLE_DECL = /^(width|height)\s*:\s*([\d.]+(px|%)|auto)$/i;
+// tamanho de fonte livre (A−/A+ e títulos): só px entre 8 e 120
+const SAFE_FONT_SIZE = /^font-size\s*:\s*(\d{1,3}(\.\d+)?)px$/i;
+function fontSizeOk(decl) {
+  const m = SAFE_FONT_SIZE.exec(decl);
+  return !!m && Number(m[1]) >= 8 && Number(m[1]) <= 120;
+}
 // acabamento da figura: sem sombra (desenho sem fundo), mesclada, ocupando a página, centralizada
 const IMG_CLASSES = new Set(['notebook-img-flat', 'notebook-img-blend', 'notebook-img-full', 'notebook-img-center']);
 const SAFE_COLOR = /^#[0-9a-f]{3,8}$/i;
@@ -358,7 +364,7 @@ export function sanitizeNotebookHtml(html) {
           const safe = attr.value
             .split(';')
             .map((s) => s.trim())
-            .filter((s) => SAFE_STYLE_DECL.test(s) || (/^color\s*:\s*/i.test(s) && SAFE_COLOR.test(s.split(':')[1].trim())))
+            .filter((s) => SAFE_STYLE_DECL.test(s) || fontSizeOk(s) || (/^color\s*:\s*/i.test(s) && SAFE_COLOR.test(s.split(':')[1].trim())))
             .join('; ');
           if (safe) child.setAttribute('style', safe);
           else child.removeAttribute('style');

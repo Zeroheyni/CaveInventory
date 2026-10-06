@@ -288,3 +288,8 @@ body.notebook-focus-mode .nb-desk{ min-height: calc(100vh - 150px); display:flex
   .nb-sheet-l .notebook-page, .nb-sheet-r .notebook-page{ border-radius:9px; padding-left:24px; padding-right:24px; }
   .nb-book-single{ padding-left:34px; }
 }
+
+/* ---------- tamanho de fonte livre ---------- */
+.nb-tb-sep{ width:1px; align-self:stretch; margin:3px 4px; background: var(--stone-line); }
+.nb-size-btn{ font-family: var(--font-mono); font-size:12px; font-weight:700; min-width:34px; }
+.notebook-page span[style*="font-size"]{ line-height:1.18; }

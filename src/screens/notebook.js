@@ -329,6 +329,13 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         <button type="button" class="notebook-fmt-btn" data-fmt="bold" title="negrito"><b>B</b></button>
         <button type="button" class="notebook-fmt-btn" data-fmt="italic" title="itálico"><i>I</i></button>
         <button type="button" class="notebook-fmt-btn" data-fmt="underline" title="sublinhado"><u>U</u></button>
+        <span class="nb-tb-sep"></span>
+        <button type="button" class="notebook-fmt-btn nb-size-btn" data-size="dec" title="diminuir a fonte do trecho selecionado (ou da linha onde está o cursor)">A−</button>
+        <button type="button" class="notebook-fmt-btn nb-size-btn" data-size="inc" title="aumentar a fonte do trecho selecionado (ou da linha onde está o cursor)">A+</button>
+        <button type="button" class="notebook-fmt-btn nb-size-btn" data-size="36" title="título grande">T1</button>
+        <button type="button" class="notebook-fmt-btn nb-size-btn" data-size="26" title="subtítulo">T2</button>
+        <button type="button" class="notebook-fmt-btn nb-size-btn" data-size="reset" title="voltar ao tamanho normal">Aa</button>
+        <span class="nb-tb-sep"></span>
         <button type="button" class="notebook-fmt-btn" data-fmt="insertUnorderedList" title="lista">☰</button>
         <button type="button" class="notebook-fmt-btn" data-fmt="insertOrderedList" title="lista numerada">①</button>
         <button type="button" class="notebook-fmt-btn" id="notebook-spoiler-btn" title="marcar trecho selecionado como spoiler (tarja preta -- clique no texto pra revelar)">🙈</button>
@@ -1026,6 +1033,60 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         scheduleSave();
       });
     });
+
+    // tamanho da fonte livre: A−/A+ (passo de 2px) e presets de título; sem seleção vale pra linha inteira do cursor
+    app.querySelectorAll('button[data-size]').forEach((btn) => {
+      btn.addEventListener('mousedown', (e) => e.preventDefault());
+      btn.addEventListener('click', () => applyFontSize(btn.dataset.size));
+    });
+    function applyFontSize(how) {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return;
+      const anchor = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
+      const editor = anchor && anchor.closest('.notebook-page[contenteditable="true"]');
+      if (!editor) return;
+      if (sel.isCollapsed) {
+        // sem seleção: pega a linha (bloco) inteira onde está o cursor
+        let blk = anchor;
+        while (blk && blk.parentElement !== editor) blk = blk.parentElement;
+        const r = document.createRange();
+        if (blk && blk !== editor) r.selectNodeContents(blk);
+        else r.selectNodeContents(editor);
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+      const cur = parseFloat(getComputedStyle(sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement).fontSize) || 18;
+      const base = parseFloat(getComputedStyle(editor).fontSize) || 18;
+      let px;
+      if (how === 'inc') px = Math.round(cur) + 2;
+      else if (how === 'dec') px = Math.round(cur) - 2;
+      else if (how === 'reset') px = null;
+      else px = Number(how);
+      if (px != null) px = Math.max(8, Math.min(120, px));
+      document.execCommand('styleWithCSS', false, false);
+      document.execCommand('fontSize', false, '7'); // marca o trecho com <font size=7>; abaixo viram <span style="font-size">
+      editor.querySelectorAll('font[size="7"]').forEach((f) => {
+        const span = document.createElement('span');
+        while (f.firstChild) span.appendChild(f.firstChild);
+        // tamanhos antigos dentro do trecho não podem sobrepor o novo
+        span.querySelectorAll('[style]').forEach((el) => el.style.removeProperty('font-size'));
+        if (px != null && Math.abs(px - base) > 0.5) span.style.fontSize = px + 'px';
+        f.replaceWith(span);
+        const r = document.createRange();
+        r.selectNodeContents(span);
+        sel.removeAllRanges();
+        sel.addRange(r);
+      });
+      // spans de tamanho que ficaram vazios/sem estilo
+      editor.querySelectorAll('span:not([class])').forEach((sp) => {
+        if (!sp.getAttribute('style') || !sp.getAttribute('style').trim()) {
+          while (sp.firstChild) sp.parentNode.insertBefore(sp.firstChild, sp);
+          sp.remove();
+        }
+      });
+      capture();
+      scheduleSave();
+    }
 
     const spoilerBtn = $('notebook-spoiler-btn');
     if (spoilerBtn) {
