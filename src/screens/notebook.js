@@ -253,8 +253,8 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
   function exportMenu(nb, theme) {
     let items;
     if (theme.family === 'digital') items = [['term', 'A janela do terminal']];
-    else if (nb.pageViewMode === 'spread') items = [['sheet-l', 'Página esquerda'], ['sheet-r', 'Página direita'], ['book', 'Caderno aberto (as duas, com capa)']];
-    else items = [['sheet-l', 'Só a folha'], ['book', 'Caderno (folha com capa)']];
+    else if (nb.pageViewMode === 'spread') items = [['sheet-l', 'Página esquerda'], ['sheet-r', 'Página direita'], ['book', 'Caderno aberto (as duas, com capa, só o conteúdo)']];
+    else items = [['sheet-l', 'Só a folha'], ['book', 'Caderno (folha com capa, só o conteúdo)']];
     return `
       <div class="notebook-settings-panel nb-export-menu">
         <div class="notebook-settings-row"><label>Exportar como imagem</label></div>

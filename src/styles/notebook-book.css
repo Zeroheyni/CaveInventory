@@ -293,3 +293,6 @@ body.notebook-focus-mode .nb-desk{ min-height: calc(100vh - 150px); display:flex
 .nb-tb-sep{ width:1px; align-self:stretch; margin:3px 4px; background: var(--stone-line); }
 .nb-size-btn{ font-family: var(--font-mono); font-size:12px; font-weight:700; min-width:34px; }
 .notebook-page span[style*="font-size"]{ line-height:1.18; }
+
+/* exportação limpa: só o conteúdo das páginas (sem "PÁGINA 1", número de folha, fita nem cantos) */
+.nb-exporting .nb-runhead, .nb-exporting .nb-folio, .nb-exporting .nb-ribbon, .nb-exporting .nb-curl{ display:none !important; }
