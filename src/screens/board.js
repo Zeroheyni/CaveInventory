@@ -355,19 +355,28 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     return !!(t && t.character_id && t.character_id === characterId);
   };
 
+  // luzes novas vindas do servidor (realtime ou reconciliação). Se mudou QUEM tem luz (token ganhou/perdeu), os botões 🔥
+  // dos tokens precisam ser refeitos; senão só atualiza o estado (aceso/apagado) dos que já existem.
+  function applyFreshLights(fresh) {
+    const shape = (arr) => arr.filter((l) => l.token_id).map((l) => l.token_id + ':' + l.kind).sort().join(',');
+    const structural = shape(fresh) !== shape(lights);
+    lights = fresh;
+    if (structural) render();
+    else lightsChanged(true);
+  }
   async function reloadLights() {
     if (!viewBoardId) return;
     try {
-      lights = await listBoardLights(viewBoardId);
+      applyFreshLights(await listBoardLights(viewBoardId));
     } catch (_) {
-      // sem a tabela (migration não aplicada) ou rede: segue sem luzes
+      // sem a tabela (migration não aplicada) ou rede: segue com as luzes que já tem
     }
-    lightsChanged(true);
   }
   // luz mudou (ou token que carrega): redesenha escuridão, marcadores e painel
   function lightsChanged(fullMarkers = false) {
     lighting.update();
     if (fullMarkers) renderLightMarkers();
+    refreshTokenLightButtons(); // o botão 🔥 do token reflete na hora a luz que o mestre acendeu/apagou
     refreshScenery();
   }
 
@@ -1061,6 +1070,45 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     render();
   }
 
+  // ---- rede de segurança do realtime: se uma mensagem se perdeu (queda de rede, aba em segundo plano), o que o mestre
+  // mexeu (iluminação ligada/desligada, luzes, paredes) chega do mesmo jeito, sem precisar recarregar a página ----
+  let reconcileTimer = null;
+  const boardSettingsKey = (b) =>
+    b ? [b.lighting_enabled, b.ambient, b.fog_mode, b.ambient_color, b.show_walls_to_players, b.collision_enabled, b.memory_enabled, b.memory_epoch, b.background_image_url].join('|') : '';
+  async function reconcileBoard() {
+    if (!viewBoardId || document.hidden || sel.dragging() || dragTokenId || resizeTokenId) return;
+    try {
+      const fresh = await listBoards(campaignId);
+      const mine = fresh.find((b) => b.id === viewBoardId);
+      const cur = currentBoard();
+      if (mine && cur && boardSettingsKey(mine) !== boardSettingsKey(cur)) {
+        boards = fresh;
+        syncMemoryEpoch();
+        render();
+      }
+      const [l, w] = await Promise.all([listBoardLights(viewBoardId).catch(() => null), listBoardWalls(viewBoardId).catch(() => null)]);
+      if (l && JSON.stringify(l.map((x) => [x.id, x.enabled, x.x, x.y, x.radius, x.dim_radius, x.angle, x.direction, x.color, x.kind, x.intensity])) !== JSON.stringify(lights.map((x) => [x.id, x.enabled, x.x, x.y, x.radius, x.dim_radius, x.angle, x.direction, x.color, x.kind, x.intensity]))) {
+        applyFreshLights(l);
+      }
+      if (w && w.length !== walls.length) reloadWalls();
+    } catch (_) {
+      // sem rede: tenta de novo no próximo ciclo
+    }
+  }
+  const onVisible = () => {
+    if (!document.hidden) reconcileBoard();
+  };
+  function startReconcile() {
+    stopReconcile();
+    reconcileTimer = setInterval(reconcileBoard, 15000);
+    document.addEventListener('visibilitychange', onVisible);
+  }
+  function stopReconcile() {
+    clearInterval(reconcileTimer);
+    reconcileTimer = null;
+    document.removeEventListener('visibilitychange', onVisible);
+  }
+
   // ---- entrar/sair do modo tela cheia ----
   async function openBoard(boardId) {
     viewBoardId = boardId;
@@ -1100,6 +1148,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     startMemoryTimer();
     loadMyCursorAvatar();
     document.addEventListener('keydown', onBoardKeyDown);
+    startReconcile();
     hud.setVisible(true);
   }
 
@@ -1111,6 +1160,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     flushMemory();
     stopMemoryTimer();
     document.removeEventListener('keydown', onBoardKeyDown);
+    stopReconcile();
     sel.deselect();
     fx.setTool(null, { silent: true });
     fx.clearAll();
@@ -1147,7 +1197,8 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       tokensChannel = null;
     }
     if (!viewBoardId) return;
-    tokensChannel = subscribeBoard(viewBoardId, {
+    const forBoard = viewBoardId;
+    subscribeBoard(viewBoardId, {
       onChange: () => {
         clearTimeout(tokensReloadTimer);
         tokensReloadTimer = setTimeout(reloadTokens, 400);
@@ -1163,6 +1214,10 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
         clearTimeout(lightsReloadTimer);
         lightsReloadTimer = setTimeout(reloadLights, 300);
       },
+    }).then((ch) => {
+      // trocou/fechou o tabuleiro enquanto o canal subia: descarta
+      if (viewBoardId !== forBoard) supabase.removeChannel(ch);
+      else tokensChannel = ch;
     });
   }
 
@@ -1389,9 +1444,11 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   }
 
   function subscribeBoardsRealtime() {
-    boardsChannel = subscribeCampaignBoards(campaignId, () => {
+    subscribeCampaignBoards(campaignId, () => {
       clearTimeout(boardsReloadTimer);
       boardsReloadTimer = setTimeout(load, 400);
+    }).then((ch) => {
+      boardsChannel = ch;
     });
   }
   let boardsReloadTimer = null;
@@ -1904,9 +1961,17 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     wireDoorButtons();
     wireLightMarkers();
     syncWallCapture();
-    lighting.attach($('board-light-layer'));
-    fx.mount({ stageEl: $('board-stage'), barEl: $('board-fx-bar') });
-    sel.mount();
+    // efeitos visuais não podem derrubar o render (e com ele o load()/realtime): cada um isolado
+    const safely = (fn) => {
+      try {
+        fn();
+      } catch (err) {
+        console.warn('tabuleiro: efeito visual falhou', err);
+      }
+    };
+    safely(() => lighting.attach($('board-light-layer')));
+    safely(() => fx.mount({ stageEl: $('board-stage'), barEl: $('board-fx-bar') }));
+    safely(() => sel.mount());
     // o board-area acabou de ser reconstruído do zero (innerHTML) --
     // redesenha os cursores que eu já conhecia na camada nova, senão
     // eles ficam "invisíveis" até a próxima mensagem de Broadcast

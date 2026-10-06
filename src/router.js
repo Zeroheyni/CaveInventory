@@ -15,7 +15,7 @@ const app = document.getElementById('app');
 export async function switchContext() {
   try {
     // não deixa a tela esperando o ack de cada canal (sem rede, cada um demora até estourar o timeout)
-    await Promise.race([supabase.removeAllChannels(), new Promise((r) => setTimeout(r, 600))]);
+    await Promise.race([supabase.removeAllChannels(), new Promise((r) => setTimeout(r, 3000))]);
   } catch (_) { /* canais já fechados */ }
   return renderApp();
 }

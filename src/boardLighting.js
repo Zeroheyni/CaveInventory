@@ -292,6 +292,10 @@ export function createLighting(host) {
     const b = host.board();
     const aspect = host.aspect();
     sizeCanvases();
+    // palco sem tamanho (tabuleiro escondido atrás de outra aba, ou imagem ainda carregando): os raios dariam 0/0 = NaN e o
+    // addColorStop estourava -- e a exceção derrubava o render()/load() INTEIRO da tela, então o que o mestre mudava
+    // (ligar/desligar luz) nunca chegava no jogador. Sem tamanho não há o que desenhar; o resize()/update() redesenha depois.
+    if (!backW || !backH || !Number.isFinite(aspect) || aspect <= 0) return false;
     dctx.globalCompositeOperation = 'source-over';
     dctx.clearRect(0, 0, backW, backH);
     gctx.clearRect(0, 0, backW, backH);
@@ -456,7 +460,12 @@ export function createLighting(host) {
     lastFrame = now;
     dirty = false;
     const t0 = performance.now();
-    const animated = draw(now);
+    let animated = false;
+    try {
+      animated = draw(now);
+    } catch (err) {
+      console.warn('iluminação: falha ao desenhar', err); // nunca derruba o laço nem a tela
+    }
     watchCost(performance.now() - t0);
     if (animated) raf = requestAnimationFrame(frame);
   }

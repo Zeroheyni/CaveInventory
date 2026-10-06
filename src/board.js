@@ -305,7 +305,23 @@ export async function deleteToken(tokenId) {
 // onCursor/onDrag são opcionais -- quem só quer ouvir mudança
 // persistida (ex: nenhum caso hoje, mas deixa a função flexível)
 // simplesmente não passa.
-export function subscribeBoard(boardId, { onChange, onCursor, onDrag, onWalls, onLights, onFx } = {}) {
+// IMPORTANTE: o supabase-js devolve o canal JÁ EXISTENTE quando o tópico é o mesmo e, ao terminar de fechar o velho
+// (removeChannel é assíncrono), ele apaga da lista QUALQUER canal com aquele tópico -- inclusive o novo. Reassinar o mesmo
+// tópico na hora (reabrir o tabuleiro, remontar a tela) deixava o realtime morto: a luz/escuridão/tokens que o mestre mudava
+// só chegavam pros jogadores recarregando a página. Por isso quem assina ESPERA o canal velho fechar de verdade.
+async function dropChannel(topic) {
+  const existing = supabase.getChannels().find((c) => c.topic === 'realtime:' + topic);
+  if (!existing) return;
+  try {
+    await supabase.removeChannel(existing);
+  } catch (_) {
+    // já estava fechando
+  }
+}
+
+// devolve uma Promise<canal> (o canal só é criado depois que o antigo de mesmo tópico saiu)
+export async function subscribeBoard(boardId, { onChange, onCursor, onDrag, onWalls, onLights, onFx } = {}) {
+  await dropChannel('board-tokens-' + boardId);
   const channel = supabase.channel('board-tokens-' + boardId);
   if (onChange) {
     channel.on('postgres_changes', { event: '*', schema: 'public', table: 'board_tokens', filter: `board_id=eq.${boardId}` }, onChange);
@@ -363,7 +379,8 @@ export async function resetBoardMemory(boardId) {
   if (error) throw error;
 }
 
-export function subscribeCampaignBoards(campaignId, onChange) {
+export async function subscribeCampaignBoards(campaignId, onChange) {
+  await dropChannel('campaign-boards-' + campaignId);
   return supabase
     .channel('campaign-boards-' + campaignId)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'boards', filter: `campaign_id=eq.${campaignId}` }, onChange)
