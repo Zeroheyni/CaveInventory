@@ -49,12 +49,13 @@ const COMBO_FLASH_MS = 900;
 // back-to-back Tetris -- igual Tetris de verdade: dois "Tetris" (limpar
 // as 4 linhas de uma vez) SEGUIDOS um do outro valem mais que qualquer
 // outra sequência. Pedido do usuário: o "tetris duplo" (as duas peças
-// juntas) tem que valer 5000 pontos no total -- 800 do 1º Tetris (sem
-// bônus, é o 1º da sequência) + 4200 do 2º (800 base + 50 de combo +
-// esse bônus de back-to-back), então o bônus precisa ser 5000 - 800 -
-// 800 - 50 = 3350. Continua só dando pra bater emendando outro Tetris
+// juntas) tem que valer 100000 pontos no total -- 800 do 1º Tetris (sem
+// bônus, é o 1º da sequência) + 99200 do 2º (800 base + 50 de combo +
+// esse bônus de back-to-back), então o bônus precisa ser 100000 - 800 -
+// 800 - 50 = 98350. Continua só dando pra bater emendando outro Tetris
 // de verdade -- não dá pra chegar lá só empilhando limpezas de 1 linha.
-const BACK_TO_BACK_TETRIS_BONUS = 3350;
+// (era 5000 / bônus 3350 até 06/10/2026; o usuário pediu 100 mil.)
+const BACK_TO_BACK_TETRIS_BONUS = 98350;
 
 function rotateCW(m) {
   const n = m.length;
