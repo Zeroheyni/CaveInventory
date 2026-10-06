@@ -673,6 +673,34 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
       });
     });
 
+    // imagem: botão 🖼, Ctrl+V (print/copiar imagem) e arrastar um arquivo pra dentro da página -- todos sobem pro mesmo lugar
+    const MAX_IMG_BYTES = 10 * 1024 * 1024;
+    async function insertImageFile(file, focusFn) {
+      if (!file || !/^image\//i.test(file.type || '')) return;
+      if (file.size > MAX_IMG_BYTES) {
+        imgUploadError = 'imagem grande demais (máximo 10 MB)';
+        render();
+        return;
+      }
+      imgUploadError = '';
+      try {
+        const url = await uploadNotebookImage(characterId, file);
+        if (focusFn) focusFn();
+        document.execCommand('insertHTML', false, `<img class="notebook-img" src="${url}" style="width:220px">`);
+        capture();
+        scheduleSave();
+      } catch (err) {
+        imgUploadError = 'erro ao enviar imagem: ' + err.message;
+        render();
+      }
+    }
+    const imageFilesOf = (dt) => {
+      if (!dt) return [];
+      const fromFiles = Array.from(dt.files || []).filter((f) => /^image\//i.test(f.type || ''));
+      if (fromFiles.length) return fromFiles;
+      return Array.from(dt.items || []).filter((it) => it.kind === 'file' && /^image\//i.test(it.type || '')).map((it) => it.getAsFile()).filter(Boolean);
+    };
+
     const imgBtn = $('notebook-img-btn');
     const imgInput = $('notebook-img-input');
     if (imgBtn && imgInput) {
@@ -685,17 +713,7 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         const file = imgInput.files && imgInput.files[0];
         imgInput.value = '';
         if (!file) return;
-        imgUploadError = '';
-        try {
-          const url = await uploadNotebookImage(characterId, file);
-          restoreSelectionAndFocus(activeEditorId());
-          document.execCommand('insertHTML', false, `<img class="notebook-img" src="${url}" style="width:220px">`);
-          capture();
-          scheduleSave();
-        } catch (err) {
-          imgUploadError = 'erro ao enviar imagem: ' + err.message;
-          render();
-        }
+        await insertImageFile(file, () => restoreSelectionAndFocus(activeEditorId()));
       });
     }
 
@@ -726,11 +744,33 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
       // sanitiza JÁ na hora de colar, antes de inserir -- mesma função
       // que já limpa ao salvar, só que também na entrada.
       editor.addEventListener('paste', (e) => {
+        // colar IMAGEM (print, "copiar imagem"): sobe o arquivo e insere. Se vier junto texto de verdade, vale o texto (copiar de um
+        // documento traz html + figura; a figura inline só entra se for http, e o resto segue o caminho normal abaixo)
+        const imgs = imageFilesOf(e.clipboardData);
+        if (imgs.length && !(e.clipboardData.getData('text/plain') || '').trim()) {
+          e.preventDefault();
+          (async () => {
+            for (const f of imgs) await insertImageFile(f, () => editor.focus());
+          })();
+          return;
+        }
         e.preventDefault();
         const html = e.clipboardData.getData('text/html');
         const text = e.clipboardData.getData('text/plain');
         const clean = html ? sanitizeNotebookHtml(html) : escapeHtml(text).replace(/\n/g, '<br>');
         document.execCommand('insertHTML', false, clean);
+      });
+      // arrastar uma imagem do computador pra dentro da página
+      editor.addEventListener('dragover', (e) => {
+        if (imageFilesOf(e.dataTransfer).length || Array.from((e.dataTransfer && e.dataTransfer.types) || []).includes('Files')) e.preventDefault();
+      });
+      editor.addEventListener('drop', (e) => {
+        const imgs = imageFilesOf(e.dataTransfer);
+        if (!imgs.length) return;
+        e.preventDefault();
+        (async () => {
+          for (const f of imgs) await insertImageFile(f, () => editor.focus());
+        })();
       });
       editor.addEventListener('mousedown', (e) => {
         if (e.target.tagName !== 'IMG') return;
