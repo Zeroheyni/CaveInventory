@@ -37,6 +37,8 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
   let imgUploadError = '';
   let settingsOpen = false;
   let colorPopoverOpen = false;
+  let organizing = false; // visão "organizar páginas" (miniaturas arrastáveis)
+  let orgHistory = []; // desfazer da visão de organizar
   let creatingNotebook = false;
   let lastFocusedSide = 'left'; // qual metade da folha dupla recebeu foco por último
   let docClickWired = false;
@@ -228,12 +230,13 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
             <button type="button" class="notebook-fmt-btn" id="notebook-export-btn" title="exportar como imagem (pra mandar em outros lugares)">📷</button>
             ${exportMenuOpen ? exportMenu(nb, theme) : ''}
           </div>
+          ${isOwner ? '<button type="button" class="notebook-fmt-btn nb-org-open ' + (organizing ? 'on' : '') + '" id="notebook-org-btn" title="organizar páginas: veja todas em miniatura e arraste pra reordenar">⇅ páginas</button>' : ''}
           <button type="button" class="notebook-fmt-btn" id="notebook-focus-btn" title="modo foco (tela cheia)">⤢</button>
           <span class="notebook-save-status" id="notebook-save-status"></span>
           ${!isOwner ? `<span class="notebook-readonly-badge">📖 modo leitura</span>` : ''}
         </div>
 
-        ${isOwner ? formatToolbar() : ''}
+        ${isOwner && !organizing ? formatToolbar() : ''}
         ${imgUploadError ? `<p class="admin-error" style="display:block;">${escapeHtml(imgUploadError)}</p>` : ''}
 
         ${
@@ -241,9 +244,11 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
             ? isOwner
               ? `<p class="admin-empty">nenhuma página ainda.</p><button type="button" class="btn" id="notebook-add-page">+ nova página</button>`
               : `<p class="admin-empty">nenhuma página compartilhada.</p>`
-            : isDigital
-              ? digitalBody(nb)
-              : physicalBody(nb)
+            : organizing && isOwner
+              ? organizerBody(nb)
+              : isDigital
+                ? digitalBody(nb)
+                : physicalBody(nb)
         }
       </div>
     `;
@@ -321,6 +326,288 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         }
       </div>
     `;
+  }
+
+  // ================= ORGANIZAR PÁGINAS =================
+  // Visão de miniaturas: arraste os cartões pra reordenar (as páginas lado a lado = como o livro abre), com desfazer.
+  const ORG_BASE_W = 523; // largura de uma folha real; a miniatura é a folha escalada
+  function organizerBody(nb) {
+    const spread = nb.pageViewMode === 'spread' && themeDef(nb.themeId).family === 'physical';
+    const cards = nb.pages
+      .map(
+        (p, i) => `
+        <div class="nb-org-card ${p.id === nb.activePageId ? 'active' : ''}" data-pid="${p.id}" tabindex="0" title="clique pra abrir · arraste pra mover">
+          <div class="nb-org-in">
+            <div class="nb-org-thumb"><div class="notebook-page nb-org-page" aria-hidden="true">${sanitizeNotebookHtml(p.html)}</div></div>
+            <span class="nb-org-grip" title="arraste pra mover">⠿</span>
+            <span class="nb-org-num">${i + 1}</span>
+            ${p.visibleToMaster ? '<span class="nb-org-eye" title="compartilhada com o mestre">👁</span>' : ''}
+            ${p.id === nb.activePageId ? '<span class="nb-org-here">aberta</span>' : ''}
+            <div class="nb-org-title">${escapeHtml(p.title)}</div>
+            <div class="nb-org-tools">
+              <button type="button" data-org="left" title="mover pra trás">◀</button>
+              <button type="button" data-org="right" title="mover pra frente">▶</button>
+              <button type="button" data-org="dup" title="duplicar">⧉</button>
+              <button type="button" data-org="rename" title="renomear">✎</button>
+              <button type="button" data-org="del" title="apagar" class="nb-org-del">🗑</button>
+            </div>
+          </div>
+        </div>`
+      )
+      .join('');
+    return `
+      <div class="nb-org ${spread ? 'nb-org-spread' : ''}" id="nb-org">
+        <div class="nb-org-head">
+          <div class="nb-org-headtxt">
+            <b>Organizar páginas</b>
+            <small>arraste os cartões pra reordenar${spread ? ' — duas páginas coladas = uma abertura do livro' : ''}. Clique numa página pra abrir.</small>
+          </div>
+          <div class="nb-org-actions">
+            <button type="button" class="btn btn-ghost" id="nb-org-undo" ${orgHistory.length ? '' : 'disabled'}>↶ desfazer</button>
+            <button type="button" class="btn" id="nb-org-done">concluído</button>
+          </div>
+        </div>
+        <div class="nb-org-grid" id="nb-org-grid">
+          ${cards}
+          <button type="button" class="nb-org-add" id="nb-org-add"><span>＋</span>nova página</button>
+        </div>
+      </div>`;
+  }
+
+  let orgKeyWired = false;
+  function wireOrganizer() {
+    const orgBtn = $('notebook-org-btn');
+    if (orgBtn) {
+      orgBtn.addEventListener('click', () => {
+        capture();
+        organizing = true;
+        orgHistory = [];
+        exportMenuOpen = false;
+        settingsOpen = false;
+        render();
+      });
+    }
+    if (!orgKeyWired) {
+      orgKeyWired = true;
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && organizing && app.isConnected) {
+          organizing = false;
+          render();
+        }
+      });
+    }
+    const grid = $('nb-org-grid');
+    if (!grid) return;
+    const nb = currentNotebook();
+    const cardsOf = () => [...grid.querySelectorAll('.nb-org-card')];
+
+    // miniatura = folha de verdade (523px) escalada pra largura do cartão
+    const fit = () =>
+      grid.querySelectorAll('.nb-org-thumb').forEach((t) => {
+        const w = t.clientWidth;
+        if (w) t.firstElementChild.style.transform = 'scale(' + w / ORG_BASE_W + ')';
+      });
+    fit();
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fit).observe(grid);
+
+    const snapshot = () => ({ pages: nb.pages.slice(), active: nb.activePageId });
+    const remember = (snap) => {
+      orgHistory.push(snap || snapshot());
+      if (orgHistory.length > 40) orgHistory.shift();
+      const u = $('nb-org-undo');
+      if (u) u.disabled = false;
+    };
+    const syncFromDom = () => {
+      const order = cardsOf().map((c) => c.dataset.pid);
+      nb.pages = order.map((id) => nb.pages.find((p) => p.id === id)).filter(Boolean);
+      cardsOf().forEach((c, i) => {
+        c.querySelector('.nb-org-num').textContent = String(i + 1);
+      });
+      scheduleSave();
+    };
+    // anima os cartões do lugar antigo pro novo (FLIP)
+    const flip = (mutate) => {
+      const before = new Map(cardsOf().map((c) => [c, c.getBoundingClientRect()]));
+      mutate();
+      if (reduceMotion()) return;
+      cardsOf().forEach((c) => {
+        const b = before.get(c);
+        if (!b) return;
+        const a = c.getBoundingClientRect();
+        const dx = b.left - a.left;
+        const dy = b.top - a.top;
+        if (Math.abs(dx) > 1 || Math.abs(dy) > 1) c.animate([{ translate: dx + 'px ' + dy + 'px' }, { translate: '0 0' }], { duration: 280, easing: 'cubic-bezier(.22,1,.36,1)' });
+      });
+    };
+
+    $('nb-org-done').addEventListener('click', () => {
+      organizing = false;
+      render();
+    });
+    $('nb-org-undo').addEventListener('click', () => {
+      const snap = orgHistory.pop();
+      if (!snap) return;
+      nb.pages = snap.pages;
+      nb.activePageId = snap.active;
+      render();
+      scheduleSave();
+    });
+    $('nb-org-add').addEventListener('click', () => {
+      remember();
+      const p = newPage('Página ' + (nb.pages.length + 1));
+      nb.pages.push(p);
+      render();
+      scheduleSave();
+      const g = $('nb-org-grid');
+      const last = g && g.querySelector('.nb-org-card:last-of-type');
+      if (last) last.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    });
+
+    let suppressClick = false;
+    grid.addEventListener('click', (e) => {
+      const card = e.target.closest('.nb-org-card');
+      if (!card) return;
+      const tool = e.target.closest('[data-org]');
+      if (!tool) {
+        if (suppressClick) return;
+        nb.activePageId = card.dataset.pid; // clicar na página abre ela
+        organizing = false;
+        render();
+        scheduleSave();
+        return;
+      }
+      e.stopPropagation();
+      const page = nb.pages.find((p) => p.id === card.dataset.pid);
+      const act = tool.dataset.org;
+      if (act === 'left' || act === 'right') {
+        const sib = act === 'left' ? card.previousElementSibling : card.nextElementSibling;
+        if (!sib || !sib.classList.contains('nb-org-card')) return;
+        remember();
+        flip(() => grid.insertBefore(card, act === 'left' ? sib : sib.nextElementSibling));
+        syncFromDom();
+      } else if (act === 'dup' && page) {
+        remember();
+        const copy = newPage(page.title + ' (cópia)');
+        copy.html = page.html;
+        nb.pages.splice(nb.pages.indexOf(page) + 1, 0, copy);
+        render();
+        scheduleSave();
+      } else if (act === 'rename' && page) {
+        const name = window.prompt('Nome da página:', page.title);
+        if (name !== null && name.trim()) {
+          page.title = name.trim().slice(0, 60);
+          render();
+          scheduleSave();
+        }
+      } else if (act === 'del' && page) {
+        if (nb.pages.length <= 1) {
+          window.alert('não dá pra apagar a única página do caderno.');
+          return;
+        }
+        if (!window.confirm('apagar a página "' + page.title + '"? (dá pra desfazer logo em seguida)')) return;
+        remember();
+        const idx = nb.pages.indexOf(page);
+        nb.pages.splice(idx, 1);
+        if (nb.activePageId === page.id) nb.activePageId = nb.pages[Math.max(0, idx - 1)].id;
+        render();
+        scheduleSave();
+      }
+    });
+
+    // setas (Shift + ← →) movem o cartão focado
+    grid.addEventListener('keydown', (e) => {
+      const card = e.target.closest('.nb-org-card');
+      if (!card || !e.shiftKey || (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight')) return;
+      e.preventDefault();
+      const btn = card.querySelector('[data-org="' + (e.key === 'ArrowLeft' ? 'left' : 'right') + '"]');
+      if (btn) btn.click();
+      const again = grid.querySelector('.nb-org-card[data-pid="' + card.dataset.pid + '"]');
+      if (again) again.focus();
+    });
+
+    // arrastar: mouse pega o cartão inteiro; toque só pela alça ⠿ (o resto continua rolando a tela)
+    cardsOf().forEach((origin) => {
+      origin.addEventListener('pointerdown', (e) => {
+        if (e.button !== undefined && e.button !== 0) return;
+        if (e.target.closest('[data-org]')) return;
+        if (e.pointerType === 'touch' && !e.target.closest('.nb-org-grip')) return;
+        const startX = e.clientX;
+        const startY = e.clientY;
+        const rect0 = origin.getBoundingClientRect();
+        const startSnap = snapshot();
+        let ghost = null;
+        let scrollTimer = null;
+        let lastY = startY;
+        const wrap = grid.closest('.notebook-wrap') || document.body;
+
+        const place = (x, y) => {
+          if (ghost) {
+            ghost.style.left = x - rect0.width / 2 + 'px';
+            ghost.style.top = y - 24 + 'px';
+          }
+        };
+        const retarget = (x, y) => {
+          let best = null;
+          let bd = Infinity;
+          cardsOf().forEach((c) => {
+            if (c === origin) return;
+            const r = c.getBoundingClientRect();
+            const d = Math.hypot(x - (r.left + r.width / 2), y - (r.top + r.height / 2));
+            if (d < bd) {
+              bd = d;
+              best = c;
+            }
+          });
+          if (!best) return;
+          const r = best.getBoundingClientRect();
+          const ref = x > r.left + r.width / 2 ? best.nextElementSibling : best;
+          if (ref === origin || ref === origin.nextElementSibling) return;
+          flip(() => grid.insertBefore(origin, ref));
+        };
+        const move = (ev) => {
+          if (!ghost) {
+            if (Math.hypot(ev.clientX - startX, ev.clientY - startY) < 6) return;
+            ghost = origin.cloneNode(true);
+            ghost.classList.add('nb-org-ghost');
+            ghost.style.width = rect0.width + 'px';
+            ghost.style.height = rect0.height + 'px';
+            wrap.appendChild(ghost);
+            origin.classList.add('nb-org-origin');
+            grid.classList.add('nb-org-dragging');
+            scrollTimer = setInterval(() => {
+              if (lastY < 80) window.scrollBy(0, -16);
+              else if (lastY > window.innerHeight - 80) window.scrollBy(0, 16);
+            }, 16);
+          }
+          lastY = ev.clientY;
+          ev.preventDefault();
+          place(ev.clientX, ev.clientY);
+          retarget(ev.clientX, ev.clientY);
+        };
+        const up = () => {
+          window.removeEventListener('pointermove', move);
+          window.removeEventListener('pointerup', up);
+          window.removeEventListener('pointercancel', up);
+          clearInterval(scrollTimer);
+          if (!ghost) return; // foi só um clique
+          ghost.remove();
+          origin.classList.remove('nb-org-origin');
+          grid.classList.remove('nb-org-dragging');
+          suppressClick = true;
+          setTimeout(() => (suppressClick = false), 0);
+          const before = startSnap.pages.map((p) => p.id).join(',');
+          const after = cardsOf().map((c) => c.dataset.pid).join(',');
+          if (before !== after) {
+            remember(startSnap);
+            syncFromDom();
+          }
+          origin.animate([{ scale: 1.06 }, { scale: 1 }], { duration: 240, easing: 'cubic-bezier(.22,1,.36,1)' });
+        };
+        window.addEventListener('pointermove', move, { passive: false });
+        window.addEventListener('pointerup', up);
+        window.addEventListener('pointercancel', up);
+      });
+    });
   }
 
   function formatToolbar() {
@@ -931,6 +1218,7 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
 
   function wireEvents() {
     wireBookExtras();
+    wireOrganizer();
     // --- lista ---
     app.querySelectorAll('button[data-open-notebook]').forEach((btn) => {
       btn.addEventListener('click', () => {
