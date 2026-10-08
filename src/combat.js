@@ -116,6 +116,50 @@ export async function passTurnFixed(campaignId, nextTurnId, participantCount, co
   if (error) throw error;
 }
 
+// "Passar o turno" / "voltar o turno" a partir de qualquer tela (o rastreador flutuante do tabuleiro usa): recebe os participantes e o
+// estado de combate atuais e faz a mesma conta da aba Combate (iniciativa por ordem: o primeiro vai pro fim; fixa: anda o ponteiro).
+// Devolve false quando não há o que fazer (lista vazia, ou já no começo da rodada 1 ao voltar).
+export async function advanceTurn(campaignId, participants, state) {
+  const ordered = participants.slice().sort((a, b) => a.position - b.position);
+  if (!ordered.length) return false;
+  const snapshot = { round: state.round, turns_passed_this_round: state.turns_passed_this_round || 0 };
+  if (state.fixed_initiative) {
+    const idx = Math.max(0, ordered.findIndex((p) => p.id === (state.current_turn_id || ordered[0].id)));
+    await passTurnFixed(campaignId, ordered[(idx + 1) % ordered.length].id, ordered.length, snapshot);
+    return true;
+  }
+  const [first, ...rest] = ordered;
+  await passTurn(campaignId, [...rest, first], snapshot);
+  return true;
+}
+
+export async function retreatTurn(campaignId, participants, state) {
+  const ordered = participants.slice().sort((a, b) => a.position - b.position);
+  if (!ordered.length) return false;
+  const passed = state.turns_passed_this_round || 0;
+  let round = state.round;
+  let turns = passed - 1;
+  if (turns < 0) {
+    if (round <= 1) return false; // começo da luta: não há turno anterior
+    round -= 1;
+    turns = ordered.length - 1;
+  }
+  const nextState = { round, turns_passed_this_round: turns, updated_at: new Date().toISOString() };
+  if (state.fixed_initiative) {
+    const idx = Math.max(0, ordered.findIndex((p) => p.id === (state.current_turn_id || ordered[0].id)));
+    nextState.current_turn_id = ordered[(idx - 1 + ordered.length) % ordered.length].id;
+  } else {
+    // o último da fila volta pro primeiro lugar; posições gravadas ANTES do update do estado (mesmo motivo de passTurn)
+    const newOrder = [ordered[ordered.length - 1], ...ordered.slice(0, -1)];
+    const res = await Promise.all(newOrder.map((p, i) => supabase.from('combat_participants').update({ position: i }).eq('id', p.id)));
+    const failed = res.find((r) => r.error);
+    if (failed) throw failed.error;
+  }
+  const { error } = await supabase.from('campaign_combat').update(nextState).eq('campaign_id', campaignId);
+  if (error) throw error;
+  return true;
+}
+
 // mestre ou jogador -- validado dentro da função (RPC SECURITY
 // DEFINER, ver db/018_patch_combat_fixed_initiative.sql).
 export async function toggleFixedInitiative(campaignId) {

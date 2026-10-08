@@ -4,7 +4,7 @@
 // subárvore do embed.
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
-import { rollDice, listRecentRolls, subscribeDiceRolls, clearRolls, DICE_PRESETS, normalizeCustomDie } from '../dice.js';
+import { rollDice, listRecentRolls, subscribeDiceRolls, clearRolls, DICE_PRESETS, normalizeCustomDie, getHiddenRollMode, setHiddenRollMode, onHiddenRollMode, revealRoll } from '../dice.js';
 
 function formatTime(iso) {
   const d = new Date(iso);
@@ -71,7 +71,12 @@ export function renderDiceScreen(app, { session, profile, campaign, topicSuffix 
       <div class="dice-wrap">
         <div class="dice-toolbar">
           <span class="dice-title">🎲 ROLAGEM DE DADOS</span>
-          ${isMaster ? `<button type="button" class="btn btn-ghost" id="dice-clear-btn">limpar histórico</button>` : ''}
+          ${
+            isMaster
+              ? `<button type="button" class="btn btn-ghost dice-hidden-toggle ${getHiddenRollMode() ? 'on' : ''}" id="dice-hidden-toggle" title="enquanto ligado, só você vê as suas rolagens (até clicar em revelar)">🙈 rolagem oculta: ${getHiddenRollMode() ? 'LIGADA' : 'desligada'}</button>
+                 <button type="button" class="btn btn-ghost" id="dice-clear-btn">limpar histórico</button>`
+              : ''
+          }
         </div>
 
         <div class="dice-controls">
@@ -105,8 +110,9 @@ export function renderDiceScreen(app, { session, profile, campaign, topicSuffix 
               : rolls
                   .map(
                     (r) => `
-              <div class="dice-roll-entry">
+              <div class="dice-roll-entry ${r.hidden ? 'is-hidden' : ''}">
                 <span class="log-time">${formatTime(r.created_at)}</span>
+                ${r.hidden ? `<span class="dice-hidden-tag" title="só os mestres veem">🙈 oculta</span><button type="button" class="dice-reveal-btn" data-reveal="${r.id}">revelar</button>` : ''}
                 <span class="dice-roll-who">${escapeHtml(r.roller_name)}</span>
                 ${r.label ? `<span class="dice-roll-label">🎯 ${escapeHtml(r.label)}</span>` : ''}
                 <span class="dice-roll-formula">${r.qty}${r.die}${r.modifier ? (r.modifier > 0 ? '+' + r.modifier : r.modifier) : ''}</span>
@@ -161,6 +167,22 @@ export function renderDiceScreen(app, { session, profile, campaign, topicSuffix 
       }
       performRoll(die);
     });
+    const hiddenToggle = $('dice-hidden-toggle');
+    if (hiddenToggle) hiddenToggle.addEventListener('click', () => setHiddenRollMode(!getHiddenRollMode()));
+    app.querySelectorAll('[data-reveal]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        try {
+          await revealRoll(btn.dataset.reveal);
+          const r = rolls.find((x) => x.id === btn.dataset.reveal);
+          if (r) r.hidden = false;
+          render();
+        } catch (err) {
+          error = err.message;
+          render();
+        }
+      });
+    });
     const clearBtn = $('dice-clear-btn');
     if (clearBtn) {
       clearBtn.addEventListener('click', async () => {
@@ -174,6 +196,9 @@ export function renderDiceScreen(app, { session, profile, campaign, topicSuffix 
       });
     }
   }
+
+  // o 🙈 pode ser ligado em outro lugar (dock do tabuleiro, bandeja do combate): repinta o botão daqui também
+  if (isMaster) onHiddenRollMode(() => app.isConnected && render());
 
   load();
   subscribeRealtime();

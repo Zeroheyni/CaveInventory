@@ -882,3 +882,59 @@
 .board-sel-bar button:hover{ background: var(--accent-faint); color: var(--accent); border-color: var(--accent-core); }
 .board-sel-sep{ width:1px; height:16px; background: rgba(255,255,255,0.18); margin:0 3px; }
 .board-sel-read{ font:600 10.5px var(--font-mono); color: var(--ink-dim); padding:0 5px 0 4px; min-width:62px; text-align:center; }
+
+/* ======================= INICIATIVA FLUTUANTE: arrastar, controles de turno, condições ======================= */
+.board-hud-tracker.free{ transform:none; }
+.board-hud-tracker.dragging{ box-shadow: 0 0 0 2px rgba(var(--accent-rgb),0.6), 0 20px 44px rgba(0,0,0,0.65); transition:none; animation:none; }
+.trk-grip{
+  align-self:center; flex-shrink:0; cursor:grab; color: var(--ink-faint); font-size:17px; line-height:1; padding:6px 3px; border-radius:8px;
+  touch-action:none; user-select:none; transition: color .15s ease, background .15s ease;
+}
+.trk-grip:hover{ color: var(--accent); background: rgba(var(--accent-rgb),0.1); }
+.board-hud-tracker.dragging .trk-grip{ cursor:grabbing; color: var(--accent); }
+.trk-ctl{ flex-shrink:0; display:grid; grid-template-columns:repeat(2, 30px); gap:4px; align-content:center; padding-left:4px; border-left:1px solid var(--stone-line); }
+.trk-ctl-btn{
+  height:28px; border-radius:9px; cursor:pointer; font-size:13px; line-height:1; color: var(--ink-dim);
+  background: rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.1); transition: all .15s ease;
+}
+.trk-ctl-btn:hover{ color: var(--accent); border-color: var(--accent-core); background: rgba(var(--accent-rgb),0.12); }
+.trk-ctl-btn.trk-next{ grid-column:1 / -1; color:#06210f; background: linear-gradient(180deg,#5af08f,#27b960); border-color:#4ade80; font-weight:700; box-shadow:0 0 12px rgba(74,222,128,0.35); }
+.trk-ctl-btn.trk-next:hover{ color:#06210f; filter:brightness(1.1); }
+.board-hud-tracker.busy .trk-ctl-btn{ opacity:0.5; pointer-events:none; }
+.trk-init{
+  position:absolute; left:3px; top:32px; z-index:1; font:700 9px/1 var(--font-mono); color: var(--void); background: var(--accent);
+  border-radius:7px; padding:2px 4px; box-shadow:0 1px 4px rgba(0,0,0,0.5);
+}
+.trk-conds{ display:flex; gap:2px; justify-content:center; flex-wrap:wrap; max-width:60px; }
+.trk-cond{
+  font-style:normal; font-size:10px; line-height:1; padding:1px 3px; border-radius:6px; color: var(--ink);
+  background: color-mix(in srgb, var(--c, #888) 24%, #000); border:1px solid var(--c, #888);
+}
+.trk-cond.more{ font:700 8px var(--font-mono); background:#000; border-color: var(--ink-faint); }
+.board-hud-tracker.free.leaving{ animation: tracker-out-free 0.3s ease-in both; }
+@keyframes tracker-out-free{ to{ opacity:0; scale:0.94; } }
+
+/* ======================= ROLAGEM OCULTA DO MESTRE ======================= */
+.dice-hidden-toggle{
+  display:inline-flex; align-items:center; gap:6px; cursor:pointer; font-family: var(--font-mono); font-size:11px; padding:6px 10px; border-radius:9px;
+  color: var(--ink-dim); background: rgba(255,255,255,0.04); border:1px dashed var(--stone-line); transition: all .15s ease;
+}
+.dice-hidden-toggle:hover{ color: var(--ink); border-color: var(--ink-faint); }
+.dice-hidden-toggle.on{
+  color:#e9d5ff; border:1px solid #a78bfa; background: rgba(167,139,250,0.16); box-shadow:0 0 14px rgba(167,139,250,0.35); animation: hid-pulse 2.2s ease-in-out infinite;
+}
+@keyframes hid-pulse{ 50%{ box-shadow:0 0 22px rgba(167,139,250,0.6); } }
+.dock-chip.dock-hidden.on{ color:#e9d5ff; border-color:#a78bfa; background: rgba(167,139,250,0.2); box-shadow:0 0 14px rgba(167,139,250,0.5); }
+.dice-roll-entry.is-hidden{ border-left:3px solid #a78bfa; background: rgba(167,139,250,0.07); }
+.dice-hidden-tag{ font-size:10.5px; color:#c4b5fd; white-space:nowrap; }
+.dice-reveal-btn, .roll-reveal{
+  cursor:pointer; font:700 10px var(--font-mono); letter-spacing:0.04em; color:#1e1038; background: linear-gradient(180deg,#c4b5fd,#8b5cf6);
+  border:none; border-radius:8px; padding:3px 8px;
+}
+.dice-reveal-btn:hover, .roll-reveal:hover{ filter:brightness(1.12); }
+.dice-reveal-btn:disabled, .roll-reveal:disabled{ opacity:0.5; cursor:default; }
+.roll-toast.hidden-roll{ border-color:#a78bfa; box-shadow: 0 0 0 1px rgba(167,139,250,0.25), 0 0 26px rgba(167,139,250,0.35), 0 12px 30px rgba(0,0,0,0.55); }
+.roll-tag.hid{ display:flex; align-items:center; gap:6px; color:#e9d5ff; background: rgba(167,139,250,0.2); border:1px solid #a78bfa; }
+.roll-tag.shown{ color:#bbf7d0; background: rgba(74,222,128,0.15); border:1px solid #4ade80; }
+.combat-dice-tray-panel .dice-hidden-toggle{ width:100%; justify-content:center; margin-bottom:6px; }
+.roll-tag.hid, .roll-tag.shown{ padding:2px 7px; border-radius:8px; letter-spacing:0.04em; width:fit-content; }

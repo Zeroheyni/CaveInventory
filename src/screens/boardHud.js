@@ -29,13 +29,13 @@
 // do board.js) em board.css.
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
-import { getCombatState, getParticipants, subscribeCombat, isVisibleToPlayer, updateParticipantHp, updateParticipantStamina, resolveCondition, listCustomConditions } from '../combat.js';
+import { getCombatState, getParticipants, subscribeCombat, isVisibleToPlayer, updateParticipantHp, updateParticipantStamina, resolveCondition, listCustomConditions, advanceTurn, retreatTurn } from '../combat.js';
 import { renderCombatScreen } from './combat.js';
 import { renderDiceScreen } from './dice.js';
 import { hpMax, estaminaMax, statusStats } from '../characterSheet.js';
 import { activeRuleset } from '../systems/index.js';
 import { listCharacterCustomBarsFor, customBarMax, updateCharacterCustomBarValue } from '../customBars.js';
-import { rollDice, subscribeDiceRolls, DICE_PRESETS, sidesFromDie } from '../dice.js';
+import { rollDice, subscribeDiceRolls, DICE_PRESETS, sidesFromDie, getHiddenRollMode, setHiddenRollMode, onHiddenRollMode, revealRoll } from '../dice.js';
 
 const collapsedKey = (name) => 'board-hud-collapsed-' + name;
 function getCollapsed(name, defaultValue) {
@@ -149,7 +149,7 @@ export function renderBoardHud(mountParent, { session, profile, campaign, charac
   diceDrawer = mountDiceDrawer(root, { session, profile, campaign });
   root.appendChild(bottom);
 
-  const feed = mountRollFeed(feedEl, { campaignId, isVisible: () => visible });
+  const feed = mountRollFeed(feedEl, { campaignId, isVisible: () => visible, isMaster });
   const tracker = mountTracker(root, { campaignId, profile, characterId, isMaster, combat });
   mountDock(dockEl, {
     campaignId,
@@ -256,8 +256,9 @@ function mountDiceDrawer(root, { session, profile, campaign }) {
 // campanha (Realtime) e a própria na hora (dedupe pelo id, já que o
 // insert devolve a linha completa antes do evento voltar).
 // ---------------------------------------------------------------
-function mountRollFeed(feedEl, { campaignId, isVisible }) {
+function mountRollFeed(feedEl, { campaignId, isVisible, isMaster }) {
   const seen = new Set();
+  const toasts = new Map(); // id da rolagem -> cartão na tela (pra marcar como revelada)
   const MAX = 3;
 
   function breakdown(r) {
@@ -289,13 +290,15 @@ function mountRollFeed(feedEl, { campaignId, isVisible }) {
     const crit = r.die === 'd20' && single && r.results[0] === 20;
     const fumble = r.die === 'd20' && single && r.results[0] === 1;
     const el = document.createElement('div');
-    el.className = 'roll-toast' + (own ? ' own' : '') + (crit ? ' crit' : '') + (fumble ? ' fumble' : '') + (r.die === 'd6' ? ' die-d6' : r.die === 'd4' ? ' die-d4' : '');
+    el.className = 'roll-toast' + (own ? ' own' : '') + (crit ? ' crit' : '') + (fumble ? ' fumble' : '') + (r.die === 'd6' ? ' die-d6' : r.die === 'd4' ? ' die-d4' : '') + (r.hidden ? ' hidden-roll' : '');
+    toasts.set(r.id, el);
     el.innerHTML = `
       <div class="roll-die"><b class="roll-num">${Math.max(1, Math.floor(Math.random() * sides))}</b><small>${escapeHtml(r.die)}</small></div>
       <div class="roll-meta">
         <div class="roll-who"><b>${escapeHtml(r.roller_name)}</b>${r.label ? `<span class="roll-label">${escapeHtml(r.label)}</span>` : ''}</div>
         <div class="roll-calc">${escapeHtml(breakdown(r))}</div>
         ${crit ? '<div class="roll-tag crit">CRÍTICO!</div>' : fumble ? '<div class="roll-tag fumble">FALHA CRÍTICA</div>' : ''}
+        ${r.hidden && isMaster ? '<div class="roll-tag hid">🙈 só você vê <button type="button" class="roll-reveal">revelar</button></div>' : ''}
       </div>
       <button type="button" class="roll-x" title="fechar">×</button>`;
     flipChildren(feedEl, () => {
@@ -322,13 +325,40 @@ function mountRollFeed(feedEl, { campaignId, isVisible }) {
       setTimeout(() => flipChildren(feedEl, () => el.remove()), 260);
     };
     el.querySelector('.roll-x').addEventListener('click', remove);
-    setTimeout(remove, crit || fumble ? 9000 : 7000);
+    const revealBtn = el.querySelector('.roll-reveal');
+    if (revealBtn) {
+      revealBtn.addEventListener('click', async () => {
+        revealBtn.disabled = true;
+        try {
+          await revealRoll(r.id);
+          markRevealed(r.id);
+        } catch (err) {
+          revealBtn.disabled = false;
+          window.alert('Não consegui revelar: ' + err.message);
+        }
+      });
+    }
+    setTimeout(() => { remove(); toasts.delete(r.id); }, r.hidden ? 14000 : crit || fumble ? 9000 : 7000);
+  }
+
+  // o mestre revelou: o cartão dele perde a tag; os outros ainda não tinham visto essa rolagem (ela nasceu oculta)
+  function markRevealed(id) {
+    const el = toasts.get(id);
+    if (!el) return;
+    el.classList.remove('hidden-roll');
+    const tag = el.querySelector('.roll-tag.hid');
+    if (tag) tag.outerHTML = '<div class="roll-tag shown">revelada ✓</div>';
   }
 
   subscribeDiceRolls(
     campaignId,
     (payload) => {
-      if (payload && payload.eventType === 'INSERT' && payload.new) show(payload.new, false);
+      if (!payload || !payload.new) return;
+      if (payload.eventType === 'INSERT') show(payload.new, false);
+      else if (payload.eventType === 'UPDATE' && payload.old && payload.old.hidden && !payload.new.hidden) {
+        markRevealed(payload.new.id);
+        show(payload.new, false); // jogadores: aparece agora, com a animação de sempre (o mestre já viu, o dedupe ignora)
+      }
     },
     'dice-board-feed-' + campaignId
   );
@@ -349,6 +379,89 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
   root.appendChild(banner);
 
   let collapsed = getCollapsed('rastreador', false);
+  // posição livre da barra (fração da área do HUD): null = centralizada no topo
+  const POS_KEY = 'cave.board.tracker.pos';
+  let pos = null;
+  try {
+    const raw = JSON.parse(localStorage.getItem(POS_KEY) || 'null');
+    if (raw && Number.isFinite(raw.fx) && Number.isFinite(raw.fy)) pos = { fx: raw.fx, fy: raw.fy };
+  } catch (_) { /* sem storage: fica no centro */ }
+  let turnBusy = false;
+  function applyPos() {
+    if (!pos) {
+      el.classList.remove('free');
+      el.style.left = '';
+      el.style.top = '';
+      return;
+    }
+    const r = root.getBoundingClientRect();
+    const w = el.offsetWidth;
+    const h = el.offsetHeight;
+    if (!r.width || !r.height) return;
+    const x = Math.max(4, Math.min(r.width - w - 4, pos.fx * r.width));
+    const y = Math.max(4, Math.min(r.height - Math.min(h, 60) - 4, pos.fy * r.height));
+    el.classList.add('free');
+    el.style.left = x + 'px';
+    el.style.top = y + 'px';
+  }
+  window.addEventListener('resize', () => applyPos());
+  function wireDrag() {
+    const grip = el.querySelector('#trk-grip');
+    if (!grip) return;
+    grip.addEventListener('dblclick', () => {
+      pos = null;
+      try { localStorage.removeItem(POS_KEY); } catch (_) { /* tanto faz */ }
+      applyPos();
+    });
+    grip.addEventListener('pointerdown', (e) => {
+      if (e.button !== undefined && e.button !== 0) return;
+      e.preventDefault();
+      const rr = root.getBoundingClientRect();
+      const er = el.getBoundingClientRect();
+      const dx = e.clientX - er.left;
+      const dy = e.clientY - er.top;
+      grip.setPointerCapture(e.pointerId);
+      el.classList.add('free', 'dragging');
+      const move = (ev) => {
+        const x = Math.max(4, Math.min(rr.width - el.offsetWidth - 4, ev.clientX - rr.left - dx));
+        const y = Math.max(4, Math.min(rr.height - 60, ev.clientY - rr.top - dy));
+        el.style.left = x + 'px';
+        el.style.top = y + 'px';
+        pos = { fx: x / rr.width, fy: y / rr.height };
+      };
+      const up = () => {
+        grip.removeEventListener('pointermove', move);
+        grip.removeEventListener('pointerup', up);
+        grip.removeEventListener('pointercancel', up);
+        el.classList.remove('dragging');
+        if (pos) {
+          try { localStorage.setItem(POS_KEY, JSON.stringify(pos)); } catch (_) { /* sem storage: vale só agora */ }
+        }
+      };
+      grip.addEventListener('pointermove', move);
+      grip.addEventListener('pointerup', up);
+      grip.addEventListener('pointercancel', up);
+    });
+  }
+  function focusCurrentToken() {
+    const all = combat.participants.slice().sort((a, b) => a.position - b.position);
+    const cur = currentTurnOf(all);
+    if (cur && cur.character_id) window.dispatchEvent(new CustomEvent('cave:board-focus', { detail: { characterId: cur.character_id } }));
+  }
+  async function stepTurn(dir) {
+    if (turnBusy || !isMaster) return;
+    turnBusy = true;
+    el.classList.add('busy');
+    try {
+      if (dir > 0) await advanceTurn(campaignId, combat.participants, combat.state);
+      else await retreatTurn(campaignId, combat.participants, combat.state);
+      await load();
+    } catch (err) {
+      window.alert('Não consegui mudar o turno: ' + err.message);
+    }
+    turnBusy = false;
+    el.classList.remove('busy');
+  }
   let prevCurrentId; // undefined = ainda não carregou (não anuncia "seu turno" no primeiro load)
   let bannerTimer = null;
 
@@ -368,6 +481,21 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
     if (p.avatar_url) return `<img class="trk-avatar" src="${escapeHtml(p.avatar_url)}" alt="">`;
     const letter = (p.display_name || '?').trim().charAt(0).toUpperCase();
     return `<span class="trk-avatar trk-avatar-letter">${escapeHtml(letter)}</span>`;
+  }
+
+  // ícones pequenos das condições do participante (só o ícone; o texto completo vai no title)
+  function condChipsHtml(p) {
+    const conds = Array.isArray(p.conditions) ? p.conditions : [];
+    if (!conds.length) return '';
+    const shown = conds.slice(0, 3);
+    const extra = conds.length - shown.length;
+    const chips = shown
+      .map((c) => {
+        const meta = resolveCondition(c.tipo, customConditions);
+        return '<i class="trk-cond" style="--c:' + escapeHtml(meta.color) + ';" title="' + escapeHtml(condLabel(c, meta)) + '">' + escapeHtml(meta.icon) + '</i>';
+      })
+      .join('');
+    return '<span class="trk-conds">' + chips + (extra > 0 ? '<i class="trk-cond more">+' + extra + '</i>' : '') + '</span>';
   }
 
   let prevRound;
@@ -416,9 +544,10 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
     const rankMap = new Map(allSorted.map((p, i) => [p.id, i + 1]));
     const list = visibleParticipants().slice().sort((a, b) => a.position - b.position);
     const currentVisible = current && list.some((p) => p.id === current.id);
-    el.className = 'board-hud-tracker' + (collapsed ? ' collapsed' : '');
+    el.className = 'board-hud-tracker' + (collapsed ? ' collapsed' : '') + (pos ? ' free' : '');
 
     el.innerHTML = `
+      <span class="trk-grip" id="trk-grip" title="arraste pra mover a barra · duplo clique volta pro centro">⠿</span>
       <button type="button" class="trk-round" id="trk-toggle" title="${collapsed ? 'expandir iniciativa' : 'recolher iniciativa'}">
         <span class="trk-round-icon">⚔</span>
         <span class="trk-round-num">RODADA <b>${combat.state.round}</b></span>
@@ -444,6 +573,8 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
                 <span class="trk-rank">${rankMap.get(p.id)}º</span>
                 ${avatarHtml(p)}
                 <span class="trk-name">${escapeHtml(p.display_name)}</span>
+                ${p.initiative !== null && p.initiative !== undefined ? '<span class="trk-init" title="iniciativa">' + escapeHtml(String(p.initiative)) + '</span>' : ''}
+                ${condChipsHtml(p)}
                 ${showHp ? `<span class="trk-hp"><span class="trk-hp-fill tone-${hpTone(pct)}" style="width:${pct}%"></span></span>` : ''}
                 ${isMe ? '<span class="trk-me-tag">você</span>' : ''}
               </button>`;
@@ -452,7 +583,23 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
           }
         </div>`
       }
+      <div class="trk-ctl">
+        <button type="button" class="trk-ctl-btn" id="trk-focus" title="centralizar o tabuleiro em quem tem a vez">🎯</button>
+        ${
+          isMaster
+            ? '<button type="button" class="trk-ctl-btn" id="trk-prev" title="voltar o turno">⏮</button><button type="button" class="trk-ctl-btn trk-next" id="trk-next" title="passar o turno">⏭</button>'
+            : ''
+        }
+      </div>
     `;
+    wireDrag();
+    applyPos();
+    el.querySelector('#trk-focus').addEventListener('click', focusCurrentToken);
+    const nextBtn = el.querySelector('#trk-next');
+    if (nextBtn) {
+      nextBtn.addEventListener('click', () => stepTurn(1));
+      el.querySelector('#trk-prev').addEventListener('click', () => stepTurn(-1));
+    }
 
     el.querySelector('#trk-toggle').addEventListener('click', () => {
       morph(el, () => {
@@ -465,7 +612,10 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
     el.querySelectorAll('.trk-card').forEach((card) => {
       card.addEventListener('mouseenter', () => tokenFor(card.dataset.cid)?.classList.add('hud-hl'));
       card.addEventListener('mouseleave', () => tokenFor(card.dataset.cid)?.classList.remove('hud-hl'));
-      card.addEventListener('click', () => ping(card.dataset.cid));
+      card.addEventListener('click', () => {
+        ping(card.dataset.cid);
+        if (card.dataset.cid) window.dispatchEvent(new CustomEvent('cave:board-focus', { detail: { characterId: card.dataset.cid } }));
+      });
     });
 
     const currentId = current ? current.id : null;
@@ -888,6 +1038,7 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
           <label class="dock-mini-field" title="quantidade de dados">×<input type="number" id="dock-qty" min="1" max="10" value="${diceQty}"></label>
           <label class="dock-mini-field" title="modificador">±<input type="number" id="dock-mod" value="${diceMod}"></label>
           ${DICE_PRESETS.map((d) => `<button type="button" class="dock-chip dock-die" data-die="${d}" title="rolar ${d}">${d}</button>`).join('')}
+          ${isMaster ? '<button type="button" class="dock-chip dock-hidden ' + (getHiddenRollMode() ? 'on' : '') + '" id="dock-hidden" title="rolagem oculta: ' + (getHiddenRollMode() ? 'LIGADA — só você vê o que rola (clique pra desligar)' : 'desligada — clique pra rolar só pra você') + '">🙈</button>' : ''}
           <button type="button" class="dock-chip dock-more" id="dock-more" title="histórico e dado personalizado">⋯</button>
         </div>
       </div>`;
@@ -973,6 +1124,16 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
     });
   }
 
+  // o 🙈 também liga/desliga em outros lugares (aba Dados, bandeja do combate): mantém o chip daqui igual
+  if (isMaster) {
+    onHiddenRollMode((on) => {
+      const b = el.querySelector('#dock-hidden');
+      if (!b) return;
+      b.classList.toggle('on', on);
+      b.title = on ? 'rolagem oculta: LIGADA — só você vê o que rola (clique pra desligar)' : 'rolagem oculta: desligada — clique pra rolar só pra você';
+    });
+  }
+
   function wire() {
     const col = el.querySelector('#dock-collapse');
     if (col) {
@@ -1026,6 +1187,8 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
     if (mod) mod.addEventListener('change', () => (diceMod = parseInt(mod.value, 10) || 0));
     const more = el.querySelector('#dock-more');
     if (more) more.addEventListener('click', openDice);
+    const hid = el.querySelector('#dock-hidden');
+    if (hid) hid.addEventListener('click', () => setHiddenRollMode(!getHiddenRollMode()));
   }
 
   // ------------------------------------------------ carga + realtime

@@ -39,7 +39,7 @@ import { listCampaignMembers } from '../accounts.js';
 import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, statusStats } from '../characterSheet.js';
 import { activeRuleset } from '../systems/index.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
-import { rollDice, listRecentRolls, subscribeDiceRolls, DICE_PRESETS, normalizeCustomDie } from '../dice.js';
+import { rollDice, listRecentRolls, subscribeDiceRolls, DICE_PRESETS, normalizeCustomDie, getHiddenRollMode, setHiddenRollMode, onHiddenRollMode, revealRoll } from '../dice.js';
 import {
   listCustomBars,
   listCharacterCustomBars,
@@ -255,6 +255,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
       <div class="combat-dice-tray ${diceTrayOpen ? 'open' : ''}" id="combat-dice-tray">
         <button type="button" class="combat-dice-tray-handle" id="combat-dice-tray-toggle" title="${diceTrayOpen ? 'fechar dados' : 'rolar dados'}"><span>🎲</span></button>
         <div class="combat-dice-tray-panel">
+          ${isMaster ? `<button type="button" class="dice-hidden-toggle ${getHiddenRollMode() ? 'on' : ''}" id="combat-hidden-toggle" title="enquanto ligado, só você vê as suas rolagens (revele quando quiser)">🙈 oculta: ${getHiddenRollMode() ? 'LIGADA' : 'desligada'}</button>` : ''}
           <div class="combat-dice-tray-buttons">
             ${DICE_PRESETS.map((d) => `<button type="button" class="dice-die-btn" data-combat-die="${d}" ${diceRolling ? 'disabled' : ''}>${d}</button>`).join('')}
           </div>
@@ -290,7 +291,8 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
                     .slice(0, 6)
                     .map(
                       (r) => `
-              <div class="dice-roll-entry">
+              <div class="dice-roll-entry ${r.hidden ? 'is-hidden' : ''}">
+                ${r.hidden ? `<span class="dice-hidden-tag" title="só os mestres veem">🙈</span><button type="button" class="dice-reveal-btn" data-combat-reveal="${r.id}">revelar</button>` : ''}
                 <span class="dice-roll-who">${escapeHtml(r.roller_name)}</span>
                 ${r.label ? `<span class="dice-roll-label">🎯 ${escapeHtml(r.label)}</span>` : ''}
                 <span class="dice-roll-formula">${r.qty}${r.die}${r.modifier ? (r.modifier > 0 ? '+' + r.modifier : r.modifier) : ''}</span>
@@ -1093,6 +1095,25 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         return;
       }
 
+      const trayHiddenBtn = e.target.closest('#combat-hidden-toggle');
+      if (trayHiddenBtn) {
+        setHiddenRollMode(!getHiddenRollMode());
+        return;
+      }
+      const trayRevealBtn = e.target.closest('button[data-combat-reveal]');
+      if (trayRevealBtn) {
+        trayRevealBtn.disabled = true;
+        try {
+          await revealRoll(trayRevealBtn.dataset.combatReveal);
+          const r = diceRolls.find((x) => x.id === trayRevealBtn.dataset.combatReveal);
+          if (r) r.hidden = false;
+        } catch (err) {
+          diceError = err.message;
+        }
+        render();
+        return;
+      }
+
       const trayDieBtn = e.target.closest('button[data-combat-die]');
       if (trayDieBtn) return performDiceRoll(trayDieBtn.dataset.combatDie);
 
@@ -1765,6 +1786,9 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     addBankNpcId = null;
     await load();
   }
+
+  // o 🙈 pode ser ligado no dock do tabuleiro ou na aba Dados: repinta o botão da bandeja
+  if (isMaster) onHiddenRollMode(() => app.isConnected && render());
 
   wireEvents();
   load();

@@ -947,6 +947,27 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     saveViewSoon();
   }
 
+  // a barra de iniciativa (boardHud.js) pede pra câmera ir até o token de alguém: centraliza suave, sem mexer no zoom
+  function focusCharacterToken(characterId) {
+    const stage = $('board-stage');
+    const base = stageBase();
+    if (!stage || !base || !characterId) return;
+    const tok = Array.from(stage.querySelectorAll('.board-token[data-character-id]')).find((n) => n.dataset.characterId === characterId);
+    if (!tok) return;
+    const s = stage.getBoundingClientRect();
+    const t = tok.getBoundingClientRect();
+    if (!s.width || !s.height) return;
+    view.fx = clamp((t.left + t.width / 2 - s.left) / s.width, 0, 1);
+    view.fy = clamp((t.top + t.height / 2 - s.top) / s.height, 0, 1);
+    stage.style.transition = 'transform 0.5s cubic-bezier(.22,1,.36,1)';
+    applyView();
+    saveViewSoon();
+    setTimeout(() => { stage.style.transition = ''; }, 560);
+  }
+  if (window.__caveBoardFocus) window.removeEventListener('cave:board-focus', window.__caveBoardFocus);
+  window.__caveBoardFocus = (e) => focusCharacterToken(e.detail && e.detail.characterId);
+  window.addEventListener('cave:board-focus', window.__caveBoardFocus);
+
   // pan/pinça só começam no "fundo" (nada de token, botão ou painel por baixo)
   function isBackgroundTarget(e) {
     if (e.target.closest('.board-wall-capture, .board-fx-capture')) return e.button === 1; // ferramenta ativa: só o botão do meio arrasta o mapa

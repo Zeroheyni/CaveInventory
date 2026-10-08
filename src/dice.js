@@ -35,7 +35,27 @@ export function rollValues(die, qty) {
 // evento de Realtime voltar (round-trip redundante pra quem já sabe o
 // resultado; só os OUTROS espectadores da campanha realmente precisam
 // do Realtime pra saber que alguém rolou).
-export async function rollDice(campaignId, rollerId, rollerName, die, qty, modifier, label) {
+// Modo "rolagem oculta" (db/076): ligado pelo MESTRE nos botões 🙈 -- enquanto estiver ligado, toda rolagem dele nasce oculta
+// (só mestres da campanha enxergam, e nada vai pro Discord/log até ele revelar). Jogador nunca liga: o banco também recusa.
+const hiddenRoll = { on: false, subs: new Set() };
+export const getHiddenRollMode = () => hiddenRoll.on;
+export function setHiddenRollMode(on) {
+  hiddenRoll.on = !!on;
+  hiddenRoll.subs.forEach((fn) => {
+    try { fn(hiddenRoll.on); } catch (_) { /* um ouvinte quebrado não derruba os outros */ }
+  });
+}
+export function onHiddenRollMode(fn) {
+  hiddenRoll.subs.add(fn);
+  return () => hiddenRoll.subs.delete(fn);
+}
+
+export async function revealRoll(id) {
+  const { error } = await supabase.from('dice_rolls').update({ hidden: false }).eq('id', id);
+  if (error) throw error;
+}
+
+export async function rollDice(campaignId, rollerId, rollerName, die, qty, modifier, label, hidden = hiddenRoll.on) {
   const results = rollValues(die, qty);
   const total = results.reduce((a, b) => a + b, 0) + modifier;
   const { data, error } = await supabase
@@ -50,6 +70,7 @@ export async function rollDice(campaignId, rollerId, rollerName, die, qty, modif
       results,
       total,
       label: label || null,
+      ...(hidden ? { hidden: true } : {}),
     })
     .select()
     .single();
