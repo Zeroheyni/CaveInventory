@@ -308,7 +308,10 @@ export function ensureCustomFontLoaded(fontName) {
 // pro mestre quando a página é compartilhada). Roda tanto ao salvar
 // quanto ao exibir (defesa em profundidade -- alguém podia adulterar
 // o próprio registro via devtools pra tentar atacar quem lê a página).
-const ALLOWED_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'UL', 'OL', 'LI', 'BR', 'P', 'DIV', 'SPAN', 'FONT', 'IMG']);
+const ALLOWED_TAGS = new Set(['B', 'STRONG', 'I', 'EM', 'U', 'S', 'STRIKE', 'DEL', 'SUP', 'SUB', 'BLOCKQUOTE', 'HR', 'UL', 'OL', 'LI', 'BR', 'P', 'DIV', 'SPAN', 'FONT', 'IMG']);
+// efeitos de texto (menu ✨ do caderno): só estas classes passam, em SPAN; letra capitular em parágrafo
+const SPAN_FX = new Set(['nb-fx-strike', 'nb-fx-scratch', 'nb-fx-censor', 'nb-fx-smudge', 'nb-fx-ghost', 'nb-fx-wavy', 'nb-fx-glow', 'nb-fx-blood', 'nb-fx-caps', 'nb-fx-hl-y', 'nb-fx-hl-p', 'nb-fx-hl-g', 'nb-fx-hl-b']);
+const SAFE_ALIGN = /^text-align\s*:\s*(left|center|right|justify)$/i;
 const SAFE_STYLE_DECL = /^(width|height)\s*:\s*([\d.]+(px|%)|auto)$/i;
 // tamanho de fonte livre (A−/A+ e títulos): só px entre 8 e 120
 const SAFE_FONT_SIZE = /^font-size\s*:\s*(\d{1,3}(\.\d+)?)px$/i;
@@ -353,8 +356,13 @@ export function sanitizeNotebookHtml(html) {
           // no DOM ao vivo, nunca deve ir pro banco -- senão um spoiler
           // salvo bem na hora em que alguém clicou pra espiar ficava
           // permanentemente revelado da próxima vez que a página abrisse).
-          if (child.tagName === 'SPAN' && attr.value.split(/\s+/).includes('notebook-spoiler')) {
+          const toks = attr.value.split(/\s+/);
+          if (child.tagName === 'SPAN' && toks.includes('notebook-spoiler')) {
             child.setAttribute('class', 'notebook-spoiler');
+          } else if (child.tagName === 'SPAN' && toks.some((c) => SPAN_FX.has(c))) {
+            child.setAttribute('class', [...new Set(toks.filter((c) => SPAN_FX.has(c)))].join(' '));
+          } else if ((child.tagName === 'P' || child.tagName === 'DIV' || child.tagName === 'BLOCKQUOTE') && toks.includes('nb-dropcap')) {
+            child.setAttribute('class', 'nb-dropcap');
           } else {
             child.removeAttribute('class');
           }
@@ -364,7 +372,7 @@ export function sanitizeNotebookHtml(html) {
           const safe = attr.value
             .split(';')
             .map((s) => s.trim())
-            .filter((s) => SAFE_STYLE_DECL.test(s) || fontSizeOk(s) || (/^color\s*:\s*/i.test(s) && SAFE_COLOR.test(s.split(':')[1].trim())))
+            .filter((s) => SAFE_STYLE_DECL.test(s) || fontSizeOk(s) || SAFE_ALIGN.test(s) || (/^color\s*:\s*/i.test(s) && SAFE_COLOR.test(s.split(':')[1].trim())))
             .join('; ');
           if (safe) child.setAttribute('style', safe);
           else child.removeAttribute('style');

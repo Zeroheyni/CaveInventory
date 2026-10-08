@@ -305,3 +305,52 @@ body.notebook-focus-mode .nb-desk{ min-height: calc(100vh - 150px); display:flex
 /* os menus (exportar, configurações) abrem pra dentro da mesa: a barra precisa ficar por cima do livro */
 .nb-top{ position:relative; z-index:30; }
 .nb-export-menu{ z-index:31; }
+
+/* ======================= ESTILOS DE TEXTO (menu ✨) ======================= */
+.notebook-color-popover{ display:none; }
+.notebook-color-popover.open{ display:flex; }
+.nb-fx-wrap{ position:relative; }
+.nb-fx-pop{
+  display:none; position:absolute; top:calc(100% + 8px); left:0; z-index:40; width:min(330px, calc(100vw - 24px)); padding:12px; border-radius:12px;
+  background: var(--stone-800); border:1px solid var(--stone-line); box-shadow:0 18px 40px rgba(0,0,0,0.55); color: var(--ink);
+  flex-direction:column; gap:7px; animation: notebook-pop-in 0.15s ease;
+}
+.nb-fx-pop.open{ display:flex; }
+.nb-fx-title{ font:600 10px var(--font-mono); letter-spacing:0.08em; text-transform:uppercase; color: var(--ink-faint); margin-top:3px; }
+.nb-fx-grid{ display:grid; grid-template-columns:1fr 1fr; gap:5px; }
+.nb-fx-grid-4{ grid-template-columns:repeat(4, 1fr); }
+.nb-fx-hls{ display:grid; grid-template-columns:repeat(4, 1fr); gap:5px; }
+.nb-fx-pop button{
+  font:13px var(--font-mono); color: var(--ink-dim); padding:7px 8px; border-radius:8px; cursor:pointer; text-align:center;
+  background: rgba(255,255,255,0.04); border:1px solid rgba(255,255,255,0.09); transition: all .12s ease;
+}
+.nb-fx-pop button:hover{ border-color: var(--accent-core); color: var(--ink); background: rgba(var(--accent-rgb),0.1); }
+.nb-fx-pop .nb-fx-clear:hover{ border-color: var(--danger); color: var(--danger); }
+
+/* os efeitos em si (valem na folha, no terminal e na imagem exportada) */
+.nb-fx-strike{ text-decoration: line-through; text-decoration-thickness: 0.09em; }
+.nb-fx-scratch{ text-decoration-line: line-through; text-decoration-style: wavy; text-decoration-thickness: 0.07em; }
+.nb-fx-censor{ -webkit-text-fill-color: transparent; background-color: currentColor; border-radius:2px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.nb-fx-smudge{ filter: blur(1.1px); opacity:0.72; text-shadow: 0 0 3px currentColor; }
+.nb-fx-ghost{ opacity:0.36; font-style:italic; }
+.nb-fx-wavy{ text-decoration-line: underline; text-decoration-style: wavy; text-underline-offset: 0.2em; }
+.nb-fx-glow{ text-shadow: 0 0 6px currentColor, 0 0 16px currentColor; }
+.nb-fx-blood{ color:#a1121b; text-shadow: 0 1px 0 rgba(0,0,0,0.3), 0 2px 6px rgba(120,0,0,0.5); }
+.nb-fx-caps{ font-variant: small-caps; letter-spacing:0.06em; }
+.nb-fx-hl-y, .nb-fx-hl-p, .nb-fx-hl-g, .nb-fx-hl-b{ color:#1c1a14; border-radius:3px; padding:0 2px; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.nb-fx-hl-y{ background: linear-gradient(transparent 10%, rgba(255,226,60,0.7) 10% 94%, transparent 94%); }
+.nb-fx-hl-p{ background: linear-gradient(transparent 10%, rgba(255,130,196,0.62) 10% 94%, transparent 94%); }
+.nb-fx-hl-g{ background: linear-gradient(transparent 10%, rgba(110,235,140,0.62) 10% 94%, transparent 94%); }
+.nb-fx-hl-b{ background: linear-gradient(transparent 10%, rgba(110,190,255,0.62) 10% 94%, transparent 94%); }
+.notebook-page strike, .notebook-page del{ text-decoration: line-through; text-decoration-thickness: 0.09em; }
+.notebook-page sup, .notebook-page sub{ font-size:0.7em; line-height:0; }
+.notebook-page blockquote{
+  margin:10px 4px 10px 8px; padding:4px 14px; font-style:italic; border-left:3px solid color-mix(in srgb, currentColor 45%, transparent);
+  background: color-mix(in srgb, currentColor 6%, transparent); border-radius:0 8px 8px 0;
+}
+.notebook-page hr{
+  border:0; height:1px; margin:16px 0; position:relative; overflow:visible; opacity:0.55;
+  background: linear-gradient(90deg, transparent, currentColor 38%, transparent 38%, transparent 62%, currentColor 62%, transparent);
+}
+.notebook-page hr::after{ content:"❖"; position:absolute; left:50%; top:50%; transform:translate(-50%, -52%); font-size:15px; line-height:1; }
+.notebook-page .nb-dropcap::first-letter{ float:left; font-size:3.3em; line-height:0.82; font-weight:700; padding:0.06em 0.1em 0 0; }

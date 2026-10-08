@@ -329,6 +329,46 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         <button type="button" class="notebook-fmt-btn" data-fmt="bold" title="negrito"><b>B</b></button>
         <button type="button" class="notebook-fmt-btn" data-fmt="italic" title="itálico"><i>I</i></button>
         <button type="button" class="notebook-fmt-btn" data-fmt="underline" title="sublinhado"><u>U</u></button>
+        <button type="button" class="notebook-fmt-btn" data-fx="nb-fx-strike" title="riscar o texto selecionado"><s>S</s></button>
+        <div class="nb-fx-wrap" id="notebook-fx-wrap">
+          <button type="button" class="notebook-fmt-btn" id="notebook-fx-btn" title="mais estilos: riscado, censura, marca-texto, brilho, alinhamento...">✨</button>
+          <div class="nb-fx-pop" id="notebook-fx-pop">
+            <div class="nb-fx-title">Estilo do trecho selecionado</div>
+            <div class="nb-fx-grid">
+              <button type="button" data-fx="nb-fx-strike"><span class="nb-fx-strike">Riscado</span></button>
+              <button type="button" data-fx="nb-fx-scratch"><span class="nb-fx-scratch">Rasurado</span></button>
+              <button type="button" data-fx="nb-fx-censor" title="tarja preta fixa (não revela ao clicar)"><span class="nb-fx-censor">Censurado</span></button>
+              <button type="button" data-fx="nb-fx-smudge"><span class="nb-fx-smudge">Borrado</span></button>
+              <button type="button" data-fx="nb-fx-ghost"><span class="nb-fx-ghost">Apagado</span></button>
+              <button type="button" data-fx="nb-fx-wavy"><span class="nb-fx-wavy">Ondulado</span></button>
+              <button type="button" data-fx="nb-fx-glow"><span class="nb-fx-glow">Brilho</span></button>
+              <button type="button" data-fx="nb-fx-blood"><span class="nb-fx-blood">Sangue</span></button>
+              <button type="button" data-fx="nb-fx-caps"><span class="nb-fx-caps">Versalete</span></button>
+              <button type="button" data-blk="sup">x<sup>2</sup> sobrescrito</button>
+              <button type="button" data-blk="sub">x<sub>2</sub> subscrito</button>
+            </div>
+            <div class="nb-fx-title">Marca-texto</div>
+            <div class="nb-fx-hls">
+              <button type="button" data-fx="nb-fx-hl-y" title="amarelo"><span class="nb-fx-hl-y">abc</span></button>
+              <button type="button" data-fx="nb-fx-hl-p" title="rosa"><span class="nb-fx-hl-p">abc</span></button>
+              <button type="button" data-fx="nb-fx-hl-g" title="verde"><span class="nb-fx-hl-g">abc</span></button>
+              <button type="button" data-fx="nb-fx-hl-b" title="azul"><span class="nb-fx-hl-b">abc</span></button>
+            </div>
+            <div class="nb-fx-title">Parágrafo</div>
+            <div class="nb-fx-grid nb-fx-grid-4">
+              <button type="button" data-blk="align-left" title="alinhar à esquerda">⇤</button>
+              <button type="button" data-blk="align-center" title="centralizar">↔</button>
+              <button type="button" data-blk="align-right" title="alinhar à direita">⇥</button>
+              <button type="button" data-blk="align-full" title="justificar">☰</button>
+            </div>
+            <div class="nb-fx-grid">
+              <button type="button" data-blk="quote">❝ Citação</button>
+              <button type="button" data-blk="dropcap">Ａ Letra capitular</button>
+              <button type="button" data-blk="divider">❖ Divisória</button>
+              <button type="button" data-blk="clear" class="nb-fx-clear">⌫ Limpar estilo</button>
+            </div>
+          </div>
+        </div>
         <span class="nb-tb-sep"></span>
         <button type="button" class="notebook-fmt-btn nb-size-btn" data-size="dec" title="diminuir a fonte do trecho selecionado (ou da linha onde está o cursor)">A−</button>
         <button type="button" class="notebook-fmt-btn nb-size-btn" data-size="inc" title="aumentar a fonte do trecho selecionado (ou da linha onde está o cursor)">A+</button>
@@ -343,7 +383,7 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         <input type="file" id="notebook-img-input" accept="image/*" style="display:none;">
         <div class="notebook-color-wrap" id="notebook-color-wrap">
           <button type="button" class="notebook-fmt-btn" id="notebook-color-btn" title="cor do texto">🎨</button>
-          ${colorPopoverOpen ? `<div class="notebook-color-popover">${TEXT_COLORS.map((c) => `<button type="button" class="notebook-color-swatch" data-color="${c}" style="background:${c};"></button>`).join('')}</div>` : ''}
+          <div class="notebook-color-popover ${colorPopoverOpen ? 'open' : ''}" id="notebook-color-pop">${TEXT_COLORS.map((c) => `<button type="button" class="notebook-color-swatch" data-color="${c}" style="background:${c};"></button>`).join('')}</div>
         </div>
       </div>
     `;
@@ -1008,7 +1048,12 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         }
         if (colorPopoverOpen && !e.target.closest('#notebook-color-wrap')) {
           colorPopoverOpen = false;
-          render();
+          const pop = $('notebook-color-pop');
+          if (pop) pop.classList.remove('open');
+        }
+        if (!e.target.closest('#notebook-fx-wrap')) {
+          const fp = $('notebook-fx-pop');
+          if (fp) fp.classList.remove('open');
         }
       });
     }
@@ -1128,6 +1173,154 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
       scheduleSave();
     }
 
+    // ---- estilos de texto (menu ✨): riscado, censura, marca-texto, brilho, alinhamento, citação, letra capitular... ----
+    // Cada efeito é um <span class="nb-fx-..."> (a lista branca do sanitize só deixa passar essas classes); aplicar de novo no mesmo trecho desliga.
+    const FX_HL = ['nb-fx-hl-y', 'nb-fx-hl-p', 'nb-fx-hl-g', 'nb-fx-hl-b'];
+    const fxBtn = $('notebook-fx-btn');
+    const fxPop = $('notebook-fx-pop');
+    if (fxBtn && fxPop) {
+      fxBtn.addEventListener('mousedown', (e) => e.preventDefault());
+      fxBtn.addEventListener('click', () => fxPop.classList.toggle('open'));
+      fxPop.addEventListener('mousedown', (e) => e.preventDefault()); // não rouba a seleção do texto
+    }
+    function fxEditor() {
+      const sel = window.getSelection();
+      if (!sel || sel.rangeCount === 0) return null;
+      const n = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
+      return n ? n.closest('.notebook-page[contenteditable="true"]') : null;
+    }
+    function unwrapEl(el) {
+      const p = el.parentNode;
+      while (el.firstChild) p.insertBefore(el.firstChild, el);
+      el.remove();
+    }
+    // textos da seleção, já cortados nas bordas (pra marcar só o que foi selecionado)
+    function selectedTextNodes(editor) {
+      const sel = window.getSelection();
+      if (sel.isCollapsed) {
+        try {
+          sel.modify('move', 'backward', 'word');
+          sel.modify('extend', 'forward', 'word');
+        } catch (_) { /* navegador sem selection.modify: exige seleção */ }
+        if (sel.isCollapsed) return [];
+      }
+      const range = sel.getRangeAt(0);
+      let sc = range.startContainer;
+      const so = range.startOffset;
+      let ec = range.endContainer;
+      const eo = range.endOffset;
+      if (ec.nodeType === 3 && eo < ec.length) ec.splitText(eo);
+      if (sc.nodeType === 3 && so > 0) {
+        const right = sc.splitText(so);
+        if (sc === ec) ec = right;
+        sc = right;
+      }
+      const r = document.createRange();
+      r.setStart(sc, sc.nodeType === 3 ? 0 : so);
+      r.setEnd(ec, ec.nodeType === 3 ? ec.length : eo);
+      const out = [];
+      const walker = document.createTreeWalker(editor, NodeFilter.SHOW_TEXT);
+      while (walker.nextNode()) {
+        const t = walker.currentNode;
+        if (!t.nodeValue || !r.intersectsNode(t)) continue;
+        if (/\n/.test(t.nodeValue) && !t.nodeValue.trim()) continue; // quebras de linha entre blocos
+        out.push(t);
+      }
+      return out;
+    }
+    function applyFx(cls) {
+      const editor = fxEditor();
+      if (!editor) return;
+      const nodes = selectedTextNodes(editor);
+      if (!nodes.length) return;
+      const inFx = (n, c) => (n.parentElement ? n.parentElement.closest('span.' + c) : null);
+      const allOn = nodes.every((n) => {
+        const s = inFx(n, cls);
+        return s && editor.contains(s);
+      });
+      let first = null;
+      let last = null;
+      if (allOn) {
+        new Set(nodes.map((n) => inFx(n, cls))).forEach(unwrapEl);
+      } else {
+        if (FX_HL.includes(cls)) {
+          FX_HL.filter((c) => c !== cls).forEach((c) => nodes.forEach((n) => { const s = inFx(n, c); if (s) unwrapEl(s); }));
+        }
+        nodes.forEach((n) => {
+          let s = inFx(n, cls);
+          if (!s) {
+            s = document.createElement('span');
+            s.className = cls;
+            n.replaceWith(s);
+            s.appendChild(n);
+          }
+          first = first || s;
+          last = s;
+        });
+        // junta spans vizinhos iguais (selecionar de novo não empilha spans)
+        editor.querySelectorAll('span.' + cls).forEach((s) => {
+          const nx = s.nextSibling;
+          if (nx && nx.nodeType === 1 && nx.tagName === 'SPAN' && nx.className === s.className && !nx.getAttribute('style')) {
+            while (nx.firstChild) s.appendChild(nx.firstChild);
+            nx.remove();
+          }
+        });
+      }
+      const sel = window.getSelection();
+      if (first && last && first.isConnected && last.isConnected) {
+        const r = document.createRange();
+        r.setStartBefore(first);
+        r.setEndAfter(last);
+        sel.removeAllRanges();
+        sel.addRange(r);
+      }
+      capture();
+      scheduleSave();
+    }
+    function blockOf(editor) {
+      const sel = window.getSelection();
+      let n = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
+      while (n && n.parentElement !== editor) n = n.parentElement;
+      return n && n !== editor ? n : null;
+    }
+    function blockAction(name) {
+      const editor = fxEditor();
+      if (!editor) return;
+      if (name === 'sup' || name === 'sub') document.execCommand(name === 'sup' ? 'superscript' : 'subscript');
+      else if (name.startsWith('align-')) {
+        document.execCommand('styleWithCSS', false, true);
+        document.execCommand({ 'align-left': 'justifyLeft', 'align-center': 'justifyCenter', 'align-right': 'justifyRight', 'align-full': 'justifyFull' }[name]);
+      } else if (name === 'quote') {
+        const sel = window.getSelection();
+        const n = sel.anchorNode && (sel.anchorNode.nodeType === 1 ? sel.anchorNode : sel.anchorNode.parentElement);
+        document.execCommand('formatBlock', false, n && n.closest('blockquote') ? 'p' : 'blockquote');
+      } else if (name === 'dropcap') {
+        let b = blockOf(editor);
+        if (!b || b.nodeType !== 1 || !['P', 'DIV', 'BLOCKQUOTE'].includes(b.tagName)) {
+          document.execCommand('formatBlock', false, 'p');
+          b = blockOf(editor);
+        }
+        if (b && b.nodeType === 1) b.classList.toggle('nb-dropcap');
+      } else if (name === 'divider') {
+        document.execCommand('insertHorizontalRule');
+      } else if (name === 'clear') {
+        const nodes = selectedTextNodes(editor);
+        document.execCommand('removeFormat');
+        nodes.forEach((n) => {
+          let p = n.parentElement;
+          while (p && p !== editor) {
+            const next = p.parentElement;
+            if (p.tagName === 'SPAN' && (/^nb-fx-/.test(p.className) || p.style.fontSize || p.classList.contains('notebook-spoiler') || p.style.color)) unwrapEl(p);
+            p = next;
+          }
+        });
+      }
+      capture();
+      scheduleSave();
+    }
+    app.querySelectorAll('[data-fx]').forEach((b) => b.addEventListener('click', () => applyFx(b.dataset.fx)));
+    app.querySelectorAll('[data-blk]').forEach((b) => b.addEventListener('click', () => blockAction(b.dataset.blk)));
+
     const spoilerBtn = $('notebook-spoiler-btn');
     if (spoilerBtn) {
       spoilerBtn.addEventListener('mousedown', (e) => e.preventDefault());
@@ -1161,7 +1354,8 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
       colorBtn.addEventListener('mousedown', (e) => e.preventDefault());
       colorBtn.addEventListener('click', () => {
         colorPopoverOpen = !colorPopoverOpen;
-        render();
+        const pop = $('notebook-color-pop');
+        if (pop) pop.classList.toggle('open', colorPopoverOpen);
       });
     }
     app.querySelectorAll('button[data-color]').forEach((btn) => {
@@ -1170,8 +1364,9 @@ export function renderNotebookScreen(app, { session, profile, campaign, characte
         document.execCommand('styleWithCSS', false, true);
         document.execCommand('foreColor', false, btn.dataset.color);
         colorPopoverOpen = false;
+        const pop = $('notebook-color-pop');
+        if (pop) pop.classList.remove('open');
         capture();
-        render();
         scheduleSave();
       });
     });
