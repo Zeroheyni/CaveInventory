@@ -2,6 +2,7 @@
 // campanha inteira. Embutida dentro de character.js (aba "DADOS"), igual
 // combat.js/notebook.js -- toda busca de elemento fica restrita à própria
 // subárvore do embed.
+import { nameInCampaign } from '../accounts.js';
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
 import { rollDice, listRecentRolls, subscribeDiceRolls, clearRolls, DICE_PRESETS, normalizeCustomDie, getHiddenRollMode, setHiddenRollMode, onHiddenRollMode, revealRoll } from '../dice.js';
@@ -20,7 +21,7 @@ function formatTime(iso) {
 export function renderDiceScreen(app, { session, profile, campaign, topicSuffix }) {
   const campaignId = campaign.id;
   const rollerId = session.user.id;
-  const rollerName = profile.username || 'jogador';
+  const rollerName = nameInCampaign(profile) || 'jogador';
   const isMaster = profile.role === 'master';
   const $ = (id) => app.querySelector('#' + id);
   const suffix = topicSuffix || '';

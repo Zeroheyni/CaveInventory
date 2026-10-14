@@ -6,6 +6,7 @@
 // Embutida dentro de character.js (aba "COMBATE"), que já tem várias
 // dessas IDs em uso (currency-wrap, etc.) — por isso, igual publicArea.js,
 // toda busca de elemento fica restrita à própria subárvore do embed.
+import { nameInCampaign } from '../accounts.js';
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
 import {
@@ -80,7 +81,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   let diceChannel = null;
 
   const rollerId = session.user.id;
-  const rollerName = profile.username || 'jogador';
+  const rollerName = nameInCampaign(profile) || 'jogador';
   let diceTrayOpen = false;
   let diceRolls = [];
   let diceQty = 1;

@@ -20,6 +20,7 @@
 // existindo como um indicador/lembrete de qual é o principal da
 // campanha, mas agora é só INFORMATIVO -- abrir um tabuleiro pra
 // olhar/jogar não depende mais dele, qualquer um da lista abre.
+import { nameInCampaign } from '../accounts.js';
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
 import {
@@ -1361,7 +1362,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   }
 
   function myDisplayName() {
-    return characterName || profile.username || 'alguém';
+    return characterName || nameInCampaign(profile) || 'alguém';
   }
 
   // reaproveita a cor de destaque do próprio tema do viewer -- em vez

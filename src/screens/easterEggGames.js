@@ -5,7 +5,7 @@
 // re-render da tela por baixo enquanto o overlay estiver aberto.
 import { escapeHtml } from '../shared/gameData.js';
 import { submitGameScore, listHighScores } from '../games.js';
-import { displayNameOf, updateMyProfile } from '../accounts.js';
+import { nameInCampaign, setMyCampaignName } from '../accounts.js';
 import { createSnakeGame } from '../games/snake.js';
 import { createTetrisGame } from '../games/tetris.js';
 import { createFlappyGame } from '../games/flappy.js';
@@ -44,8 +44,8 @@ const GAMES = {
 // masterCampaignHub.js) recarregar quais temas o jogador destravou
 // jogando essa sessão (ver db/049), sem precisar recarregar a página.
 export function renderEasterEggOverlay({ campaign, profile, onClose }) {
-  // nome que vai pros recordes: o de exibição da conta (editável aqui mesmo, no menu), ou o apelido de login
-  let playerName = displayNameOf(profile) || 'jogador';
+  // nome que vai pros recordes DESTA mesa: o que a pessoa escolheu pra ela (editável aqui mesmo, no menu), senão o da conta, senão o apelido de login
+  let playerName = nameInCampaign(profile) || 'jogador';
   let renaming = false;
   let root = document.getElementById('easter-egg-root');
   if (root) return; // já tem um aberto -- não empilha dois
@@ -210,9 +210,9 @@ export function renderEasterEggOverlay({ campaign, profile, onClose }) {
   // "jogando como [nome] ✎": muda o nome de exibição da conta, que é o que aparece nos recordes (um gatilho no banco atualiza os recordes antigos)
   function whoHtml() {
     if (renaming) {
-      return '<div class="ee-who"><input type="text" id="ee-name-input" maxlength="40" value="' + escapeHtml(playerName) + '" placeholder="seu nome nos recordes"><button type="button" class="btn" id="ee-name-save">salvar</button><button type="button" class="btn btn-ghost" id="ee-name-cancel">cancelar</button></div><div class="ee-who-err" id="ee-name-err"></div>';
+      return '<div class="ee-who"><input type="text" id="ee-name-input" maxlength="40" value="' + escapeHtml(playerName) + '" placeholder="deixe vazio pra usar o nome da conta"><button type="button" class="btn" id="ee-name-save">salvar</button><button type="button" class="btn btn-ghost" id="ee-name-cancel">cancelar</button></div><div class="ee-who-err" id="ee-name-err"></div>';
     }
-    return '<div class="ee-who">jogando como <b>' + escapeHtml(playerName) + '</b> <button type="button" class="ee-who-edit" id="ee-name-edit" title="mudar o nome que aparece nos recordes">✎ mudar nome</button></div>';
+    return '<div class="ee-who">jogando como <b>' + escapeHtml(playerName) + '</b> <small class="ee-who-scope">(nesta mesa)</small> <button type="button" class="ee-who-edit" id="ee-name-edit" title="mudar o nome que aparece nos recordes e nas rolagens DESTA mesa">✎ mudar nome</button></div>';
   }
   function wireWho() {
     const edit = root.querySelector('#ee-name-edit');
@@ -234,9 +234,8 @@ export function renderEasterEggOverlay({ campaign, profile, onClose }) {
       const btn = root.querySelector('#ee-name-save');
       btn.disabled = true;
       try {
-        const patch = await updateMyProfile(profile.id, { display_name: input.value });
-        profile.display_name = patch.display_name;
-        playerName = displayNameOf(profile) || 'jogador';
+        profile.member_name = await setMyCampaignName(campaign.id, input.value);
+        playerName = nameInCampaign(profile) || 'jogador';
         renaming = false;
         render();
         try { scores = await listHighScores(campaign.id, selectedGame); render(); } catch (_) { /* ranking só atualiza no próximo abrir */ }

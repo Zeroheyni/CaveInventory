@@ -75,3 +75,4 @@
 .ee-who-edit:hover{ color: var(--accent); border-color: var(--accent-core); }
 .ee-who-err{ text-align:center; color: var(--danger); font-size:11px; min-height:0; }
 .side-nav-games .side-nav-icon{ color: var(--accent); }
+.ee-who-scope{ color: var(--ink-faint); font-size:10.5px; }

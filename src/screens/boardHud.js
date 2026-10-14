@@ -27,6 +27,7 @@
 // Montado UMA VEZ só (não a cada abrir/fechar tabuleiro) -- igual toda aba
 // de character.js. Ver o raciocínio completo (z-index, irmão do container
 // do board.js) em board.css.
+import { nameInCampaign } from '../accounts.js';
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
 import { getCombatState, getParticipants, subscribeCombat, isVisibleToPlayer, updateParticipantHp, updateParticipantStamina, resolveCondition, listCustomConditions, advanceTurn, retreatTurn } from '../combat.js';
@@ -868,7 +869,7 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
   const saveTimers = new Map();
   let inflight = 0;
 
-  const rollerName = () => (hasChar ? characterName || (char && char.name) || profile.username : profile.username) || 'jogador';
+  const rollerName = () => (hasChar ? characterName || (char && char.name) || nameInCampaign(profile) : nameInCampaign(profile)) || 'jogador';
 
   // ------------------------------------------------ valores
   function vitalInfo(kind) {

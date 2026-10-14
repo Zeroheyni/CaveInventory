@@ -9,7 +9,7 @@ import { padPassword } from './nickname.js';
 export async function listMyMemberships(userId) {
   const { data, error } = await supabase
     .from('campaign_members')
-    .select('campaign_id, role, can_see_others_hp, can_see_hidden_initiative, is_transport_admin, campaigns(*)')
+    .select('campaign_id, role, display_name, can_see_others_hp, can_see_hidden_initiative, is_transport_admin, campaigns(*)')
     .eq('user_id', userId);
   if (error) throw error;
   return (data || []).filter((m) => m.campaigns);
@@ -60,7 +60,19 @@ export function effectiveProfile(profile, campaign, membership, { asPlayer = fal
     can_see_others_hp: isMaster || !!membership?.can_see_others_hp,
     can_see_hidden_initiative: isMaster || !!membership?.can_see_hidden_initiative,
     is_transport_admin: !!membership?.is_transport_admin,
+    // nome que a pessoa escolheu pra ESTA mesa (nulo = vale o nome da conta)
+    member_name: (membership?.display_name || '').trim() || null,
   };
+}
+
+// nome mostrado nesta mesa: o da mesa, senão o de exibição da conta, senão o apelido de login
+export const nameInCampaign = (p) => (p && ((p.member_name && p.member_name.trim()) || displayNameOf(p))) || '';
+
+// troca o nome DESTA mesa (vazio = volta a usar o da conta); devolve o nome gravado ou null
+export async function setMyCampaignName(campaignId, name) {
+  const { data, error } = await supabase.rpc('set_my_campaign_name', { p_campaign_id: campaignId, p_name: name || '' });
+  if (error) throw error;
+  return data || null;
 }
 
 // ---- escritas (RPCs de db/065 e db/066) ----
