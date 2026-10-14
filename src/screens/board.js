@@ -1627,9 +1627,23 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   }
 
   function onTokenPointerDown(e) {
-    const el = e.currentTarget;
-    const tokenId = el.dataset.tokenId;
-    const token = tokens.find((t) => t.id === tokenId);
+    let el = e.currentTarget;
+    let tokenId = el.dataset.tokenId;
+    let token = tokens.find((t) => t.id === tokenId);
+    // pins empilhados: o de cima pode ser de outro jogador e engolia o clique do de baixo. Então, se o pin que recebeu o clique não é meu
+    // (ou se o clique foi com Alt = "pegar o próximo de baixo"), procuro embaixo do ponteiro o primeiro pin que eu posso mexer.
+    if (!token || !canMoveToken(token) || e.altKey) {
+      const under = document.elementsFromPoint(e.clientX, e.clientY).filter((n) => n.classList && n.classList.contains('board-token'));
+      const below = under.slice(Math.max(0, under.indexOf(el)) + 1);
+      const pick = below.find((n) => {
+        const t = tokens.find((x) => x.id === n.dataset.tokenId);
+        return t && canMoveToken(t);
+      });
+      if (!pick) return;
+      el = pick;
+      tokenId = el.dataset.tokenId;
+      token = tokens.find((t) => t.id === tokenId);
+    }
     if (!token || !canMoveToken(token)) return;
     const boardArea = $('board-stage'); // palco: o retângulo dele já inclui zoom/pan
     if (!boardArea) return;

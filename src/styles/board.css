@@ -837,14 +837,6 @@
 /* ======================= PIN: ROTAÇÃO + SELEÇÃO (boardSelect.js) ======================= */
 /* a arte do pin gira; a moldura/botões/barra de vida não */
 .board-token > img, .board-token > .board-token-placeholder{ transform: rotate(var(--rot, 0deg)); transition: transform .08s linear; }
-/* cunha na borda mostrando pra onde o pin está virado (só quando foi girado/tem feixe) */
-.board-token[data-rot]::before{
-  content:""; position:absolute; inset:0; pointer-events:none; z-index:3;
-  background: conic-gradient(from calc(var(--rot, 0deg) - 17deg), rgba(255,255,255,0.95) 0deg 34deg, transparent 34deg 360deg);
-  -webkit-mask: radial-gradient(circle farthest-side, transparent 66%, #000 68%); mask: radial-gradient(circle farthest-side, transparent 66%, #000 68%);
-  filter: drop-shadow(0 0 3px rgba(255,255,255,0.8));
-}
-
 .board-sel-layer{ position:absolute; inset:0; z-index:595; pointer-events:none; }
 .board-sel{ position:absolute; aspect-ratio:1/1; min-width:32px; transform:translate(-50%,-50%); pointer-events:none; }
 .board-sel-box{

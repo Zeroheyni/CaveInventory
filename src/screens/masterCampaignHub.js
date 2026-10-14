@@ -128,6 +128,10 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
             <span class="side-nav-label">${item.label}</span>
           </button>`
           ).join('')}
+          <button type="button" class="side-nav-item side-nav-games" id="hub-games-btn" title="minijogos com ranking da campanha">
+            <span class="side-nav-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="11" rx="5"/><path d="M8 10.5v4M6 12.5h4"/><circle cx="15.5" cy="11.5" r="1" fill="currentColor" stroke="none"/><circle cx="17.8" cy="13.6" r="1" fill="currentColor" stroke="none"/></svg></span>
+            <span class="side-nav-label">Jogos</span>
+          </button>
         </div>
       </nav>
     `;
@@ -151,6 +155,12 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
     easterEgg.attach(dot && dot.closest('.title'));
 
     const sideNav = document.getElementById('side-nav');
+    // item "Jogos" do menu (o gatilho escondido do título continua funcionando)
+    document.getElementById('hub-games-btn').addEventListener('click', async () => {
+      sideNav.classList.remove('open');
+      const { renderEasterEggOverlay } = await import('./easterEggGames.js');
+      renderEasterEggOverlay({ campaign, profile, onClose: loadUnlockedGames });
+    });
     document.getElementById('side-nav-toggle').addEventListener('click', () => {
       sideNav.classList.toggle('open');
     });

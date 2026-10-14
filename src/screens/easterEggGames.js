@@ -5,6 +5,7 @@
 // re-render da tela por baixo enquanto o overlay estiver aberto.
 import { escapeHtml } from '../shared/gameData.js';
 import { submitGameScore, listHighScores } from '../games.js';
+import { displayNameOf, updateMyProfile } from '../accounts.js';
 import { createSnakeGame } from '../games/snake.js';
 import { createTetrisGame } from '../games/tetris.js';
 import { createFlappyGame } from '../games/flappy.js';
@@ -43,7 +44,9 @@ const GAMES = {
 // masterCampaignHub.js) recarregar quais temas o jogador destravou
 // jogando essa sessão (ver db/049), sem precisar recarregar a página.
 export function renderEasterEggOverlay({ campaign, profile, onClose }) {
-  const playerName = profile.username || 'jogador';
+  // nome que vai pros recordes: o de exibição da conta (editável aqui mesmo, no menu), ou o apelido de login
+  let playerName = displayNameOf(profile) || 'jogador';
+  let renaming = false;
   let root = document.getElementById('easter-egg-root');
   if (root) return; // já tem um aberto -- não empilha dois
   root = document.createElement('div');
@@ -204,13 +207,62 @@ export function renderEasterEggOverlay({ campaign, profile, onClose }) {
       </div>`;
   }
 
+  // "jogando como [nome] ✎": muda o nome de exibição da conta, que é o que aparece nos recordes (um gatilho no banco atualiza os recordes antigos)
+  function whoHtml() {
+    if (renaming) {
+      return '<div class="ee-who"><input type="text" id="ee-name-input" maxlength="40" value="' + escapeHtml(playerName) + '" placeholder="seu nome nos recordes"><button type="button" class="btn" id="ee-name-save">salvar</button><button type="button" class="btn btn-ghost" id="ee-name-cancel">cancelar</button></div><div class="ee-who-err" id="ee-name-err"></div>';
+    }
+    return '<div class="ee-who">jogando como <b>' + escapeHtml(playerName) + '</b> <button type="button" class="ee-who-edit" id="ee-name-edit" title="mudar o nome que aparece nos recordes">✎ mudar nome</button></div>';
+  }
+  function wireWho() {
+    const edit = root.querySelector('#ee-name-edit');
+    if (edit) {
+      edit.addEventListener('click', () => {
+        renaming = true;
+        render();
+        const i = root.querySelector('#ee-name-input');
+        if (i) { i.focus(); i.select(); }
+      });
+    }
+    const input = root.querySelector('#ee-name-input');
+    if (!input) return;
+    const cancel = () => {
+      renaming = false;
+      render();
+    };
+    const save = async () => {
+      const btn = root.querySelector('#ee-name-save');
+      btn.disabled = true;
+      try {
+        const patch = await updateMyProfile(profile.id, { display_name: input.value });
+        profile.display_name = patch.display_name;
+        playerName = displayNameOf(profile) || 'jogador';
+        renaming = false;
+        render();
+        try { scores = await listHighScores(campaign.id, selectedGame); render(); } catch (_) { /* ranking só atualiza no próximo abrir */ }
+      } catch (err) {
+        btn.disabled = false;
+        const e = root.querySelector('#ee-name-err');
+        if (e) e.textContent = 'não deu pra salvar: ' + err.message;
+      }
+    };
+    root.querySelector('#ee-name-save').addEventListener('click', save);
+    root.querySelector('#ee-name-cancel').addEventListener('click', cancel);
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') save();
+      else if (e.key === 'Escape') cancel();
+    });
+  }
+
   function render() {
     if (view === 'menu') {
       root.innerHTML = `
         <div class="easter-egg-overlay">
           <div class="easter-egg-panel">
             <button type="button" class="easter-egg-close" id="ee-close" title="fechar">✕</button>
-            <div class="ee-title">🎮 ACHOU O EASTER EGG</div>
+            <div class="ee-title">🎮 MINIJOGOS</div>
+            ${whoHtml()}
             <div class="ee-game-tabs">
               ${Object.entries(GAMES)
                 .map(([key, g]) => `<button type="button" class="ee-game-tab ${selectedGame === key ? 'active' : ''}" data-ee-select="${key}">${g.icon} ${g.label}</button>`)
@@ -225,6 +277,7 @@ export function renderEasterEggOverlay({ campaign, profile, onClose }) {
         </div>`;
       root.querySelector('#ee-close').addEventListener('click', close);
       root.querySelector('#ee-play-btn').addEventListener('click', startGame);
+      wireWho();
       root.querySelectorAll('[data-ee-select]').forEach((btn) => btn.addEventListener('click', () => openMenu(btn.dataset.eeSelect)));
       return;
     }

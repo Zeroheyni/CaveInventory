@@ -66,3 +66,12 @@
 .ee-lb-name{ color: var(--ink-dim); }
 .ee-lb-score{ color: var(--accent); font-weight:600; }
 .ee-empty{ font-size:11px; color: var(--ink-faint); text-align:center; }
+
+/* nome que aparece nos recordes (editável no menu dos jogos) */
+.ee-who{ display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; font-family: var(--font-mono); font-size:12px; color: var(--ink-dim); }
+.ee-who b{ color: var(--accent); }
+.ee-who input{ background: var(--stone-900); border:1px solid var(--stone-line); color: var(--ink); border-radius:8px; padding:6px 9px; font-family: var(--font-mono); font-size:12px; width:min(220px, 60vw); }
+.ee-who-edit{ background:none; border:1px dashed var(--stone-line); color: var(--ink-faint); border-radius:8px; padding:3px 8px; cursor:pointer; font-family: var(--font-mono); font-size:11px; }
+.ee-who-edit:hover{ color: var(--accent); border-color: var(--accent-core); }
+.ee-who-err{ text-align:center; color: var(--danger); font-size:11px; min-height:0; }
+.side-nav-games .side-nav-icon{ color: var(--accent); }
