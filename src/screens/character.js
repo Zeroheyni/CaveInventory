@@ -49,6 +49,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M3 12a9 9 0 109-9"/><path d="M3 4v5h5"/></svg>
         <span class="undo-count-badge" id="undo-count-badge" style="display:none;">0</span>
       </button>
+      <button class="theme-trigger-btn games-header-btn" id="games-header-btn" title="minijogos com ranking da campanha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="11" rx="5"/><path d="M8 10.5v4M6 12.5h4"/><circle cx="15.5" cy="11.5" r="1" fill="currentColor" stroke="none"/><circle cx="17.8" cy="13.6" r="1" fill="currentColor" stroke="none"/></svg><span>JOGOS</span></button>
       <div class="log-picker-wrap" id="summary-picker-wrap">
         <button class="theme-trigger-btn" id="summary-trigger" title="ver resumo do inventário">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="4" y="10" width="4" height="10" rx="1"/><rect x="10" y="6" width="4" height="14" rx="1"/><rect x="16" y="13" width="4" height="7" rx="1"/></svg>
@@ -2912,6 +2913,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
         openGames();
       });
     }
+    const gamesHeader = document.getElementById('games-header-btn');
+    if (gamesHeader) gamesHeader.addEventListener('click', openGames);
   })();
 
   // ---- desfazer: captura o estado antes de qualquer clique/drop e compara depois ----

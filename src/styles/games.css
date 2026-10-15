@@ -76,3 +76,9 @@
 .ee-who-err{ text-align:center; color: var(--danger); font-size:11px; min-height:0; }
 .side-nav-games .side-nav-icon{ color: var(--accent); }
 .ee-who-scope{ color: var(--ink-faint); font-size:10.5px; }
+
+/* botão visível "JOGOS" no cabeçalho (ficha e hub do mestre) */
+.theme-trigger-btn.games-header-btn{ width:auto; padding:0 11px; gap:7px; font:700 10.5px var(--font-display); letter-spacing:0.12em; }
+.games-header-btn span{ color: var(--ink-dim); }
+.games-header-btn:hover span{ color: var(--accent); }
+@media (max-width:520px){ .games-header-btn span{ display:none; } .theme-trigger-btn.games-header-btn{ width:36px; padding:0; } }

@@ -95,6 +95,7 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
             <div class="id">${escapeHtml(campaign.name)}</div>
           </div>
           <div style="display:flex; align-items:flex-start; gap:8px;">
+            <button class="theme-trigger-btn games-header-btn" id="games-header-btn" title="minijogos com ranking da campanha"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><rect x="3" y="7" width="18" height="11" rx="5"/><path d="M8 10.5v4M6 12.5h4"/><circle cx="15.5" cy="11.5" r="1" fill="currentColor" stroke="none"/><circle cx="17.8" cy="13.6" r="1" fill="currentColor" stroke="none"/></svg><span>JOGOS</span></button>
             <div class="theme-picker-wrap" id="theme-picker-wrap">
               <button class="theme-trigger-btn" id="theme-trigger" title="mudar tema">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3a9 9 0 100 18c1 0 1.8-.8 1.8-1.8 0-.5-.2-.9-.5-1.2-.3-.3-.5-.7-.5-1.2 0-1 .8-1.8 1.8-1.8H16a4 4 0 004-4c0-4.4-3.6-8-8-8z"/><circle cx="7.5" cy="10.5" r="1" fill="currentColor" stroke="none"/><circle cx="9.5" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="14.5" cy="7" r="1" fill="currentColor" stroke="none"/><circle cx="16.5" cy="10.5" r="1" fill="currentColor" stroke="none"/></svg>
@@ -156,11 +157,13 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
 
     const sideNav = document.getElementById('side-nav');
     // item "Jogos" do menu (o gatilho escondido do título continua funcionando)
-    document.getElementById('hub-games-btn').addEventListener('click', async () => {
+    const openGames = async () => {
       sideNav.classList.remove('open');
       const { renderEasterEggOverlay } = await import('./easterEggGames.js');
       renderEasterEggOverlay({ campaign, profile, onClose: loadUnlockedGames });
-    });
+    };
+    document.getElementById('hub-games-btn').addEventListener('click', openGames);
+    document.getElementById('games-header-btn').addEventListener('click', openGames);
     document.getElementById('side-nav-toggle').addEventListener('click', () => {
       sideNav.classList.toggle('open');
     });
