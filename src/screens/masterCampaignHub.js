@@ -13,6 +13,7 @@ import { listUnlockedGameThemes } from '../games.js';
 import { renderCombatScreen } from './combat.js';
 import { renderBoardScreen } from './board.js';
 import { createEasterEggTrigger } from '../easterEggTrigger.js';
+import { openGamesOverlay } from '../gamesLauncher.js';
 import { renderMasterFichaScreen } from './masterFicha.js';
 import { renderNpcBankScreen } from './npcBank.js';
 import { renderMasterInventoryChooser } from './masterInventoryChooser.js';
@@ -66,10 +67,7 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
   let theme = profile.theme || 'caverna-azul';
   const mounted = Object.fromEntries(MODES.map((m) => [m, false]));
   // o contador mora dentro do gatilho (fora do render()) -- não pode zerar toda vez que a tela é reconstruída
-  const easterEgg = createEasterEggTrigger(async () => {
-    const { renderEasterEggOverlay } = await import('./easterEggGames.js');
-    renderEasterEggOverlay({ campaign, profile, onClose: loadUnlockedGames });
-  });
+  const easterEgg = createEasterEggTrigger(() => openGamesOverlay({ campaign, profile, onClose: loadUnlockedGames }));
   // quais jogos escondidos essa conta já destravou (ver character.js/
   // THEMES + db/049) -- carregado uma vez e de novo quando o overlay
   // dos jogos fecha, pra um tema recém-destravado aparecer sem recarregar.
@@ -157,10 +155,9 @@ export function renderMasterCampaignHub(app, { session, profile, campaign, onBac
 
     const sideNav = document.getElementById('side-nav');
     // item "Jogos" do menu (o gatilho escondido do título continua funcionando)
-    const openGames = async () => {
+    const openGames = () => {
       sideNav.classList.remove('open');
-      const { renderEasterEggOverlay } = await import('./easterEggGames.js');
-      renderEasterEggOverlay({ campaign, profile, onClose: loadUnlockedGames });
+      openGamesOverlay({ campaign, profile, onClose: loadUnlockedGames });
     };
     document.getElementById('hub-games-btn').addEventListener('click', openGames);
     document.getElementById('games-header-btn').addEventListener('click', openGames);

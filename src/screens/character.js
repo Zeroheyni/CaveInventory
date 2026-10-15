@@ -12,6 +12,7 @@ import { renderSessionJournalScreen } from './sessionJournal.js';
 import { renderMasterInventoryChooser } from './masterInventoryChooser.js';
 import { renderBoardScreen } from './board.js';
 import { createEasterEggTrigger } from '../easterEggTrigger.js';
+import { openGamesOverlay } from '../gamesLauncher.js';
 import { createPublicItem, createPublicContainer, listCampaignPlayers, transferCurrencyRpc } from '../publicArea.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 import { updateProfileTheme } from '../campaign.js';
@@ -2899,10 +2900,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   // (a área clicável é um raio em volta do pontinho, ver easterEggTrigger.js)
   (function wireEasterEgg() {
     const dot = document.querySelector('.title .dot');
-    const openGames = async () => {
-      const { renderEasterEggOverlay } = await import('./easterEggGames.js');
-      renderEasterEggOverlay({ campaign, profile, onClose: loadUnlockedGames });
-    };
+    const openGames = () => openGamesOverlay({ campaign, profile, onClose: loadUnlockedGames });
     createEasterEggTrigger(openGames).attach(dot && dot.closest('.title'));
     // o jeito escondido continua valendo; agora também tem o item "Jogos" no menu lateral
     const gamesNav = document.getElementById('games-trigger');

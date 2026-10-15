@@ -1,3 +1,21 @@
+// site atualizado enquanto a aba estava aberta/em cache: um arquivo sob demanda sumiu -- recarrega uma vez pra pegar a versão nova
+window.addEventListener('vite:preloadError', (e) => {
+  try {
+    if (sessionStorage.getItem('cave.preload.reloaded') === '1') return;
+    sessionStorage.setItem('cave.preload.reloaded', '1');
+  } catch (_) { /* sem storage: recarrega mesmo assim */ }
+  e.preventDefault();
+  window.location.reload();
+});
+
+// carregou bem: libera de novo o recarregamento automático (vale pra próxima atualização do site)
+setTimeout(() => {
+  try {
+    sessionStorage.removeItem('cave.preload.reloaded');
+    sessionStorage.removeItem('cave.games.reloaded');
+  } catch (_) { /* tanto faz */ }
+}, 8000);
+
 import './styles/theme.css';
 import './styles/auth.css';
 import './styles/campaign-strip.css';
