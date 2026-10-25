@@ -19,7 +19,7 @@ export async function listMyMemberships(userId) {
 export async function listMyCharacters(userId) {
   const { data, error } = await supabase
     .from('characters')
-    .select('id, name, campaign_id, avatar_url, level, xp, vitalidade, hp_current, hp_max_override, sheet_data, updated_at, campaigns(id, name, system)')
+    .select('id, name, campaign_id, avatar_url, level, xp, vitalidade, hp_current, hp_max_override, system_data, sheet_data, updated_at, campaigns(id, name, system)')
     .eq('owner_id', userId)
     .eq('is_npc', false)
     .order('name');

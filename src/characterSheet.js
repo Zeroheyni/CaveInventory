@@ -4,16 +4,31 @@
 // grava de volta pra cá quando o participante tem character_id.
 import { supabase } from './supabaseClient.js';
 import { activeRuleset } from './systems/index.js';
+import { grantXpMsl, revokeXpMsl, demoteLevelMsl } from './systems/msl-actions.js';
 
 export const SHEET_FIELDS =
   'id, campaign_id, owner_id, name, avatar_url, level, xp, status_points_unspent, status_confirmed, ' +
   'vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, hp_current, estamina_current, sheet_data, ' +
-  'is_npc, npc_sheet_type, npc_has_status, hp_max_override, estamina_max_override, npc_damage, theme';
+  'is_npc, npc_sheet_type, npc_has_status, hp_max_override, estamina_max_override, npc_damage, theme, system_data';
 
 // atributos, vida, estamina e XP vêm do SISTEMA DE REGRAS da campanha atual (src/systems/); aqui ficam só os atalhos
 // que o resto do app já usava. (As regras do Cave Story foram extraídas pra src/systems/cave-story.js sem mudar nada.)
 // statusStats() -- atributos de status com ícone/cor: usado por ficha.js, combat.js, boardHud.js, npcBank.js, customBars.js.
 export const statusStats = () => activeRuleset().attributes;
+// valor / modificador de teste de um atributo conforme o sistema (Cave Story: a coluna; Magic Learning: system_data)
+export const statValueOf = (char, key) => {
+  const rs = activeRuleset();
+  return rs.statValue ? rs.statValue(char, key) : char ? char[key] : undefined;
+};
+export const testModOf = (char, key) => {
+  const rs = activeRuleset();
+  return rs.attributeMod ? rs.attributeMod(char, key) : (char && char[key]) || 0;
+};
+// atributos que cabem em chips compactos (dock do tabuleiro, resumo do mestre); sem lista própria = todos
+export const compactStats = () => {
+  const rs = activeRuleset();
+  return rs.dockStats ? rs.dockStats.map((k) => rs.attributes.find((a) => a.key === k)).filter(Boolean) : rs.attributes;
+};
 export const hpMax = (char) => activeRuleset().hpMax(char);
 export const estaminaMax = (char) => activeRuleset().estaminaMax(char);
 export const xpNeeded = (level) => activeRuleset().xpNeeded(level);
@@ -143,6 +158,7 @@ export async function confirmStatusAllocation(characterId, stats) {
 }
 
 export async function grantXp(characterIds, amount) {
+  if (activeRuleset().id === 'magic-learning') return grantXpMsl(characterIds, amount); // regras próprias de nível/pontos
   const { error } = await supabase.rpc('grant_xp', { p_character_ids: characterIds, p_amount: amount });
   if (error) throw error;
 }
@@ -150,10 +166,12 @@ export async function grantXp(characterIds, amount) {
 // tira XP (desce de nível sozinho se precisar) e diminuir nível direto
 // (reseta XP pro começo do nível novo) -- db/051.
 export async function revokeXp(characterIds, amount) {
+  if (activeRuleset().id === 'magic-learning') return revokeXpMsl(characterIds, amount);
   const { error } = await supabase.rpc('revoke_xp', { p_character_ids: characterIds, p_amount: amount });
   if (error) throw error;
 }
 export async function demoteLevel(characterIds, levels) {
+  if (activeRuleset().id === 'magic-learning') return demoteLevelMsl(characterIds, levels);
   const { error } = await supabase.rpc('demote_level', { p_character_ids: characterIds, p_levels: levels });
   if (error) throw error;
 }

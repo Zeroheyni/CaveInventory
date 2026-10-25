@@ -37,7 +37,7 @@ import {
   resolveCondition,
 } from '../combat.js';
 import { listCampaignMembers } from '../accounts.js';
-import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, statusStats } from '../characterSheet.js';
+import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, statusStats, statValueOf, testModOf, compactStats } from '../characterSheet.js';
 import { activeRuleset } from '../systems/index.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 import { rollDice, listRecentRolls, subscribeDiceRolls, DICE_PRESETS, normalizeCustomDie, getHiddenRollMode, setHiddenRollMode, onHiddenRollMode, revealRoll } from '../dice.js';
@@ -71,6 +71,9 @@ import {
 // por cima de tudo -- duplicando (e colidindo com) o drawer de Dados
 // que o próprio tabuleiro já tem. Character.js/masterCampaignHub.js
 // não passam isso, continuam vendo a bandeja normal de sempre.
+// nome da segunda barra (Cave Story: Estamina; Magic Learning: PE)
+const vitalLabel = () => (activeRuleset().vitalLabels || {}).estamina || "Estamina";
+
 export function renderCombatScreen(app, { session, profile, campaign, characterId, characterName, topicSuffix, embedded }) {
   const campaignId = campaign.id;
   const isMaster = profile.role === 'master';
@@ -141,7 +144,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     if (!isMaster && characterId) {
       const { data: charRow } = await supabase
         .from('characters')
-        .select('vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao')
+        .select('vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, system_data')
         .eq('id', characterId)
         .maybeSingle();
       myStatusStats = charRow || null;
@@ -151,7 +154,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         supabase
           .from('characters')
           .select(
-            'id, name, vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, hp_current, estamina_current, avatar_url, data, ' +
+            'id, name, vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, system_data, hp_current, estamina_current, avatar_url, data, ' +
               'is_npc, npc_sheet_type, npc_has_status, hp_max_override, estamina_max_override, npc_damage'
           )
           .eq('campaign_id', campaignId)
@@ -271,7 +274,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           <div class="combat-dice-tray-stat-row">
             <select id="combat-tray-stat-select" title="escolher status pra testar">
               ${statusStats().map((s) => {
-                const value = myStatusStats[s.key] ?? 0;
+                const value = testModOf(myStatusStats, s.key);
                 return `<option value="${s.key}" ${mySelectedStat === s.key ? 'selected' : ''}>${s.icon} ${s.label} (${value >= 0 ? '+' : ''}${value})</option>`;
               }).join('')}
             </select>
@@ -360,7 +363,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
               <select id="custom-cond-bar">
                 <option value="">não tinge barra</option>
                 <option value="hp">tinge HP</option>
-                <option value="estamina">tinge Estamina</option>
+                <option value="estamina">tinge ${vitalLabel()}</option>
               </select>
               <input type="color" id="custom-cond-color" value="#ff5a5a">
             </div>
@@ -620,7 +623,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         ${
           showStatusChips
             ? `<div class="combat-master-stat-row">
-                ${statusStats().map((s) => `<span class="combat-master-stat-chip" style="--stat-color:${s.color};" title="${s.label}">${s.icon}${char[s.key] ?? '—'}</span>`).join('')}
+                ${compactStats().map((s) => `<span class="combat-master-stat-chip" style="--stat-color:${s.color};" title="${s.label}">${s.icon}${statValueOf(char, s.key) ?? '—'}</span>`).join('')}
               </div>`
             : ''
         }
@@ -710,7 +713,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             <button type="button" class="combat-hp-btn" data-hp-delta="1" data-pid="${mySelf.id}">+</button>
           </div>
           <div class="combat-self-card-head" style="margin-top:10px;">
-            <span class="combat-self-name">⚡ Estamina</span>
+            <span class="combat-self-name">⚡ ${vitalLabel()}</span>
             <span class="combat-hp-readout"><b>${mySelf.stamina_current}</b> / ${mySelf.stamina_max}</span>
           </div>
           <div class="combat-hp-bar"><div class="combat-hp-fill ficha-estamina-fill" style="width:${staminaPct(mySelf)}%${mySelfEstColor ? `; background:${mySelfEstColor}` : ''}"></div></div>
@@ -871,7 +874,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             <input type="number" class="slot-select" id="combat-add-hp" min="1" value="10">
           </div>
           <div class="field" style="margin-bottom:10px;">
-            <label>Estamina máxima</label>
+            <label>${vitalLabel()} máximo</label>
             <input type="number" class="slot-select" id="combat-add-stamina" min="0" value="10">
           </div>`
           }
@@ -1134,7 +1137,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         if (diceRolling || !myStatusStats) return;
         const stat = statusStats().find((s) => s.key === mySelectedStat);
         if (!stat) return;
-        const mod = myStatusStats[stat.key] || 0;
+        const mod = testModOf(myStatusStats, stat.key);
         diceRolling = true;
         diceError = '';
         render();
@@ -1273,7 +1276,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
           for (const charId of selectedCharIds) {
             const { data: char } = await supabase
               .from('characters')
-              .select('vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao')
+              .select('vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, system_data')
               .eq('id', charId)
               .maybeSingle();
             const initialValue = customBarMax(newBar, char);
@@ -1528,7 +1531,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             const def = customBarDefs.find((d) => d.id === defId);
             const { data: char } = await supabase
               .from('characters')
-              .select('vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao')
+              .select('vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, system_data')
               .eq('id', charId)
               .maybeSingle();
             await assignCustomBar(campaignId, defId, charId, customBarMax(def, char));

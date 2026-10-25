@@ -581,11 +581,13 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     // capacidade máxima é fórmula (3x Força + adicional do mestre), não
     // mais um número livre -- ver db/028_patch_max_carga_formula.sql.
     state.maxCargaBonus = (typeof row.max_carga_bonus === 'number') ? row.max_carga_bonus : 0;
-    state.maxCarga = activeRuleset().carryMax(typeof row.forca === 'number' ? row.forca : 10, state.maxCargaBonus);
+    state.carryRow = row;
+    state.maxCarga = activeRuleset().carryMax(typeof row.forca === 'number' ? row.forca : 10, state.maxCargaBonus, row);
     state.currency = (row.currency && typeof row.currency === 'object') ? row.currency : { bronze:0, silver:0, gold:0, platinum:0 };
     ['vitalidade','forca','agilidade','destreza','inteligencia','estamina','observacao'].forEach(k => {
       if(typeof row[k] === 'number') state.status[k] = row[k];
     });
+    applyRulesetFormulaStats(row);
 
     ['bronze','silver','gold','platinum'].forEach(k => { if(typeof state.currency[k] !== 'number' || isNaN(state.currency[k])) state.currency[k] = 0; });
     state.items.forEach(it => {
@@ -674,6 +676,13 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   // campos que NÃO fazem parte da versão do inventário (status e
   // adicional de carga, mexidos pelo mestre/ficha) -- aplica direto
   // do payload, são colunas pequenas e sempre presentes.
+  // sistemas com ficha própria (Magic Learning): as siglas de fórmula de dano (FOR, VIT, AGI, EST, INT...) leem os atributos de lá
+  function applyRulesetFormulaStats(row){
+    const rs = activeRuleset();
+    if(!rs.formulaStats) return;
+    Object.assign(state.status, rs.formulaStats(row));
+  }
+
   function applyRemoteScalars(row){
     let changed = false;
     if(typeof row.max_carga_bonus === 'number' && row.max_carga_bonus !== state.maxCargaBonus){
@@ -687,7 +696,9 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       }
     });
     if(!changed) return;
-    state.maxCarga = activeRuleset().carryMax(typeof state.status.forca === 'number' ? state.status.forca : 10, state.maxCargaBonus);
+    state.carryRow = Object.assign({}, state.carryRow || {}, row);
+    state.maxCarga = activeRuleset().carryMax(typeof state.status.forca === 'number' ? state.status.forca : 10, state.maxCargaBonus, state.carryRow);
+    applyRulesetFormulaStats(state.carryRow);
     renderAll();
   }
 
@@ -712,11 +723,13 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     state.transportPersonal = Array.isArray(d.transportPersonal) ? d.transportPersonal : [];
     state.transportPersonalMaxCarga = d.transportPersonalMaxCarga !== undefined ? d.transportPersonalMaxCarga : 100;
     state.maxCargaBonus = (typeof row.max_carga_bonus === 'number') ? row.max_carga_bonus : 0;
-    state.maxCarga = activeRuleset().carryMax(typeof row.forca === 'number' ? row.forca : 10, state.maxCargaBonus);
+    state.carryRow = row;
+    state.maxCarga = activeRuleset().carryMax(typeof row.forca === 'number' ? row.forca : 10, state.maxCargaBonus, row);
     state.currency = (row.currency && typeof row.currency === 'object') ? row.currency : { bronze:0, silver:0, gold:0, platinum:0 };
     ['vitalidade','forca','agilidade','destreza','inteligencia','estamina','observacao'].forEach(k => {
       if(typeof row[k] === 'number') state.status[k] = row[k];
     });
+    applyRulesetFormulaStats(row);
     renderAll();
     renderCampaignStrip();
     // NÃO usa flashStatus: ele agenda um saveState() 1,8s depois, e aqui
@@ -2393,7 +2406,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   const maxCargaBonusInput = document.getElementById('max-carga-bonus-input');
   if(maxCargaBonusInput) maxCargaBonusInput.addEventListener('input', (e)=>{
     state.maxCargaBonus = Math.max(0, parseFloat(e.target.value) || 0);
-    state.maxCarga = activeRuleset().carryMax(state.status.forca || 0, state.maxCargaBonus);
+    state.maxCarga = activeRuleset().carryMax(state.status.forca || 0, state.maxCargaBonus, state.carryRow);
     renderGauge(); saveState();
   });
   document.getElementById('max-carga-input-personal').addEventListener('input', (e)=>{

@@ -109,3 +109,31 @@ export async function clearRolls(campaignId) {
   const { error } = await supabase.from('dice_rolls').delete().eq('campaign_id', campaignId);
   if (error) throw error;
 }
+
+// Teste d20 do Magic Learning: 1d20 + modificador, com vantagem/desvantagem (rola 2d20, fica o maior/menor; as duas juntas se cancelam --
+// quem chama já resolve isso e passa 'normal'). O total gravado é o do d20 escolhido + modificador (não a soma dos dois dados).
+// Devolve a linha gravada + `kept` (o d20 que valeu).
+export async function rollD20Test(campaignId, rollerId, rollerName, modifier, label, mode = 'normal', hidden = hiddenRoll.on) {
+  const qty = mode === 'normal' ? 1 : 2;
+  const results = rollValues('d20', qty);
+  const kept = mode === 'vantagem' ? Math.max(...results) : mode === 'desvantagem' ? Math.min(...results) : results[0];
+  const total = kept + modifier;
+  const { data, error } = await supabase
+    .from('dice_rolls')
+    .insert({
+      campaign_id: campaignId,
+      roller_id: rollerId,
+      roller_name: rollerName,
+      die: 'd20',
+      qty,
+      modifier,
+      results,
+      total,
+      label: (label || 'Teste') + (mode === 'normal' ? '' : ` (${mode})`),
+      ...(hidden ? { hidden: true } : {}),
+    })
+    .select()
+    .single();
+  if (error) throw error;
+  return { ...data, kept };
+}

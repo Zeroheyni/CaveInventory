@@ -33,7 +33,7 @@ import { escapeHtml } from '../shared/gameData.js';
 import { getCombatState, getParticipants, subscribeCombat, isVisibleToPlayer, updateParticipantHp, updateParticipantStamina, resolveCondition, listCustomConditions, advanceTurn, retreatTurn } from '../combat.js';
 import { renderCombatScreen } from './combat.js';
 import { renderDiceScreen } from './dice.js';
-import { hpMax, estaminaMax, statusStats } from '../characterSheet.js';
+import { hpMax, estaminaMax, statusStats, testModOf, compactStats } from '../characterSheet.js';
 import { activeRuleset } from '../systems/index.js';
 import { listCharacterCustomBarsFor, customBarMax, updateCharacterCustomBarValue } from '../customBars.js';
 import { rollDice, subscribeDiceRolls, DICE_PRESETS, sidesFromDie, getHiddenRollMode, setHiddenRollMode, onHiddenRollMode, revealRoll } from '../dice.js';
@@ -889,7 +889,7 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
   }
   function vitalsList() {
     const list = [{ kind: 'hp', label: '❤ HP', color: null }];
-    if (estaminaMax(char) > 0) list.push({ kind: 'estamina', label: '⚡ EST', color: '#ffd93d' });
+    if (estaminaMax(char) > 0) list.push({ kind: 'estamina', label: '⚡ ' + ((activeRuleset().vitalLabels || {}).estamina || 'EST'), color: '#ffd93d' });
     customBars.forEach((cb) => list.push({ kind: cb.id, label: cb.bar.name, color: cb.bar.color }));
     return list;
   }
@@ -1091,8 +1091,8 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
         <div class="dock-group dock-attrs">
           <span class="dock-group-label">ATRIBUTOS</span>
           <div class="dock-chips">
-            ${statusStats().map((s) => {
-              const val = char[s.key] || 0;
+            ${compactStats().map((s) => {
+              const val = testModOf(char, s.key);
               return `<button type="button" class="dock-chip dock-stat" data-stat="${s.key}" style="--c:${s.color};" title="${escapeHtml(s.label)} — rolar ${activeRuleset().attributeTestDie} ${signed(val)}"><span class="dock-stat-ico">${s.icon}</span><b>${s.abbr}</b><i>${val}</i></button>`;
             }).join('')}
           </div>
@@ -1176,7 +1176,7 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
       btn.addEventListener('click', () => {
         const s = statusStats().find((x) => x.key === btn.dataset.stat);
         if (!s || !char) return;
-        doRoll(btn, { die: activeRuleset().attributeTestDie, qty: 1, mod: char[s.key] || 0, label: s.label });
+        doRoll(btn, { die: activeRuleset().attributeTestDie, qty: 1, mod: testModOf(char, s.key), label: s.label });
       });
     });
     el.querySelectorAll('.dock-die').forEach((btn) => {
@@ -1209,7 +1209,7 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
       const [{ data: charRow }, bars] = await Promise.all([
         supabase
           .from('characters')
-          .select('name, avatar_url, level, hp_current, estamina_current, hp_max_override, estamina_max_override, vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao')
+          .select('name, avatar_url, level, hp_current, estamina_current, hp_max_override, estamina_max_override, vitalidade, forca, agilidade, destreza, inteligencia, estamina, observacao, system_data')
           .eq('id', characterId)
           .maybeSingle(),
         listCharacterCustomBarsFor(characterId),

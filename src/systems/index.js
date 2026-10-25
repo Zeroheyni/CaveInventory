@@ -10,9 +10,10 @@
 //   4. se o sistema tiver ficha própria, guardar em characters.system_data (jsonb) -- o Cave Story fica nas colunas atuais;
 //   5. regras com validação no servidor (XP, nível, status) entram numa RPC despachada por campaigns.system.
 import { caveStory } from './cave-story.js';
+import { magicLearning } from './magic-learning.js';
 
 export const DEFAULT_SYSTEM = 'cave-story';
-const REGISTRY = { [caveStory.id]: caveStory };
+const REGISTRY = { [caveStory.id]: caveStory, [magicLearning.id]: magicLearning };
 
 export function getRuleset(id) {
   return REGISTRY[id] || REGISTRY[DEFAULT_SYSTEM];

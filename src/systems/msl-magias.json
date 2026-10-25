@@ -1,0 +1,3957 @@
+[
+  {
+    "id": "dardo_elemental",
+    "nome": "Dardo Elemental",
+    "escola": "Mágica",
+    "estilo": "Projéteis",
+    "nivel": 1,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Um pequeno dardo do elemento do conjurador.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Moldagem",
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura a até 15 m",
+    "resistencia": "ataque com Precisão Mágica contra a CE",
+    "efeito": "se acertar, causa 1d6 de dano do elemento.",
+    "custo_mp": 1,
+    "manutencao": null,
+    "custo_texto": "1 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1d6 de dano a cada 10 pontos."
+      },
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+5 m de alcance a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "esfera_elemental",
+    "nome": "Esfera Elemental",
+    "escola": "Mágica",
+    "estilo": "Projéteis",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Uma esfera do elemento explode no ponto atingido.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Moldagem",
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "criaturas num raio de 2 m em volta de um ponto a até 15 m",
+    "resistencia": "RM (metade do dano)",
+    "efeito": "causa 2d6 de dano do elemento.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1d6 de dano a cada 10 pontos."
+      },
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 m de raio a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "lanca_elemental",
+    "nome": "Lança Elemental",
+    "escola": "Mágica",
+    "estilo": "Projéteis",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Uma lança afiada do elemento perfura o alvo.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Moldagem",
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura a até 20 m",
+    "resistencia": "ataque com Precisão Mágica contra a CE",
+    "efeito": "se acertar, causa 2d8 de dano do elemento e ignora metade da armadura do alvo, arredondando para cima.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1d8 de dano a cada 10 pontos."
+      },
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+5 m de alcance a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "rajada_multipla",
+    "nome": "Rajada Múltipla",
+    "escola": "Mágica",
+    "estilo": "Projéteis",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Vários projéteis pequenos saem ao mesmo tempo.",
+    "atributo_principal": "Moldagem",
+    "atributos_secundarios": [
+      "Poder Mágico"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "até 3 criaturas a até 15 m",
+    "resistencia": "um ataque com Precisão Mágica contra a CE para cada projétil",
+    "efeito": "dispara 3 projéteis, distribuídos como o conjurador quiser. Cada um causa 1d4 de dano do elemento.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1 projétil a cada 5 pontos."
+      },
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de dano por projétil a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "cometa_elemental",
+    "nome": "Cometa Elemental",
+    "escola": "Mágica",
+    "estilo": "Projéteis",
+    "nivel": 3,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Uma massa enorme do elemento cai do alto sobre a área.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Moldagem",
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 3 PA",
+    "alvo": "todas as criaturas num raio de 3 m em volta de um ponto a até 30 m, inclusive aliados",
+    "resistencia": "RM (metade do dano)",
+    "efeito": "causa 4d6 de dano do elemento.",
+    "custo_mp": 5,
+    "manutencao": null,
+    "custo_texto": "5 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1d6 de dano a cada 10 pontos."
+      },
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 m de raio a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "parede_elemental",
+    "nome": "Parede Elemental",
+    "escola": "Mágica",
+    "estilo": "Construções",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma parede do elemento surge do chão.",
+    "atributo_principal": "Moldagem",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "um ponto a até 10 m",
+    "resistencia": "nenhuma",
+    "efeito": "cria uma parede de até 3 m de largura e 2 m de altura, com 20 de HP. Ela bloqueia passagem e ataques. Quem tocar nela rola o efeito do tipo de dano do elemento, com a chance normal. Duração 10 turnos.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+2 m de largura e +5 de HP a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+5 turnos de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "ponte_elemental",
+    "nome": "Ponte Elemental",
+    "escola": "Mágica",
+    "estilo": "Construções",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma ponte, rampa ou escada moldada no elemento.",
+    "atributo_principal": "Moldagem",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "um ponto a até 5 m",
+    "resistencia": "nenhuma",
+    "efeito": "cria uma ponte, rampa ou escada de até 5 m, que aguenta até 4 pessoas. Duração 10 turnos.",
+    "custo_mp": 1,
+    "manutencao": null,
+    "custo_texto": "1 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+3 m de comprimento a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+5 turnos de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "pilar_ascendente",
+    "nome": "Pilar Ascendente",
+    "escola": "Mágica",
+    "estilo": "Construções",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um pilar do elemento brota do chão com força.",
+    "atributo_principal": "Moldagem",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "um ponto a até 10 m",
+    "resistencia": "RM, de quem estiver em cima do ponto",
+    "efeito": "um pilar de até 3 m de altura, com 20 de HP, surge no ponto. Quem estiver em cima é erguido. Se falhar na resistência, cai e fica caído, sofrendo 1d6 de dano a cada 3 m de altura. Duração 10 turnos.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1 m de altura a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+5 turnos de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "escudo_moldado",
+    "nome": "Escudo Moldado",
+    "escola": "Mágica",
+    "estilo": "Construções",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma barreira do elemento surge na frente de um ataque.",
+    "atributo_principal": "Moldagem",
+    "atributos_secundarios": [],
+    "ativacao": "instantânea, reação, 2 PA",
+    "alvo": "o conjurador ou 1 aliado a até 5 m",
+    "resistencia": "nenhuma",
+    "efeito": "bloqueia até 8 de dano de um ataque que acabou de acertar. Depois disso, o escudo se desfaz e libera a vaga de Formas.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+2 de dano bloqueado a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "cela_elemental",
+    "nome": "Cela Elemental",
+    "escola": "Mágica",
+    "estilo": "Construções",
+    "nivel": 3,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Uma jaula do elemento se fecha em volta do alvo.",
+    "atributo_principal": "Moldagem",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura a até 10 m",
+    "resistencia": "RM",
+    "efeito": "se falhar, o alvo fica preso numa cela com 25 de HP. Ele não pode sair, mas pode atacar a cela. Duração 3 turnos.",
+    "custo_mp": 4,
+    "manutencao": null,
+    "custo_texto": "4 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+5 de HP da cela a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "lamina_elemental",
+    "nome": "Lâmina Elemental",
+    "escola": "Mágica",
+    "estilo": "Armamento",
+    "nivel": 1,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Uma arma corpo a corpo do elemento se forma na mão do conjurador.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Moldagem",
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "cria uma arma corpo a corpo, no formato que o conjurador quiser. Ela causa 1d8 + Poder Mágico ÷ 2 de dano do elemento. Duração 10 turnos.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1 m de alcance da arma a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+5 turnos de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "manoplas_de_impacto",
+    "nome": "Manoplas De Impacto",
+    "escola": "Mágica",
+    "estilo": "Armamento",
+    "nivel": 1,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Os punhos do conjurador são cobertos pelo elemento.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Moldagem",
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "ataques desarmados causam 1d6 + Poder Mágico ÷ 2 de dano do elemento, e o conjurador tem +2 nos testes para agarrar, empurrar e derrubar. Duração 10 turnos.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1 nos testes de agarrar, empurrar e derrubar a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+5 turnos de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "arco_de_energia",
+    "nome": "Arco De Energia",
+    "escola": "Mágica",
+    "estilo": "Armamento",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Uma arma de disparo do elemento, que não precisa de munição.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Moldagem",
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "cria uma arma de disparo que atira projéteis de mana a até 20 m. Os ataques usam Precisão Mágica e causam 1d8 + Poder Mágico ÷ 2 de dano do elemento. Duração 10 turnos.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+10 m de alcance a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+5 turnos de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "armadura_cristalina",
+    "nome": "Armadura Cristalina",
+    "escola": "Mágica",
+    "estilo": "Armamento",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Placas do elemento cobrem o corpo do conjurador.",
+    "atributo_principal": "Moldagem",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "armadura 2. Não soma com armadura de itens (vale a maior). Quem acertar o conjurador corpo a corpo rola o efeito do tipo de dano do elemento, com a chance normal. Duração 10 turnos.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1 de armadura a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+5 turnos de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "avatar_elemental",
+    "nome": "Avatar Elemental",
+    "escola": "Mágica",
+    "estilo": "Armamento",
+    "nivel": 3,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "O corpo inteiro do conjurador é tomado pelo elemento.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Moldagem",
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "armadura 2, que soma com a de itens, e os ataques corpo a corpo do conjurador causam +1d6 de dano do elemento. Ele fica imune ao efeito do próprio elemento. Ocupa 2 vagas de Formas. Duração 3 turnos.",
+    "custo_mp": 5,
+    "manutencao": null,
+    "custo_texto": "5 MP",
+    "escalamentos": [
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "cortina_de_nevoa",
+    "nome": "Cortina De Névoa",
+    "escola": "Mágica",
+    "estilo": "Terreno",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma nuvem do elemento (vapor, fumaça, poeira) cobre a área.",
+    "atributo_principal": "Moldagem",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "área com raio de 4 m em volta de um ponto a até 15 m",
+    "resistencia": "nenhuma",
+    "efeito": "a área bloqueia a visão. Ataques que atravessam a névoa têm desvantagem. Duração 5 turnos.",
+    "custo_mp": 1,
+    "manutencao": null,
+    "custo_texto": "1 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1 m de raio a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+2 turnos de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "campo_elemental",
+    "nome": "Campo Elemental",
+    "escola": "Mágica",
+    "estilo": "Terreno",
+    "nivel": 1,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "O chão é coberto pelo elemento.",
+    "atributo_principal": "Moldagem",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "área com raio de 3 m em volta de um ponto a até 15 m",
+    "resistencia": "nenhuma",
+    "efeito": "a área vira terreno difícil (andar nela custa o dobro de deslocamento). Quem terminar o turno dentro rola o efeito do tipo de dano do elemento, com a chance normal. Duração 5 turnos.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1 m de raio a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+2 turnos de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "espinhos_do_solo",
+    "nome": "Espinhos Do Solo",
+    "escola": "Mágica",
+    "estilo": "Terreno",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Pontas do elemento brotam do chão.",
+    "atributo_principal": "Moldagem",
+    "atributos_secundarios": [],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "área com raio de 3 m em volta de um ponto a até 15 m",
+    "resistencia": "RM (metade do dano)",
+    "efeito": "quem estiver na área ou entrar nela sofre 1d6 de dano do elemento, e o deslocamento dentro dela cai pela metade. Duração 3 turnos.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1 de dano e +1 m de raio a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "vortice",
+    "nome": "Vórtice",
+    "escola": "Mágica",
+    "estilo": "Terreno",
+    "nivel": 3,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Um redemoinho do elemento puxa tudo para o centro.",
+    "atributo_principal": "Moldagem",
+    "atributos_secundarios": [
+      "Poder Mágico"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "área com raio de 3 m em volta de um ponto a até 15 m",
+    "resistencia": "RM",
+    "efeito": "no início de cada turno, quem estiver na área e falhar é puxado 2 m para o centro e sofre 1d6 de dano do elemento. Duração 3 turnos.",
+    "custo_mp": 4,
+    "manutencao": null,
+    "custo_texto": "4 MP",
+    "escalamentos": [
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1 m de raio a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "dominio_elemental",
+    "nome": "Domínio Elemental",
+    "escola": "Mágica",
+    "estilo": "Terreno",
+    "nivel": 4,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "A área em volta do conjurador se transforma no elemento dele.",
+    "atributo_principal": "Moldagem",
+    "atributos_secundarios": [
+      "Poder Mágico",
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 3 PA",
+    "alvo": "área com raio de 6 m em volta do conjurador",
+    "resistencia": "nenhuma",
+    "efeito": "dentro da área, as magias de Mágica do conjurador custam 1 MP a menos (mínimo 1) e a chance de efeito do tipo de dano dobra. Inimigos que terminarem o turno dentro sofrem 1d6 de dano do elemento. Ocupa 2 vagas de Formas. Duração 3 turnos.",
+    "custo_mp": 6,
+    "manutencao": null,
+    "custo_texto": "6 MP",
+    "escalamentos": [
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Moldagem",
+        "efeito": "+2 m de raio a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Marcante",
+    "sustentada": false
+  },
+  {
+    "id": "grito_cortante",
+    "nome": "Grito Cortante",
+    "escola": "Encantamentos",
+    "estilo": "Ofensivo (Ressonâncias de Ruptura)",
+    "nivel": 1,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Um grito concentrado atinge o alvo como um golpe.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura a até 10 m",
+    "resistencia": "ataque com Precisão Mágica contra a CE do alvo",
+    "efeito": "se acertar, causa 1d8 de dano de impacto.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+5 m de alcance a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "onda_de_choque",
+    "nome": "Onda De Choque",
+    "escola": "Encantamentos",
+    "estilo": "Ofensivo (Ressonâncias de Ruptura)",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Uma onda sonora varre tudo à frente do conjurador.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "criaturas numa área de 3 m à frente do conjurador",
+    "resistencia": "RM",
+    "efeito": "quem falhar sofre 1d6 de dano e é empurrado 2 m. Quem passar sofre metade do dano e não é empurrado.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 m de área a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "nota_estilhacante",
+    "nome": "Nota Estilhaçante",
+    "escola": "Encantamentos",
+    "estilo": "Ofensivo (Ressonâncias de Ruptura)",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Uma frequência aguda faz vibrar e rachar materiais.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura ou objeto a até 10 m",
+    "resistencia": "RM (objetos não resistem)",
+    "efeito": "a armadura do alvo diminui 2 até o fim do combate. Objetos frágeis (vidro, fechaduras simples, madeira fina) se partem.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "-1 de armadura adicional a cada 10 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+5 m de alcance a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "eco_persistente",
+    "nome": "Eco Persistente",
+    "escola": "Encantamentos",
+    "estilo": "Ofensivo (Ressonâncias de Ruptura)",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "O som fica ressoando dentro do corpo do alvo.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura a até 10 m",
+    "resistencia": "RM",
+    "efeito": "o alvo sofre 1d4 de dano por turno, ignorando armadura, e tem desvantagem em testes de percepção pela audição. Duração 3 turnos.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "brado_trovejante",
+    "nome": "Brado Trovejante",
+    "escola": "Encantamentos",
+    "estilo": "Ofensivo (Ressonâncias de Ruptura)",
+    "nivel": 3,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Um brado ensurdecedor explode em volta do conjurador.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "todas as criaturas a até 3 m, inclusive aliados",
+    "resistencia": "RM",
+    "efeito": "quem falhar sofre 2d6 de dano e perde 2 PA no próximo turno. Quem passar sofre metade do dano.",
+    "custo_mp": 4,
+    "manutencao": null,
+    "custo_texto": "4 MP",
+    "escalamentos": [
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1d6 de dano a cada 10 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 m de raio a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "cupula_silenciosa",
+    "nome": "Cúpula Silenciosa",
+    "escola": "Encantamentos",
+    "estilo": "Defensivo (Escudos Harmônicos)",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma esfera sonora envolve o conjurador e os aliados próximos.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "aliados a até 2 m do conjurador",
+    "resistencia": "nenhuma",
+    "efeito": "quem está dentro recebe 5 de dano a menos de encantamentos e de magias baseadas em som. Nenhum som de dentro escapa para fora. O próximo encantamento do conjurador enquanto a cúpula existir tem +2 na dificuldade para resistir. Duração 2 turnos.",
+    "requisitos": "cantar ou assobiar.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 m de raio a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "reflexao_sonora",
+    "nome": "Reflexão Sonora",
+    "escola": "Encantamentos",
+    "estilo": "Defensivo (Escudos Harmônicos)",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Ondas sonoras revertem parte dos ataques de volta ao atacante.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "25% do dano recebido é refletido de volta ao atacante. Duração 2 turnos.",
+    "requisitos": "conjuração vocal contínua.",
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+5% de dano refletido a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "harmonia_protetora",
+    "nome": "Harmonia Protetora",
+    "escola": "Encantamentos",
+    "estilo": "Defensivo (Escudos Harmônicos)",
+    "nivel": 3,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um canto poderoso cria uma zona onde os ataques inimigos são desviados sutilmente.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "aliados a até 2 m do conjurador",
+    "resistencia": "nenhuma",
+    "efeito": "ataques de inimigos contra quem está na zona têm desvantagem. Duração 2 turnos.",
+    "requisitos": "conjuração vocal contínua.",
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 m de raio a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "sons_estaticos",
+    "nome": "Sons Estáticos",
+    "escola": "Encantamentos",
+    "estilo": "Defensivo (Escudos Harmônicos)",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Sons constantes em torno do corpo estabilizam o fluxo interno de mana.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "vantagem nos testes de resistência contra magias. Duração 2 turnos.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "compartilha o efeito com +1 aliado a até 2 m a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "domo_de_ressonancia",
+    "nome": "Domo De Ressonância",
+    "escola": "Encantamentos",
+    "estilo": "Defensivo (Escudos Harmônicos)",
+    "nivel": 3,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um domo de ressonância sonora envolve o grupo.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA (não pode ser sustentada)",
+    "alvo": "aliados a até 3 m do conjurador",
+    "resistencia": "nenhuma",
+    "efeito": "bloqueia todos os ataques à distância (projéteis e magias de ataque à distância) contra quem está dentro, até o início do próximo turno do conjurador.",
+    "requisitos": "conjuração vocal contínua.",
+    "custo_mp": 4,
+    "manutencao": 1,
+    "custo_texto": "4 MP",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 10 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 m de raio a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "cancao_de_coragem",
+    "nome": "Canção De Coragem",
+    "escola": "Encantamentos",
+    "estilo": "Inspirador (Encantamentos de Suporte)",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma canção firme acalma o medo dos aliados.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "aliados a até 10 m que ouçam o conjurador",
+    "resistencia": "nenhuma",
+    "efeito": "+2 em testes de Autocontrole, inclusive os de Sanidade. Duração 3 turnos.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+5 m de alcance a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "hino_do_folego",
+    "nome": "Hino Do Fôlego",
+    "escola": "Encantamentos",
+    "estilo": "Inspirador (Encantamentos de Suporte)",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um canto ritmado devolve o ar aos pulmões dos aliados.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "aliados a até 5 m que ouçam o conjurador (o conjurador não é afetado)",
+    "resistencia": "nenhuma",
+    "efeito": "cada aliado recupera 1d6 de PE.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 de PE recuperado a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+2 m de alcance a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "melodia_restauradora",
+    "nome": "Melodia Restauradora",
+    "escola": "Encantamentos",
+    "estilo": "Inspirador (Encantamentos de Suporte)",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma melodia suave acelera a cura de um aliado.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 aliado a até 10 m que ouça o conjurador",
+    "resistencia": "nenhuma",
+    "efeito": "o aliado regenera 1d4 de HP no início de cada turno. Só funciona em combate. Duração 3 turnos.",
+    "custo_mp": 3,
+    "manutencao": 2,
+    "custo_texto": "3 MP (manutenção 2)",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 de HP regenerado a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "palavra_de_inspiracao",
+    "nome": "Palavra De Inspiração",
+    "escola": "Encantamentos",
+    "estilo": "Inspirador (Encantamentos de Suporte)",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma palavra certa, na hora certa, faz o aliado acertar.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, reação, 2 PA",
+    "alvo": "1 aliado a até 10 m que ouça o conjurador",
+    "resistencia": "nenhuma",
+    "efeito": "quando o aliado for fazer um teste, ele rola com vantagem. Uma vez por rodada.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "a cada 10 pontos, pode ser usada +1 vez por rodada."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+5 m de alcance a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "ritmo_de_batalha",
+    "nome": "Ritmo De Batalha",
+    "escola": "Encantamentos",
+    "estilo": "Inspirador (Encantamentos de Suporte)",
+    "nivel": 3,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma batida constante sincroniza os movimentos do grupo.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "até 2 aliados a até 10 m que ouçam o conjurador",
+    "resistencia": "nenhuma",
+    "efeito": "o primeiro movimento de cada aliado no turno custa 1 PA a menos. Duração 2 turnos.",
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 aliado a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "palavra_de_comando",
+    "nome": "Palavra De Comando",
+    "escola": "Encantamentos",
+    "estilo": "Dominador (Encantamentos de Controle)",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autoridades",
+    "descricao": "Uma única palavra carregada de energia mágica obriga o alvo a obedecer.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Canalização",
+      "Interpretação"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura que ouça e entenda o conjurador",
+    "resistencia": "RM",
+    "efeito": "se falhar, o alvo cumpre um comando de uma palavra no seu próximo turno (\"Largue\", \"Pare\", \"Deite\", \"Fuja\"), gastando até 2 PA nisso. Não funciona com comandos que causem dano direto ao próprio alvo.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 na dificuldade para resistir a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a cada 10 pontos (todos recebem o mesmo comando)."
+      },
+      {
+        "atributo": "Interpretação",
+        "efeito": "a cada 10 pontos, o comando pode ter até 3 palavras (\"Largue a arma\", \"Corra para fora\")."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "sussurro_da_duvida",
+    "nome": "Sussurro Da Dúvida",
+    "escola": "Encantamentos",
+    "estilo": "Dominador (Encantamentos de Controle)",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Um sussurro constante mina a confiança do inimigo.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura que ouça o conjurador",
+    "resistencia": "RM",
+    "efeito": "se falhar, o alvo tem desvantagem nos ataques contra o conjurador. Duração 1 turno.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "melodia_do_pavor",
+    "nome": "Melodia Do Pavor",
+    "escola": "Encantamentos",
+    "estilo": "Dominador (Encantamentos de Controle)",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Um canto dissonante induz pânico.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura que ouça o conjurador",
+    "resistencia": "RM",
+    "efeito": "se falhar, no próximo turno o alvo escolhe entre só se afastar do conjurador ou perder 2 PA hesitando.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 na dificuldade para resistir a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "voz_da_verdade",
+    "nome": "Voz Da Verdade",
+    "escola": "Encantamentos",
+    "estilo": "Dominador (Encantamentos de Controle)",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "interrogatório oficial",
+    "descricao": "A voz do conjurador prende a mente do alvo à verdade.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Interpretação",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura que ouça e entenda o conjurador",
+    "resistencia": "RM, uma vez, ao ativar",
+    "efeito": "o alvo não consegue mentir deliberadamente, mas pode se calar. Se resistir, percebe que tentaram enfeitiçá-lo. Duração 2 turnos.",
+    "requisitos": "conjuração vocal contínua e que o alvo entenda o idioma.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Interpretação",
+        "efeito": "a cada 10 pontos, o alvo também não pode se calar diante de uma pergunta direta e responde com a verdade, de forma curta."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo que ouça a voz a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "ordem_dominante",
+    "nome": "Ordem Dominante",
+    "escola": "Encantamentos",
+    "estilo": "Dominador (Encantamentos de Controle)",
+    "nivel": 4,
+    "classificacao": "Proibida",
+    "contexto_legal": null,
+    "descricao": "Palavras sutis penetram na mente do alvo até tomarem o controle do corpo dele.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Interpretação"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura que ouça e entenda o conjurador",
+    "resistencia": "RM, a cada sugestão",
+    "efeito": "a cada turno, o conjurador sugere uma ação simples e o alvo resiste. Se falhar, cumpre a sugestão. Se falhar em três sugestões seguidas, o conjurador controla o corpo do alvo por 1 turno. Um sucesso do alvo encerra a magia. Duração 3 turnos.",
+    "informacoes": "rastro persistente.",
+    "custo_mp": 5,
+    "manutencao": 2,
+    "custo_texto": "5 MP (manutenção 2)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de controle a cada 10 pontos."
+      },
+      {
+        "atributo": "Interpretação",
+        "efeito": "a cada 10 pontos, o alvo não percebe que foi enfeitiçado quando resiste."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "sangue_amaldicoado",
+    "nome": "Sangue Amaldiçoado",
+    "escola": "Maldições",
+    "estilo": "Corrompimento",
+    "nivel": 3,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "Transforma o sangue aliado em veneno contra os inimigos próximos.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "inimigos perto de um aliado ferido",
+    "resistencia": "RM, para cada inimigo",
+    "efeito": "enquanto ativa, quando um aliado sofre dano cortante, inimigos a até 2 m dele ficam envenenados: 1d4 de dano por turno durante 3 turnos. Duração 1 turno.",
+    "informacoes": "o veneno é um efeito físico, então a RF reduz a duração e o dano dele.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 de dano do veneno a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 m de alcance a partir do aliado a cada 5 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "carne_podre",
+    "nome": "Carne Podre",
+    "escola": "Maldições",
+    "estilo": "Corrompimento",
+    "nivel": 2,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "A energia da maldição corrói lentamente uma parte do corpo do alvo, causando dor constante.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura",
+    "resistencia": "RM",
+    "efeito": "o alvo sofre 1d4 de dano por turno na parte afetada e -2 de Força. Duração 3 turnos.",
+    "requisitos": "contato físico, e o alvo precisa já ter sofrido dano.",
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 de dano e -1 de Força a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a até 2 m do original a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "corrupcao_de_fluxo",
+    "nome": "Corrupção De Fluxo",
+    "escola": "Maldições",
+    "estilo": "Corrompimento",
+    "nivel": 3,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "A mana do alvo é reinterpretada como sua própria saúde.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura",
+    "resistencia": "RM (sucesso automático se o conjurador foi alvo da magia que presenciou)",
+    "efeito": "cada MP que o alvo gasta também tira a mesma quantidade de HP dele. Duração 3 turnos.",
+    "requisitos": "contato visual com o alvo e ter presenciado uma magia dele.",
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 de perda de HP por gasto de mana a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a até 2 m do original a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "fungo_pestilento",
+    "nome": "Fungo Pestilento",
+    "escola": "Maldições",
+    "estilo": "Corrompimento",
+    "nivel": 2,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "Ao encostar, o usuário infecta o alvo com um fungo pestilento que cresce até explodir.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA (não pode ser sustentada)",
+    "alvo": "1 criatura tocada",
+    "resistencia": "RM",
+    "efeito": "se falhar, a cada turno rola 1d4 e soma ao dano acumulado. Quando o efeito acaba, o fungo explode e causa todo o dano acumulado, ignorando armadura. Duração 3 turnos.",
+    "requisitos": "contato físico direto, o alvo precisa estar em contato com o solo e o usuário precisa ter um fungo em mãos.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de dano acumulado por turno a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "marcha_da_morte",
+    "nome": "Marcha Da Morte",
+    "escola": "Maldições",
+    "estilo": "Corrompimento",
+    "nivel": 3,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "Quanto mais ferido o alvo estiver, maior a influência da maldição sobre o corpo dele.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura com menos da metade do HP",
+    "resistencia": "RM",
+    "efeito": "o alvo sofre 1d4 de dano por turno, ou 2d4 se estiver com menos de 25% do HP. Enquanto durar, ele tem -2 nos testes de resistência e na CE. Se o alvo for curado acima da metade do HP, a maldição acaba. Duração 3 turnos.",
+    "requisitos": "o alvo precisa estar com menos da metade do HP.",
+    "custo_mp": 5,
+    "manutencao": 1,
+    "custo_texto": "5 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 de dano por turno a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a até 2 m do original a cada 10 pontos (que também esteja com menos da metade do HP)."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "expor_a_dor",
+    "nome": "Expor A Dor",
+    "escola": "Maldições",
+    "estilo": "Enfraquecimento",
+    "nivel": 1,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "O corpo do alvo fica mais débil, reduzindo suas resistências.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura",
+    "resistencia": "RM",
+    "efeito": "-5 de RF ou RM (o conjurador escolhe). Duração 3 turnos.",
+    "requisitos": "contato físico com o alvo ou ter presenciado um ataque que o feriu recentemente.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "-1 adicional a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a até 2 m do original a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "olhar_pesado",
+    "nome": "Olhar Pesado",
+    "escola": "Maldições",
+    "estilo": "Enfraquecimento",
+    "nivel": 2,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "A atenção do alvo fica lenta, e ele tem dificuldade em reagir ao que vê.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura",
+    "resistencia": "RM",
+    "efeito": "-5 de Reflexos e -5 de Precisão Física. Duração 2 turnos.",
+    "requisitos": "contato visual com o alvo.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "-1 adicional em cada um a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a até 2 m do original a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "fraqueza_muscular",
+    "nome": "Fraqueza Muscular",
+    "escola": "Maldições",
+    "estilo": "Enfraquecimento",
+    "nivel": 1,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "O alvo perde a firmeza dos músculos.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura",
+    "resistencia": "RM",
+    "efeito": "-5 de Força ou -5 de Agilidade (o conjurador escolhe). Duração 3 turnos.",
+    "requisitos": "contato físico, ou o alvo ter usado força recentemente (um ataque ou uma corrida, por exemplo).",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "-1 adicional a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a até 2 m do original a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "tranca_de_energia",
+    "nome": "Tranca De Energia",
+    "escola": "Maldições",
+    "estilo": "Enfraquecimento",
+    "nivel": 2,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "Trava as capacidades energéticas do corpo do alvo.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura",
+    "resistencia": "RM",
+    "efeito": "o conjurador escolhe uma versão. Física: cada ação do alvo custa +1 PE. Mágica: cada magia do alvo custa +1 MP. Duração 3 turnos.",
+    "requisitos": "contato visual ou físico, ou ter presenciado o alvo gastando energia (conjurando ou correndo, por exemplo).",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 de custo extra a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a até 2 m do original a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "quebra_de_foco",
+    "nome": "Quebra De Foco",
+    "escola": "Maldições",
+    "estilo": "Enfraquecimento",
+    "nivel": 1,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "Abala a mente do alvo, dificultando a concentração.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura",
+    "resistencia": "RM",
+    "efeito": "-5 de Poder Mágico ou -5 de Precisão Mágica (o conjurador escolhe). Duração 2 turnos.",
+    "requisitos": "contato visual com o alvo, e ele precisa ter usado uma magia recentemente.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "-1 adicional a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a até 2 m do original a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "corrente_de_destino",
+    "nome": "Corrente De Destino",
+    "escola": "Maldições",
+    "estilo": "Vinculação",
+    "nivel": 1,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "Uma corrente invisível prende o alvo ao conjurador.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura a até 5 m",
+    "resistencia": "RM",
+    "efeito": "o alvo não consegue se afastar mais de 5 m do conjurador. Cada metro além disso custa 1 PA extra. Duração 3 turnos.",
+    "requisitos": "o alvo precisa estar a até 5 m e em contato visual com o conjurador.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 PA extra por metro a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "laco_parasita",
+    "nome": "Laço Parasita",
+    "escola": "Maldições",
+    "estilo": "Vinculação",
+    "nivel": 2,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "O fôlego do alvo passa a alimentar o conjurador.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura",
+    "resistencia": "RM",
+    "efeito": "para cada 2 PE que o alvo gastar, o conjurador recupera 1 PE. Duração 3 turnos.",
+    "requisitos": "contato físico com o alvo.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "a cada 10 pontos, também recupera 1 MP para cada 2 MP que o alvo gastar."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a até 2 m do original a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "elo_de_dor",
+    "nome": "Elo De Dor",
+    "escola": "Maldições",
+    "estilo": "Vinculação",
+    "nivel": 2,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "A dor do conjurador ecoa no corpo do alvo.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura a até 20 m",
+    "resistencia": "RM",
+    "efeito": "o alvo também sofre 25% de todo o dano que o conjurador receber, ignorando armadura. O conjurador continua sofrendo o dano normalmente. Duração 3 turnos.",
+    "requisitos": "ter sido ferido pelo alvo no combate atual.",
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+5% do dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "espelho_maldito",
+    "nome": "Espelho Maldito",
+    "escola": "Maldições",
+    "estilo": "Vinculação",
+    "nivel": 3,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "O conjurador passa o próprio infortúnio para outra pessoa.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura a até 10 m",
+    "resistencia": "RM, quando o efeito é passado",
+    "efeito": "o próximo efeito negativo que atingir o conjurador (penalidade, veneno, atordoamento, maldição) vai para o alvo. Se o alvo falhar na resistência, sofre o efeito no lugar do conjurador. Depois disso, a magia acaba. Dano direto não é passado. Duração 3 turnos.",
+    "requisitos": "contato visual com o alvo ao ativar.",
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "a cada 10 pontos, pode passar +1 efeito antes de acabar."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "partilha_de_sangue",
+    "nome": "Partilha De Sangue",
+    "escola": "Maldições",
+    "estilo": "Vinculação",
+    "nivel": 3,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "Dois inimigos passam a sangrar como se fossem um só.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "2 criaturas a até 2 m uma da outra",
+    "resistencia": "RM, cada uma",
+    "efeito": "se as duas falharem, metade do dano que uma sofrer também é causada à outra, ignorando armadura. Se só uma falhar, a magia não funciona. Duração 3 turnos.",
+    "requisitos": "as duas criaturas precisam ter sofrido dano no combate atual.",
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+10% do dano repassado a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 criatura na corrente a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": true
+  },
+  {
+    "id": "palavra_proibida",
+    "nome": "Palavra Proibida",
+    "escola": "Maldições",
+    "estilo": "Gatilho",
+    "nivel": 1,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "O conjurador amaldiçoa uma palavra na boca do alvo.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura que ouça o conjurador",
+    "resistencia": "RM",
+    "efeito": "o conjurador escolhe uma palavra, um nome ou um assunto. Sempre que o alvo falar sobre isso, sofre 1d6 de dano, ignorando armadura (no máximo uma vez por turno). Duração 1 hora.",
+    "requisitos": "o alvo precisa entender o idioma do conjurador.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 hora de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": false
+  },
+  {
+    "id": "condenacao",
+    "nome": "Condenação",
+    "escola": "Maldições",
+    "estilo": "Gatilho",
+    "nivel": 2,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "Quem levantar a mão contra o conjurador é punido na hora.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura",
+    "resistencia": "RM",
+    "efeito": "na próxima vez que o alvo atacar o conjurador, o ataque é feito com desvantagem e o alvo perde 2 PA. Depois disso, a maldição acaba. Duração até o fim do combate.",
+    "requisitos": "contato físico com o alvo.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "a cada 10 pontos, dispara +1 vez antes de acabar."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": false
+  },
+  {
+    "id": "selo_de_passagem",
+    "nome": "Selo De Passagem",
+    "escola": "Maldições",
+    "estilo": "Gatilho",
+    "nivel": 2,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "Um selo invisível pune quem atravessar o local marcado.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, 1 minuto para traçar (não pode ser feito em combate)",
+    "alvo": "uma porta, passagem ou linha de até 3 m",
+    "resistencia": "RM, de quem atravessar",
+    "efeito": "a primeira criatura que atravessar (menos as que o conjurador escolher ao traçar) sofre 2d4 de dano e perde 2 PA no próximo turno. Depois disso, o selo se desfaz. Dura até disparar ou por 1 dia.",
+    "requisitos": "traçar o selo com as mãos no próprio local.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1d4 de dano a cada 10 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 m de largura a cada 5 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": false
+  },
+  {
+    "id": "marca_do_traidor",
+    "nome": "Marca Do Traidor",
+    "escola": "Maldições",
+    "estilo": "Gatilho",
+    "nivel": 3,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "Um acordo selado com mana pune quem o quebrar.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura que aceite um acordo com o conjurador",
+    "resistencia": "nenhuma, se o alvo aceitar o acordo de livre vontade",
+    "efeito": "o acordo é definido em uma frase (ex.: \"não revelar este segredo\", \"não atacar meus aliados\"). Se o alvo quebrar o acordo, sofre 3d6 de dano, ignorando armadura, e o conjurador sente na hora. Duração 1 semana.",
+    "requisitos": "o alvo precisa aceitar o acordo em voz alta.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1d6 de dano a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 semana de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": false
+  },
+  {
+    "id": "maldicao_latente",
+    "nome": "Maldição Latente",
+    "escola": "Maldições",
+    "estilo": "Gatilho",
+    "nivel": 3,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "O conjurador grava outra maldição no corpo do alvo, que dispara sozinha depois.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura tocada",
+    "resistencia": "RM, ao gravar",
+    "efeito": "o conjurador grava no alvo uma maldição de nível 1 ou 2 que conheça e escolhe uma condição (o alvo conjurar uma magia, cair abaixo da metade do HP ou entrar em combate). Quando a condição acontecer, a maldição gravada dispara sozinha, sem novo teste de resistência. Duração 1 dia.",
+    "requisitos": "contato físico com o alvo, e o conjurador precisa conhecer a maldição gravada.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP, mais o custo da maldição gravada",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "a cada 10 pontos, pode gravar uma maldição de +1 nível."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 dia de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": false
+  },
+  {
+    "id": "reacao_agressiva",
+    "nome": "Reação Agressiva",
+    "escola": "Sentivar",
+    "estilo": "Ofensivo",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O usuário fica em alerta total e golpeia quem se aproxima.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "enquanto ativa, pode fazer um golpe de oportunidade (1 PA) contra qualquer inimigo que entre no seu alcance, e não só contra quem sai dele. Duração 3 turnos.",
+    "custo_mp": 1,
+    "manutencao": 1,
+    "custo_texto": "1 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 m de alcance para esses golpes a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "bloquear_fluxo",
+    "nome": "Bloquear Fluxo",
+    "escola": "Sentivar",
+    "estilo": "Ofensivo",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Ao golpear, o usuário danifica o fluxo de mana do inimigo.",
+    "atributo_principal": "Canalização",
+    "atributos_secundarios": [],
+    "ativacao": "instantânea, junto com o próximo ataque corpo a corpo, 1 PA",
+    "alvo": "a criatura atingida",
+    "resistencia": "RM",
+    "efeito": "se o ataque acertar e o alvo falhar na resistência, ele tem -5 de Fluxo no próximo turno. O golpe também ignora barreiras mágicas simples (mas não armadura).",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "-1 de Fluxo adicional a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "eco_de_mana",
+    "nome": "Eco De Mana",
+    "escola": "Sentivar",
+    "estilo": "Ofensivo",
+    "nivel": 3,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O usuário deixa uma imagem residual que repete seus golpes.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "cada ataque corpo a corpo que acertar é repetido pela imagem, causando metade do dano. Duração 3 turnos.",
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+10% do dano do ataque a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "choque_de_mana",
+    "nome": "Choque De Mana",
+    "escola": "Sentivar",
+    "estilo": "Ofensivo",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "O corpo emite uma onda curta de choque mágico.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "inimigos a até 2 m do usuário",
+    "resistencia": "RM",
+    "efeito": "quem falhar perde 2 PA no próximo turno.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 m de raio a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "golpe_de_repulsao",
+    "nome": "Golpe De Repulsão",
+    "escola": "Sentivar",
+    "estilo": "Ofensivo",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Amplia a força do impacto físico, empurrando o inimigo.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [],
+    "ativacao": "instantânea, junto com o próximo ataque corpo a corpo, 1 PA",
+    "alvo": "a criatura atingida",
+    "resistencia": "nenhuma",
+    "efeito": "se o ataque acertar, o alvo é empurrado 2 m, sem teste.",
+    "custo_mp": 1,
+    "manutencao": null,
+    "custo_texto": "1 MP",
+    "escalamentos": [
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 m de empurrão a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "leitura_de_combate",
+    "nome": "Leitura De Combate",
+    "escola": "Sentivar",
+    "estilo": "Perceptivo",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O usuário lê os sinais do corpo e da mana do inimigo e prevê o que ele vai fazer.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura visível",
+    "resistencia": "nenhuma",
+    "efeito": "o mestre revela a próxima ação que o alvo pretende fazer.",
+    "custo_mp": 1,
+    "manutencao": null,
+    "custo_texto": "1 MP",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "iniciativa_forcada",
+    "nome": "Iniciativa Forçada",
+    "escola": "Sentivar",
+    "estilo": "Perceptivo",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O usuário prepara o corpo para agir antes de todos.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, reação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "no próximo turno, o usuário age antes de todos.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "a cada 10 pontos, +1 aliado a até 2 m age logo depois do usuário."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "ressonancia_do_espaco",
+    "nome": "Ressonância Do Espaço",
+    "escola": "Sentivar",
+    "estilo": "Perceptivo",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "A mana do usuário vibra em sintonia com o ambiente, revelando o que está escondido.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "área dentro da Detecção do usuário",
+    "resistencia": "nenhuma",
+    "efeito": "revela passagens, falhas, pontos frágeis e esconderijos no ambiente.",
+    "custo_mp": 1,
+    "manutencao": null,
+    "custo_texto": "1 MP",
+    "escalamentos": [
+      {
+        "atributo": "Sensitividade",
+        "efeito": "a cada 10 pontos, revela também coisas escondidas por magia, até nível 1 por cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "linha_de_fuga",
+    "nome": "Linha De Fuga",
+    "escola": "Sentivar",
+    "estilo": "Perceptivo",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O usuário enxerga a rota mais segura em meio ao combate.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "os movimentos do usuário não provocam golpe de oportunidade. Duração 2 turnos.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Sensitividade",
+        "efeito": "+1 m de deslocamento a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "olhar_da_voragem",
+    "nome": "Olhar Da Voragem",
+    "escola": "Sentivar",
+    "estilo": "Perceptivo",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "O olhar do usuário projeta no inimigo a sensação de um ataque iminente.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura que veja o usuário",
+    "resistencia": "RM",
+    "efeito": "se falhar, o alvo não pode reagir nem desviar até o fim da rodada.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Sensitividade",
+        "efeito": "+1 na dificuldade para resistir a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 alvo a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "pele_vibrante",
+    "nome": "Pele Vibrante",
+    "escola": "Sentivar",
+    "estilo": "Defensivo",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "A pele vibra com o impacto, dissipando o dano.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "armadura 2, que soma com a armadura de itens. Duração 3 turnos.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Sensitividade",
+        "efeito": "+1 de armadura a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "inabalavel",
+    "nome": "Inabalável",
+    "escola": "Sentivar",
+    "estilo": "Defensivo",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Firmeza absoluta no solo.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "o usuário não pode ser empurrado nem derrubado. Duração 3 turnos.",
+    "custo_mp": 1,
+    "manutencao": 1,
+    "custo_texto": "1 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "compartilha o efeito com +1 aliado a até 2 m a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "aumento_sensorial",
+    "nome": "Aumento Sensorial",
+    "escola": "Sentivar",
+    "estilo": "Defensivo",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Sobrecarrega os reflexos.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "+5 de Reflexos. Duração 3 turnos.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Sensitividade",
+        "efeito": "+1 de Reflexos a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "espirito_de_ferro",
+    "nome": "Espírito De Ferro",
+    "escola": "Sentivar",
+    "estilo": "Defensivo",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O usuário regula o fluxo interno de mana para resistir à dor e ao cansaço.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "ignora as penalidades em testes causadas por efeitos físicos (veneno, Carne Podre, Tremores) e por 1 nível de exaustão. O dano desses efeitos continua. Duração 3 turnos.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Sensitividade",
+        "efeito": "ignora +1 nível de exaustão a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "ultimo_suspiro",
+    "nome": "Último Suspiro",
+    "escola": "Sentivar",
+    "estilo": "Defensivo",
+    "nivel": 3,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O usuário sobrecarrega o corpo, ignorando a dor e os ferimentos.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, reação quando o HP cai abaixo de 0, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "o usuário age normalmente mesmo no estado morrendo, até chegar a -15 HP. Quando o efeito acaba, volta ao estado morrendo normal se não tiver sido curado. Duração 2 turnos.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "sobrecarga_de_vida",
+    "nome": "Sobrecarga De Vida",
+    "escola": "Sentivar",
+    "estilo": "Auto-Suporte",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Acelera a regeneração natural do corpo.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Canalização",
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "regenera 1d4 de HP no início de cada turno. Só funciona em combate. Duração 3 turnos.",
+    "custo_mp": 2,
+    "manutencao": 2,
+    "custo_texto": "2 MP (manutenção 2)",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 de HP regenerado a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "bullet_time",
+    "nome": "Bullet Time",
+    "escola": "Sentivar",
+    "estilo": "Auto-Suporte",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Os nervos são acelerados ao máximo.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "pode desviar de contra-ataques e até de projéteis velozes. Duração 2 turnos.",
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Sensitividade",
+        "efeito": "+1 de CE a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "compartilha o efeito com +1 alvo a até 2 m a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "fluxo_de_controle",
+    "nome": "Fluxo De Controle",
+    "escola": "Sentivar",
+    "estilo": "Auto-Suporte",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Controla o fluxo de mana para impedir atordoamentos.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "imunidade a atordoamento. Duração 3 turnos.",
+    "custo_mp": 1,
+    "manutencao": 1,
+    "custo_texto": "1 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "compartilha o efeito com +1 aliado a até 2 m a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "fluxo_de_forca",
+    "nome": "Fluxo De Força",
+    "escola": "Sentivar",
+    "estilo": "Auto-Suporte",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "A energia mágica é conduzida pelos músculos.",
+    "atributo_principal": "Poder Mágico",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "+5 de Força em ataques físicos. Duração 3 turnos.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Poder Mágico",
+        "efeito": "+1 de Força a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "fluxo_veloz",
+    "nome": "Fluxo Veloz",
+    "escola": "Sentivar",
+    "estilo": "Auto-Suporte",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Movimentos fluidos como água.",
+    "atributo_principal": "Sensitividade",
+    "atributos_secundarios": [
+      "Controle",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "+5 de Agilidade. Duração 3 turnos.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Sensitividade",
+        "efeito": "+1 de Agilidade a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "compartilha o efeito com +1 alvo a até 2 m a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "runa_de_luz",
+    "nome": "Runa De Luz",
+    "escola": "Arcanismo",
+    "estilo": "Runas",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma runa que guarda luz para quando for preciso.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "preparo": "10 minutos, sobre um objeto pequeno",
+    "modos": "carregado (1 PA, por toque ou palavra) ou inerte",
+    "resistencia": "RM, só no modo clarão",
+    "efeito": "o arcanista escolhe ao ativar. Lanterna: ilumina 10 m por 1 hora. Clarão: criaturas a até 3 m que falharem têm desvantagem no próximo ataque.",
+    "custo_mp": 1,
+    "manutencao": null,
+    "custo_texto": "1 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+5 m de luz a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 hora no modo lanterna a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "runa_de_afiacao",
+    "nome": "Runa De Afiação",
+    "escola": "Arcanismo",
+    "estilo": "Runas",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma runa gravada na arma aguça o golpe quando ativada.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "preparo": "10 minutos, sobre uma arma",
+    "modos": "carregado (1 PA, por quem empunha a arma) ou inerte",
+    "resistencia": "nenhuma",
+    "efeito": "por 3 turnos, a arma causa +1d4 de dano e ignora 1 de armadura.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "runa_explosiva",
+    "nome": "Runa Explosiva",
+    "escola": "Arcanismo",
+    "estilo": "Runas",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Uma runa cheia de energia instável, pronta para estourar.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "preparo": "20 minutos, sobre um objeto ou superfície",
+    "modos": "carregado (dispara quando alguém tocar o suporte, quando o suporte for arremessado e bater em algo, ou com 1 PA por palavra a até 10 m) ou inerte",
+    "resistencia": "RM (metade do dano)",
+    "efeito": "explode num raio de 2 m, causando 2d6 de dano.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+1d6 de dano a cada 10 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+10 m de distância de ativação a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "runa_de_cura",
+    "nome": "Runa De Cura",
+    "escola": "Arcanismo",
+    "estilo": "Runas",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma runa que guarda energia vital para um momento de necessidade.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [],
+    "preparo": "20 minutos, sobre um objeto pequeno ou sobre a pele",
+    "modos": "carregado (1 PA, por toque) ou inerte",
+    "resistencia": "nenhuma",
+    "efeito": "quem ativar recupera 2d4 de HP.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+1d4 de HP a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "runa_guardia",
+    "nome": "Runa Guardiã",
+    "escola": "Arcanismo",
+    "estilo": "Runas",
+    "nivel": 3,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma runa gravada no corpo ou na roupa reage sozinha ao perigo.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [],
+    "preparo": "30 minutos, sobre o corpo ou a roupa do portador",
+    "modos": "só carregado (dispara na primeira vez que o portador for acertado por um ataque)",
+    "resistencia": "nenhuma",
+    "efeito": "uma barreira bloqueia até 10 de dano desse ataque.",
+    "custo_mp": 4,
+    "manutencao": null,
+    "custo_texto": "4 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+2 de dano bloqueado a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "circulo_de_alerta",
+    "nome": "Círculo De Alerta",
+    "escola": "Arcanismo",
+    "estilo": "Círculos",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um círculo que avisa quando alguém passa.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Moldagem"
+    ],
+    "preparo": "10 minutos, desenhado no chão",
+    "modos": "só carregado (dispara quando uma criatura entra)",
+    "resistencia": "nenhuma",
+    "efeito": "o círculo tem 5 m de raio. Quando alguém entra, o arcanista sente na hora, a qualquer distância e até dormindo. O círculo continua ativo depois de avisar.",
+    "custo_mp": 1,
+    "manutencao": null,
+    "custo_texto": "1 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+5 m de raio a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "circulo_de_protecao",
+    "nome": "Círculo De Proteção",
+    "escola": "Arcanismo",
+    "estilo": "Círculos",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um círculo que fortalece quem está dentro.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Moldagem",
+      "Controle"
+    ],
+    "preparo": "10 minutos, desenhado no chão",
+    "modos": "carregado (1 PA, por palavra) ou inerte",
+    "resistencia": "nenhuma",
+    "efeito": "por 3 turnos, aliados dentro do círculo têm +2 na CE e nos testes de resistência.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1 m de raio a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "circulo_de_drenagem",
+    "nome": "Círculo De Drenagem",
+    "escola": "Arcanismo",
+    "estilo": "Círculos",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Um círculo que suga a mana de quem fica nele.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Moldagem",
+      "Controle"
+    ],
+    "preparo": "20 minutos, desenhado no chão",
+    "modos": "carregado (1 PA, por palavra) ou inerte",
+    "resistencia": "RM",
+    "efeito": "por 3 turnos, inimigos que terminarem o turno dentro e falharem perdem 2 MP, e o arcanista recupera a mesma quantidade.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+1 MP drenado a cada 10 pontos."
+      },
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1 m de raio a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "circulo_de_contencao",
+    "nome": "Círculo De Contenção",
+    "escola": "Arcanismo",
+    "estilo": "Círculos",
+    "nivel": 3,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Um círculo que prende quem pisa nele.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Controle",
+      "Interpretação"
+    ],
+    "preparo": "30 minutos, desenhado no chão",
+    "modos": "carregado (dispara quando uma criatura escolhida no preparo, ou qualquer inimigo, entra) ou inerte (ativado com alguém já dentro)",
+    "resistencia": "RM",
+    "efeito": "se falhar, a criatura não consegue sair do círculo por 3 turnos. Ela ainda pode agir lá dentro.",
+    "custo_mp": 4,
+    "manutencao": null,
+    "custo_texto": "4 MP",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 na dificuldade para resistir a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "circulos_gemeos",
+    "nome": "Círculos Gêmeos",
+    "escola": "Arcanismo",
+    "estilo": "Círculos",
+    "nivel": 3,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Dois círculos ligados levam quem está num deles até o outro.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "preparo": "30 minutos para cada círculo",
+    "modos": "carregado (2 PA, por quem estiver dentro de um dos círculos) ou inerte (o arcanista precisa estar dentro de um dos círculos)",
+    "resistencia": "nenhuma",
+    "efeito": "até 3 criaturas dentro de um círculo vão para o outro. Os círculos podem estar a até 100 m um do outro. Funciona 1 vez e depois se desfaz.",
+    "custo_mp": 5,
+    "manutencao": null,
+    "custo_texto": "5 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+1 uso a cada 10 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+100 m de distância entre os círculos a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "bateria_de_mana",
+    "nome": "Bateria De Mana",
+    "escola": "Arcanismo",
+    "estilo": "Reservatórios",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um objeto que guarda mana para quem precisar.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [],
+    "preparo": "10 minutos, sobre um objeto pequeno",
+    "modos": "só carregado (1 PA, por quem segurar o objeto)",
+    "resistencia": "nenhuma",
+    "efeito": "quem ativar recupera o MP guardado, sem passar do próprio máximo.",
+    "custo_mp": null,
+    "manutencao": null,
+    "custo_texto": "quanto o arcanista quiser, até 5 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+2 MP de capacidade a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "cristal_de_folego",
+    "nome": "Cristal De Fôlego",
+    "escola": "Arcanismo",
+    "estilo": "Reservatórios",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um cristal que devolve energia física a quem o quebra.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [],
+    "preparo": "10 minutos, sobre um cristal ou pedra",
+    "modos": "só carregado (1 PA, por quem segurar o cristal)",
+    "resistencia": "nenhuma",
+    "efeito": "quem ativar recupera 1d6 de PE.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+1 de PE a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "pedra_de_sustentacao",
+    "nome": "Pedra De Sustentação",
+    "escola": "Arcanismo",
+    "estilo": "Reservatórios",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma pedra que paga a manutenção de outra magia.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [],
+    "preparo": "20 minutos, sobre uma pedra",
+    "modos": "só carregado (1 PA, ligando a pedra a uma magia sustentada do arcanista ou de um aliado tocado)",
+    "resistencia": "nenhuma",
+    "efeito": "por 3 turnos, a pedra paga a manutenção da magia. A magia continua ocupando uma vaga de Manutenção.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+1 turno a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "catalisador",
+    "nome": "Catalisador",
+    "escola": "Arcanismo",
+    "estilo": "Reservatórios",
+    "nivel": 3,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um núcleo que libera de uma vez a energia guardada.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [],
+    "preparo": "30 minutos, sobre um objeto pequeno",
+    "modos": "só carregado (1 PA)",
+    "resistencia": "nenhuma",
+    "efeito": "a próxima magia do arcanista neste turno, de qualquer escola, ignora o limite de Fluxo e tem +2 na dificuldade para resistir.",
+    "custo_mp": 4,
+    "manutencao": null,
+    "custo_texto": "4 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+1 na dificuldade a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "amuleto_absorvente",
+    "nome": "Amuleto Absorvente",
+    "escola": "Arcanismo",
+    "estilo": "Reservatórios",
+    "nivel": 3,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um amuleto que engole magia inimiga e guarda a energia.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [],
+    "preparo": "30 minutos, sobre um amuleto",
+    "modos": "só carregado (dispara na primeira vez que uma magia de dano atingir o portador)",
+    "resistencia": "nenhuma",
+    "efeito": "o dano dessa magia diminui 2d6. Metade do dano absorvido fica guardado no amuleto como MP, que o portador pode recuperar com 1 PA.",
+    "custo_mp": 4,
+    "manutencao": null,
+    "custo_texto": "4 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+1d6 de dano absorvido a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "sentinela_arcana",
+    "nome": "Sentinela Arcana",
+    "escola": "Arcanismo",
+    "estilo": "Mecanismos",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um pequeno dispositivo que vigia uma área.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "preparo": "10 minutos, sobre um objeto pequeno",
+    "modos": "só carregado (1 PA)",
+    "resistencia": "nenhuma",
+    "efeito": "por 8 horas, a sentinela vigia 10 m em volta. Quando alguém entra, ela emite um alarme e marca o intruso, que pode ser sentido pelo arcanista com Detecção.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "+5 m de área a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "servo_mecanico",
+    "nome": "Servo Mecânico",
+    "escola": "Arcanismo",
+    "estilo": "Mecanismos",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um pequeno construto que obedece ordens simples.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "preparo": "10 minutos, sobre um conjunto de peças ou objetos",
+    "modos": "carregado (1 PA) ou inerte",
+    "resistencia": "nenhuma",
+    "efeito": "o servo tem 10 de HP, anda 5 m por turno e carrega até 20 de peso. Ele faz tarefas simples, como abrir portas e buscar objetos. Não ataca. Duração 1 hora.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 hora de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "torreta_arcana",
+    "nome": "Torreta Arcana",
+    "escola": "Arcanismo",
+    "estilo": "Mecanismos",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Uma torreta que dispara sozinha contra inimigos.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "preparo": "20 minutos, sobre um objeto ou superfície",
+    "modos": "carregado (2 PA) ou inerte",
+    "resistencia": "ataque com a Precisão Mágica do arcanista contra a CE",
+    "efeito": "a torreta tem 15 de HP. Uma vez por turno do arcanista, ela dispara em um inimigo a até 15 m, causando 1d8 de dano. Duração 3 turnos.",
+    "custo_mp": 4,
+    "manutencao": null,
+    "custo_texto": "4 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+1 de dano a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "escudo_autonomo",
+    "nome": "Escudo Autônomo",
+    "escola": "Arcanismo",
+    "estilo": "Mecanismos",
+    "nivel": 3,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um disco de energia que voa até quem precisa de proteção.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "preparo": "30 minutos, sobre um disco ou placa",
+    "modos": "carregado (2 PA) ou inerte",
+    "resistencia": "nenhuma",
+    "efeito": "o escudo tem 15 de HP. Uma vez por rodada, quando um aliado a até 5 m for acertado, ele bloqueia até 6 de dano. Duração 3 turnos.",
+    "custo_mp": 4,
+    "manutencao": null,
+    "custo_texto": "4 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+2 de dano bloqueado a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "automato_de_guerra",
+    "nome": "Autômato De Guerra",
+    "escola": "Arcanismo",
+    "estilo": "Mecanismos",
+    "nivel": 4,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "Um construto do tamanho de uma pessoa, feito para lutar.",
+    "atributo_principal": "Armazenamento",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "preparo": "1 hora, sobre um corpo de metal, pedra ou madeira",
+    "modos": "carregado (2 PA) ou inerte",
+    "resistencia": "nenhuma",
+    "efeito": "o autômato tem 30 de HP, armadura 2 e CE 12. Ele age no turno do arcanista com 4 PA próprios e ataca corpo a corpo com 1d10 + Armazenamento ÷ 2 de dano. Obedece ordens simples (uma ação menor do arcanista). Duração 3 turnos.",
+    "custo_mp": 8,
+    "manutencao": null,
+    "custo_texto": "8 MP",
+    "escalamentos": [
+      {
+        "atributo": "Armazenamento",
+        "efeito": "+5 de HP a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Marcante",
+    "sustentada": false
+  },
+  {
+    "id": "sentidos_compartilhados",
+    "nome": "Sentidos Compartilhados",
+    "escola": "Invocação",
+    "estilo": "União",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O invocador vê e ouve pelos sentidos de uma criatura vinculada.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Canalização",
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura vinculada a até 100 m",
+    "resistencia": "nenhuma",
+    "efeito": "o invocador usa a visão e a audição da criatura, mas perde os próprios sentidos enquanto isso. Duração 10 turnos.",
+    "custo_mp": 1,
+    "manutencao": 1,
+    "custo_texto": "1 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "+100 m de distância a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+5 turnos de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Interpretação",
+        "efeito": "a cada 10 pontos, mantém também os próprios sentidos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "traco_bestial",
+    "nome": "Traço Bestial",
+    "escola": "Invocação",
+    "estilo": "União",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O corpo do invocador ganha uma característica de uma criatura vinculada por União.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "o invocador ganha um traço que a criatura vinculada realmente tem. Um lobo dá garras ou faro, mas não dá asas. Valores de referência: garras (ataque desarmado de 1d6 + Força ÷ 2), pele grossa (armadura 1), sentidos agudos (+2 em testes de percepção), patas velozes (+2 m de deslocamento). Para traços que não estão na lista, o mestre define o efeito usando esses valores como medida. Duração 3 turnos.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 traço ao mesmo tempo a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "asas_emprestadas",
+    "nome": "Asas Emprestadas",
+    "escola": "Invocação",
+    "estilo": "União",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O invocador recebe as asas de uma criatura vinculada por União.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "o invocador pode voar, com o seu deslocamento normal. Duração 3 turnos.",
+    "requisitos": "vínculo de União com uma criatura alada.",
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+2 m de deslocamento voando a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "elo_vital",
+    "nome": "Elo Vital",
+    "escola": "Invocação",
+    "estilo": "União",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O corpo do invocador e o da criatura passam a dividir os ferimentos.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 criatura vinculada em campo",
+    "resistencia": "nenhuma",
+    "efeito": "todo dano que o invocador ou a criatura sofrerem é dividido igualmente entre os dois. Duração 3 turnos.",
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": true
+  },
+  {
+    "id": "fusao_completa",
+    "nome": "Fusão Completa",
+    "escola": "Invocação",
+    "estilo": "União",
+    "nivel": 4,
+    "classificacao": "Uso específico",
+    "contexto_legal": "autodefesa",
+    "descricao": "O invocador e a criatura se tornam um só ser.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 3 PA",
+    "alvo": "1 criatura vinculada por União, de tier igual ou menor que a Decifração",
+    "resistencia": "nenhuma",
+    "efeito": "o invocador soma metade do HP da criatura ao seu, pode usar os ataques dela e ganha 2 traços dela (como no Traço Bestial). Quando a fusão acaba, o invocador faz um teste de Sanidade de gravidade leve, pelo choque de dividir a mente. Duração 3 turnos.",
+    "custo_mp": 6,
+    "manutencao": null,
+    "custo_texto": "6 MP",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "prisao_de_mana",
+    "nome": "Prisão De Mana",
+    "escola": "Invocação",
+    "estilo": "Captura",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Cria um recipiente mágico capaz de conter uma criatura.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Moldagem"
+    ],
+    "ativacao": "instantânea, 10 minutos (fora de combate)",
+    "alvo": "um objeto pequeno (cristal, selo ou jaula)",
+    "resistencia": "nenhuma",
+    "efeito": "o objeto vira uma prisão vazia, pronta para receber uma criatura. O invocador mantém no máximo 1 prisão.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Moldagem",
+        "efeito": "+1 prisão a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "captura",
+    "nome": "Captura",
+    "escola": "Invocação",
+    "estilo": "Captura",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "caça licenciada",
+    "descricao": "Prende uma criatura enfraquecida numa prisão vazia.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura mística a até 5 m, com menos da metade do HP e tier igual ou menor que a Decifração",
+    "resistencia": "RM",
+    "efeito": "se falhar, a criatura é presa numa prisão vazia do invocador, e o vínculo de Captura é criado.",
+    "requisitos": "ter uma prisão vazia em mãos.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 na dificuldade para resistir a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+5 m de alcance a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "libertar_criatura",
+    "nome": "Libertar Criatura",
+    "escola": "Invocação",
+    "estilo": "Captura",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Traz para o campo uma criatura capturada.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura presa numa prisão do invocador",
+    "resistencia": "nenhuma",
+    "efeito": "a criatura aparece a até 5 m do invocador e obedece às ordens dele. Mandar a criatura de volta para a prisão custa 1 PA.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP, mais a manutenção da criatura",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "+5 m de distância a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "troca_instantanea",
+    "nome": "Troca Instantânea",
+    "escola": "Invocação",
+    "estilo": "Captura",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O invocador e uma criatura dele trocam de lugar num piscar de olhos.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, reação, 2 PA",
+    "alvo": "1 criatura capturada do invocador, em campo, a até 20 m",
+    "resistencia": "nenhuma",
+    "efeito": "o invocador e a criatura trocam de posição. Se usada quando o invocador for atacado, o ataque atinge a criatura no lugar dele.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "+10 m de distância a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "selo_corporal",
+    "nome": "Selo Corporal",
+    "escola": "Invocação",
+    "estilo": "Captura",
+    "nivel": 3,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma criatura capturada fica selada no corpo do invocador, como uma tatuagem.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, 10 minutos para selar (fora de combate)",
+    "alvo": "1 criatura capturada do invocador",
+    "resistencia": "nenhuma",
+    "efeito": "a criatura deixa a prisão e passa a ficar selada na pele do invocador. Ele pode liberá-la como reação, por 1 PA (pagando a manutenção normal), e selá-la de novo com 1 PA. Só 1 criatura pode ficar selada por vez.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 criatura selada a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "pacto_menor",
+    "nome": "Pacto Menor",
+    "escola": "Invocação",
+    "estilo": "Pacto",
+    "nivel": 1,
+    "classificacao": "Uso específico",
+    "contexto_legal": "licença de invocação",
+    "descricao": "Sela um acordo com uma criatura de tier baixo.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [],
+    "ativacao": "ritual de 10 minutos (fora de combate)",
+    "alvo": "1 criatura mística de tier 1 ou 2 com quem o invocador consiga se comunicar",
+    "resistencia": "a criatura precisa aceitar",
+    "efeito": "cria um vínculo de Pacto. A criatura aceita servir em troca de um preço combinado (uma oferenda, um favor, uma tarefa), definido pelo mestre. Se o invocador não cumprir, o pacto se quebra e a criatura pode se voltar contra ele.",
+    "custo_mp": 1,
+    "manutencao": null,
+    "custo_texto": "1 MP",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "a cada 10 pontos, pode pactuar com criaturas de +1 tier."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": false
+  },
+  {
+    "id": "chamado_do_pacto",
+    "nome": "Chamado Do Pacto",
+    "escola": "Invocação",
+    "estilo": "Pacto",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "licença de invocação",
+    "descricao": "Chama uma criatura pactuada de onde quer que ela esteja.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura com vínculo de Pacto",
+    "resistencia": "nenhuma",
+    "efeito": "a criatura aparece a até 5 m do invocador, venha de onde vier, e obedece dentro dos termos do pacto.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP, mais a manutenção da criatura",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "+5 m de distância a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": false
+  },
+  {
+    "id": "favor_da_criatura",
+    "nome": "Favor Da Criatura",
+    "escola": "Invocação",
+    "estilo": "Pacto",
+    "nivel": 2,
+    "classificacao": "Uso específico",
+    "contexto_legal": "licença de invocação",
+    "descricao": "A criatura pactuada se manifesta só por um instante para agir.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura a até 15 m (para atacar) ou 1 aliado (para curar)",
+    "resistencia": "RM (metade do dano), no ataque",
+    "efeito": "a criatura pactuada se manifesta por um instante, sem ser invocada, e causa 2d8 de dano do tipo dela ou cura 2d6 de HP.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP, e o invocador perde 1d4 de HP como preço",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1d8 de dano ou +1d6 de cura a cada 10 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+5 m de alcance a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": false
+  },
+  {
+    "id": "pacto_de_sangue",
+    "nome": "Pacto De Sangue",
+    "escola": "Invocação",
+    "estilo": "Pacto",
+    "nivel": 3,
+    "classificacao": "Uso específico",
+    "contexto_legal": "licença de invocação",
+    "descricao": "O invocador oferece o próprio sangue para fortalecer a criatura.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura com vínculo de Pacto, em campo",
+    "resistencia": "nenhuma",
+    "efeito": "a criatura ganha 5 × tier de HP extra e +2 no acerto e no dano. Duração 3 turnos.",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP, e o invocador perde 5 de HP máximo até o próximo descanso",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": false
+  },
+  {
+    "id": "grande_pacto",
+    "nome": "Grande Pacto",
+    "escola": "Invocação",
+    "estilo": "Pacto",
+    "nivel": 4,
+    "classificacao": "Proibida",
+    "contexto_legal": null,
+    "descricao": "Um pacto com uma criatura de grande poder, como um dragão ou um demônio maior.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [],
+    "ativacao": "ritual de 1 hora (fora de combate)",
+    "alvo": "1 criatura mística de tier 4 ou 5 com quem o invocador consiga se comunicar",
+    "resistencia": "a criatura precisa aceitar",
+    "efeito": "cria um vínculo de Pacto com a criatura. Ela só pode ser chamada uma vez por dia, e cada vez que vier o invocador faz um teste de Sanidade de gravidade moderada.",
+    "informacoes": "pactos com criaturas de tier 4 ou mais são proibidos por lei.",
+    "custo_mp": 5,
+    "manutencao": null,
+    "custo_texto": "5 MP, e um preço alto definido pelo mestre (anos de serviço, um segredo, parte da própria Sanidade máxima, um nome)",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "a cada 10 pontos, a criatura pode ser chamada +1 vez por dia."
+      }
+    ],
+    "rastro": "Marcante",
+    "sustentada": false
+  },
+  {
+    "id": "sussurro_do_nome",
+    "nome": "Sussurro Do Nome",
+    "escola": "Invocação",
+    "estilo": "Chamado",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Um chamado que só a criatura escuta.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura de quem o invocador conheça o nome, uma palavra ou tenha um objeto, a até 1 km",
+    "resistencia": "nenhuma",
+    "efeito": "a criatura sente o chamado e sabe onde o invocador está. Ela decide se vem ou não.",
+    "custo_mp": 1,
+    "manutencao": null,
+    "custo_texto": "1 MP",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "+1 km de distância a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "comando_breve",
+    "nome": "Comando Breve",
+    "escola": "Invocação",
+    "estilo": "Chamado",
+    "nivel": 1,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "Uma ordem dita na língua da criatura.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura mística a até 10 m, de quem o invocador conheça o nome ou uma palavra, de tier igual ou menor que a Decifração",
+    "resistencia": "RM",
+    "efeito": "se falhar, a criatura cumpre uma ordem simples no seu próximo turno, gastando até 2 PA nisso.",
+    "custo_mp": 2,
+    "manutencao": null,
+    "custo_texto": "2 MP",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 na dificuldade para resistir a cada 5 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+5 m de alcance a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "chamado_selvagem",
+    "nome": "Chamado Selvagem",
+    "escola": "Invocação",
+    "estilo": "Chamado",
+    "nivel": 2,
+    "classificacao": "Livre",
+    "contexto_legal": null,
+    "descricao": "O invocador chama as criaturas menores que vivem por perto.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "criaturas de tier 1 que vivam na região",
+    "resistencia": "nenhuma",
+    "efeito": "1d4 criaturas de tier 1 chegam em 1d4 turnos e ajudam o invocador por 3 turnos, depois vão embora. Não precisam de vínculo e não ocupam Manutenção.",
+    "requisitos": "estar num lugar onde essas criaturas vivam (uma floresta densa, um deserto, um pântano).",
+    "custo_mp": 3,
+    "manutencao": null,
+    "custo_texto": "3 MP",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 criatura a cada 10 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de ajuda a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "sustentada": false
+  },
+  {
+    "id": "invocacao_pelo_objeto",
+    "nome": "Invocação Pelo Objeto",
+    "escola": "Invocação",
+    "estilo": "Chamado",
+    "nivel": 3,
+    "classificacao": "Uso específico",
+    "contexto_legal": "licença de invocação",
+    "descricao": "Um pedaço da criatura traz uma manifestação dela.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "a criatura ligada ao objeto (uma pena, uma escama, um dente), de tier igual ou menor que a Decifração",
+    "resistencia": "nenhuma",
+    "efeito": "uma manifestação da criatura aparece a até 5 m, com a ficha dela, e luta ao lado do invocador por 2 turnos. No começo de cada turno, ele faz um teste de controle. Não precisa de vínculo e não ocupa Manutenção.",
+    "custo_mp": 4,
+    "manutencao": null,
+    "custo_texto": "4 MP, e o objeto é consumido",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "sustentada": false
+  },
+  {
+    "id": "nome_verdadeiro",
+    "nome": "Nome Verdadeiro",
+    "escola": "Invocação",
+    "estilo": "Chamado",
+    "nivel": 4,
+    "classificacao": "Restrita",
+    "contexto_legal": null,
+    "descricao": "Quem conhece o nome verdadeiro de uma criatura tem poder total sobre ela.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 2 PA",
+    "alvo": "1 criatura de quem o invocador conheça o nome verdadeiro, de tier igual ou menor que a Decifração",
+    "resistencia": "nenhuma",
+    "efeito": "a criatura obedece totalmente ao invocador por 1 turno, sem poder resistir. Fora de combate, o invocador pode usar o nome para criar um vínculo de Pacto sem negociação.",
+    "requisitos": "o nome verdadeiro precisa ser descoberto em jogo.",
+    "custo_mp": 5,
+    "manutencao": null,
+    "custo_texto": "5 MP",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de comando a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "sustentada": false
+  }
+]

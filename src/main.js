@@ -27,6 +27,7 @@ import './styles/ficha.css';
 import './styles/npcBank.css';
 import './styles/notebook.css';
 import './styles/notebook-book.css';
+import './styles/msl.css';
 import './styles/dice.css';
 import './styles/sessionJournal.css';
 import './styles/games.css';
