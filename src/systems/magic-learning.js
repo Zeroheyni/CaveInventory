@@ -35,6 +35,33 @@ const attributes = [
   A('sensitividade', 'Sensitividade', 'SEN', '📡', '#2dd4bf', 'magico'),
   A('interpretacao', 'Interpretação', 'ITP', '📜', '#ff8a4c', 'magico'),
 ];
+// "Função" de cada atributo no Ficha-Guia; sociais dizem com o que o alvo resiste, mágicos onde costumam escalar nas magias
+const INFO = {
+  forca: { desc: 'Dano corpo a corpo, força bruta e capacidade de carga' },
+  poder_magico: { desc: 'Potência de magias ofensivas e efeitos mágicos. Escala o dano de itens mágicos (ex.: cajados)' },
+  agilidade: { desc: 'Deslocamento e movimentação no campo de batalha' },
+  reflexos: { desc: 'Esquiva e velocidade de reação' },
+  res_fisica: { desc: 'Reduz efeitos físicos negativos: atordoamento, empurrões, quedas, queimadura, veneno, sangramento' },
+  res_magica: { desc: 'Diminui intensidade e duração de efeitos mágicos prejudiciais. Resiste a magias' },
+  intelecto: { desc: 'Facilita aprender magias e conhecimento arcano. Sem impacto direto no combate' },
+  disciplina: { desc: 'Facilita aprender estilos de luta e técnicas físicas. Sem impacto direto no combate' },
+  prec_fisica: { desc: 'Acerto de ataques físicos, corpo a corpo e à distância' },
+  prec_magica: { desc: 'Acerto de magias que exigem mira direta' },
+  estamina: { desc: 'Resistência a esforço físico. Define o PE' },
+  vitalidade: { desc: 'Define o HP' },
+  ameacar: { desc: 'Intimidar, mexer na emoção do alvo para o medo', resist: 'Autocontrole' },
+  acalmar: { desc: 'Mexer na emoção do alvo para a calmaria', resist: 'Autocontrole' },
+  enganacao: { desc: 'Mentir, enganar', resist: 'Perspicácia' },
+  perspicacia: { desc: 'Perceber mentiras e intenções' },
+  autocontrole: { desc: 'Resistir a Ameaçar e Acalmar' },
+  armazenamento: { desc: 'Capacidade de armazenar energia mágica', scales: 'reservas, efeitos que duram mais ou acumulam energia' },
+  canalizacao: { desc: 'Capacidade de canalizar energia mágica pela matéria', scales: 'alcance, direcionamento, propagação, alvos extras' },
+  controle: { desc: 'Coordenação da energia mágica (ex.: usar magias ao mesmo tempo)', scales: 'duração, número de alvos, precisão' },
+  moldagem: { desc: 'Moldar energia mágica em formatos, sem moldes', scales: 'formas criativas, área de efeito, construções' },
+  sensitividade: { desc: 'Sentir energia mágica, geralmente por um dos sentidos', scales: 'detectar, prever, reagir mais rápido' },
+  interpretacao: { desc: 'Interpretar energia criptografada, moldada em formatos complexos ou transmutada', scales: 'decifrar, transformar, efeitos incomuns' },
+};
+attributes.forEach((a) => Object.assign(a, INFO[a.key] || {}));
 const ATTR_KEYS = attributes.map((a) => a.key);
 
 // os atributos básicos aparecem em 6 pares (como no livro)

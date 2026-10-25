@@ -86,6 +86,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   let rollMode = 'normal'; // normal | vantagem | desvantagem
   let lastRoll = null;
   let showTemp = false;
+  let showHelp = false; // descrições dos atributos (Função, "o alvo resiste com", "costuma escalar")
   let uploadingAvatar = false;
   let spellFilter = { school: '', level: '', text: '', learned: false };
   let spellOpen = new Set();
@@ -341,7 +342,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     const gained = draft && base > sheet_base(a.key) ? ` <small class="msl-new" title="pontos novos neste rascunho">+${base - sheet_base(a.key)}</small>` : '';
     return `
       <div class="msl-arow" style="--c:${a.color};">
-        <div class="msl-arow-name" title="${escapeHtml(a.label)}">${escapeHtml(a[labelKey])}</div>
+        <div class="msl-arow-name" title="${escapeHtml(a.desc || a.label)}">${escapeHtml(a[labelKey])}${showHelp && a.desc ? '<small class="msl-arow-desc">' + escapeHtml(a.desc) + (a.resist ? ' · o alvo resiste com <b>' + escapeHtml(a.resist) + '</b>' : '') + (a.scales ? ' · costuma escalar: ' + escapeHtml(a.scales) : '') + '</small>' : ''}</div>
         <div class="msl-arow-val">
           <button type="button" class="msl-step" data-attr="${a.key}" data-d="-1" ${canDown ? '' : 'disabled'} aria-label="diminuir">−</button>
           <b>${total}</b>
@@ -383,13 +384,16 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     const poolLeft = { basicos: msl.pool.basicos - used.basicos, sociais: msl.pool.sociais - used.sociais, magicos: msl.pool.magicos - used.magicos };
     const view = { attrs, bonus, poolLeft };
     const canDraft = isOwner() && !isMaster && msl.pool.basicos + msl.pool.sociais + msl.pool.magicos > 0;
-    const pool = (k) => `<span class="msl-pool" title="pontos pra distribuir">pontos <b>${poolLeft[k]}</b></span>`;
+    const sumOf = (g) => byGroupSum(g, attrs);
+    const pool = (k, g) => `<span class="msl-pool" title="soma dos pontos já colocados nos atributos do grupo">total usado <b>${sumOf(g)}</b></span><span class="msl-pool" title="pontos que ainda dá pra distribuir">sobram <b>${poolLeft[k]}</b></span>`;
     const byGroup = (g) => attrDefs.filter((a) => a.group === g);
     return `
       <div class="msl-attr-top">
+        <button type="button" class="btn btn-ghost" data-act="toggle-help" title="mostra, em cada atributo, o que ele faz">${showHelp ? 'ocultar' : 'mostrar'} descrições</button>
         <button type="button" class="btn btn-ghost" data-act="toggle-temp">${showTemp ? 'ocultar' : 'mostrar'} modificadores temporários</button>
         ${isMaster ? '<span class="ficha-master-badge">edição livre (mestre)</span>' : ''}
       </div>
+      ${creationGuideHtml(msl, poolLeft)}
       ${
         canDraft && !draft
           ? `<div class="msl-pointsbar"><span>Você tem pontos pra distribuir:</span>${poolBadges(msl.pool)}<button type="button" class="btn" data-act="draft-start">distribuir pontos</button></div>`
@@ -399,22 +403,41 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       ${isMaster ? `<div class="msl-pointsbar"><span>Pontos disponíveis (jogador):</span>${poolInputs(msl.pool)}<span class="msl-sep"></span><span>graus de perícia:</span><input type="number" min="0" class="msl-pool-input" data-skillgrades value="${msl.skillGrades}"></div>` : ''}
 
       <section class="msl-asection">
-        <div class="msl-asection-head"><h3>📊 Atributos básicos</h3>${pool('basicos')}</div>
+        <div class="msl-asection-head"><h3>📊 Atributos básicos</h3>${pool('basicos', 'basico')}</div>
         <div class="msl-ablocks">
           ${BASIC_SUBGROUPS.map((sg) => attrBlock(sg.label, sg.icon, sg.color, byGroup('basico').filter((a) => a.sub === sg.id), msl, view, 'short')).join('')}
         </div>
       </section>
       <div class="msl-asection-pair">
         <section class="msl-asection">
-          <div class="msl-asection-head"><h3>🗣️ Atributos sociais</h3>${pool('sociais')}</div>
+          <div class="msl-asection-head"><h3>🗣️ Atributos sociais</h3>${pool('sociais', 'social')}</div>
           <div class="msl-ablocks msl-ablocks-one">${attrBlock('Sociais', '🗣️', '#e879f9', byGroup('social'), msl, view, 'label')}</div>
         </section>
         <section class="msl-asection">
-          <div class="msl-asection-head"><h3>✨ Atributos mágicos</h3>${pool('magicos')}</div>
+          <div class="msl-asection-head"><h3>✨ Atributos mágicos</h3>${pool('magicos', 'magico')}</div>
           <div class="msl-ablocks msl-ablocks-one">${attrBlock('Mágicos', '🔮', '#a78bfa', byGroup('magico'), msl, view, 'label')}</div>
         </section>
       </div>`;
   }
+  const byGroupSum = (g, attrs) => attrDefs.filter((a) => a.group === g).reduce((s, a) => s + (attrs[a.key] || 0), 0);
+
+  // passo a passo do "Como criar sua ficha" (Ficha-Guia), com o que já foi feito
+  function creationGuideHtml(msl, poolLeft) {
+    if (msl.done) return '';
+    const pv = pvSummary(msl);
+    const left = poolLeft.basicos + poolLeft.sociais + poolLeft.magicos;
+    const steps = [
+      [left <= 0, '1. Atributos', left <= 0 ? 'todos os pontos distribuídos' : 'faltam ' + poolLeft.basicos + ' básicos · ' + poolLeft.sociais + ' sociais · ' + poolLeft.magicos + ' mágicos (pontos de um grupo não passam pro outro)'],
+      [true, '2. Status', 'calculados sozinhos pelas fórmulas (barras e quadros acima)'],
+      [msl.skillGrades <= 0, '3. Perícias', msl.skillGrades <= 0 ? 'os 4 graus foram usados' : 'faltam ' + msl.skillGrades + ' de ' + 4 + ' graus (básico custa 1, treinado 2; ninguém começa como mestre)'],
+      [pv.left >= 0 && pv.rawGained <= 8, '4. Vantagens e desvantagens', 'PV ganhos ' + pv.gained + '/8 · gastos ' + pv.spent + ' · sobra ' + pv.left + ' (o que sobrar na criação é perdido)'],
+      [msl.sanidade >= 100 || true, '5. Sanidade', 'começa em 100'],
+      [true, '6. Nível', 'nível 1, 0 de XP (sobe com XP do mestre)'],
+    ];
+    return '<div class="msl-guide"><div class="msl-guide-head"><b>📋 Como criar sua ficha</b><span class="msl-hint">siga os passos; quando terminar, conclua a criação na aba Notas</span></div>' +
+      steps.map(([ok, t, d]) => '<div class="msl-guide-step ' + (ok ? 'ok' : '') + '"><span>' + (ok ? '✔' : '○') + '</span><b>' + t + '</b><small>' + escapeHtml(d) + '</small></div>').join('') + '</div>';
+  }
+
   function poolBadges(pool) {
     return `<span class="msl-pool">básicos <b>${pool.basicos}</b></span><span class="msl-pool">sociais <b>${pool.sociais}</b></span><span class="msl-pool">mágicos <b>${pool.magicos}</b></span>`;
   }
@@ -455,7 +478,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       <div class="ficha-section">
         <div class="ficha-section-head">
           <span class="ficha-section-title">PERÍCIAS</span>
-          <span class="msl-pool">graus pra gastar <b>${msl.skillGrades}</b></span>
+          <span class="msl-pool">graus pra gastar <b>${msl.skillGrades}</b></span><span class="msl-pool" title="soma dos graus nas perícias">graus usados <b>${Object.values(msl.skills).reduce((s, g) => s + (parseInt(g, 10) || 0), 0)}</b></span>
           <span class="msl-hint">grau 1 = básico (+2) · 2 = treinado (+4) · 3 = mestre (+6)${!msl.done && !isMaster ? ' · na criação: no máximo treinado' : ''}</span>
         </div>
         ${SKILL_GROUPS.map(group).join('')}
@@ -779,11 +802,11 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   // ---------------------------------------------------------------- aba: notas
   function notesTab(msl) {
     const data = sheetDataOf(sheet);
-    const f = (id, label) => `<div><label class="msl-lbl">${label}</label><input type="text" data-sheetfield="${id}" value="${escapeHtml(data[id])}" ${canEdit() ? '' : 'disabled'}></div>`;
+    const f = (id, label) => `<div><label class="msl-lbl">${label}</label><input type="text" data-sheetfield="${id}" value="${escapeHtml(data[id] || '')}" ${canEdit() ? '' : 'disabled'}></div>`;
     return `
       <div class="ficha-section">
         <div class="ficha-section-head"><span class="ficha-section-title">FICHA</span></div>
-        <div class="ficha-fields-grid">${f('idade', 'Idade')}${f('genero', 'Gênero')}${f('raca', 'Raça')}${f('trabalho', 'Trabalho')}</div>
+        <div class="ficha-fields-grid">${f('jogador', 'Jogador')}${f('idade', 'Idade')}${f('trabalho', 'Ocupação')}${f('genero', 'Gênero')}${f('raca', 'Raça')}</div>
       </div>
       <div class="ficha-section">
         <div class="ficha-section-head"><span class="ficha-section-title">HISTÓRIA</span></div>
@@ -889,6 +912,10 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       const msl = mslOf(sheet);
       if (act === 'back') return onBack && onBack();
       if (act === 'avatar') return $('msl-avatar-input').click();
+      if (act === 'toggle-help') {
+        showHelp = !showHelp;
+        return render();
+      }
       if (act === 'toggle-temp') {
         showTemp = !showTemp;
         return render();

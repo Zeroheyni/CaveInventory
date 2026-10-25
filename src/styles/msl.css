@@ -276,3 +276,15 @@
 /* vantagens/desvantagens já na ficha: cartões legíveis com borda por nível */
 .msl-perk{ border-left:4px solid var(--stone-line); }
 .msl-perk-text{ font-size:12px; line-height:1.55; }
+
+/* guia de criação (Ficha-Guia) e descrições dos atributos */
+.msl-guide{ margin-bottom:14px; padding:12px 14px; border-radius:14px; border:1px solid var(--accent-core); background: linear-gradient(165deg, var(--accent-faint), var(--stone-800) 60%); }
+.msl-guide-head{ display:flex; gap:12px; align-items:baseline; flex-wrap:wrap; margin-bottom:8px; }
+.msl-guide-head b{ font:800 12.5px var(--font-display); letter-spacing:0.1em; text-transform:uppercase; }
+.msl-guide-step{ display:grid; grid-template-columns: 20px auto 1fr; gap:8px; align-items:baseline; padding:5px 0; border-top:1px solid rgba(255,255,255,0.06); font:12px var(--font-mono); }
+.msl-guide-step span{ color: var(--ink-faint); }
+.msl-guide-step b{ color: var(--ink); white-space:nowrap; }
+.msl-guide-step small{ color: var(--ink-faint); font-size:11px; }
+.msl-guide-step.ok span{ color:#4ade80; } .msl-guide-step.ok b{ color:#4ade80; }
+.msl-arow-desc{ display:block; margin-top:3px; font:400 10.5px/1.45 var(--font-mono); color: var(--ink-faint); letter-spacing:0; font-weight:400; }
+.msl-arow-desc b{ color: var(--c); font-weight:700; }
