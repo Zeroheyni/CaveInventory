@@ -366,8 +366,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   function attrRow(a, msl, view, labelKey = 'short') {
     const base = view.attrs[a.key];
     const total = Math.max(0, base + (view.bonus[a.key] || 0));
-    const eff = Math.max(0, total + msl.temp[a.key]);
-    const mod = Math.floor(eff / 2);
+    const mod = Math.floor(total / 2) + (msl.temp[a.key] || 0); // o temporário vale direto no teste, não sobe o atributo
     const pk = poolKeyOfAttr(a.key);
     const draftMode = draft && isOwner() && !isMaster;
     const canUp = isMaster || (draftMode && view.poolLeft[pk] > 0);
@@ -382,12 +381,12 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
           <button type="button" class="msl-step" data-attr="${a.key}" data-d="1" ${canUp ? '' : 'disabled'} aria-label="aumentar">+</button>
         </div>
         <div class="msl-arow-info">
-          <span class="msl-arow-mod" title="modificador de teste (atributo ÷ 2)">${signed(mod)}</span>
+          <span class="msl-arow-mod" title="modificador de teste (atributo ÷ 2${msl.temp[a.key] ? ' ' + signed(msl.temp[a.key]) + ' de modificador' : ''})">${signed(mod)}</span>
           ${view.bonus[a.key] ? `<small title="bônus de vantagens: ${signed(view.bonus[a.key])}">(${base}${signed(view.bonus[a.key])})</small>` : ''}
-          ${msl.temp[a.key] ? `<small class="msl-temp-tag" title="modificador temporário">${signed(msl.temp[a.key])} temp</small>` : ''}${gained}
+          ${msl.temp[a.key] ? `<small class="msl-temp-tag" title="modificador direto nos testes deste atributo (não muda o atributo)">${signed(msl.temp[a.key])} nos dados</small>` : ''}${gained}
         </div>
         <button type="button" class="msl-roll" data-roll-attr="${a.key}" title="rolar ${escapeHtml(a.label)}">🎲</button>
-        ${showTemp && canEdit() ? `<input type="number" class="msl-temp-input" data-temp="${a.key}" value="${msl.temp[a.key]}" title="modificador temporário (não muda HP/PE/MP máximos)">` : ''}
+        ${showTemp && canEdit() ? `<input type="number" class="msl-temp-input" data-temp="${a.key}" value="${msl.temp[a.key]}" title="+x ou -x direto nos dados dos testes deste atributo (não aumenta o atributo, nem HP, PE ou MP)" placeholder="±">` : ''}
       </div>`;
   }
   // cartão de um grupo de atributos (um par dos básicos, ou os sociais/mágicos inteiros)
@@ -423,7 +422,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     return `
       <div class="msl-attr-top">
         <button type="button" class="btn btn-ghost" data-act="toggle-help" title="mostra, em cada atributo, o que ele faz">${showHelp ? 'ocultar' : 'mostrar'} descrições</button>
-        <button type="button" class="btn btn-ghost" data-act="toggle-temp">${showTemp ? 'ocultar' : 'mostrar'} modificadores temporários</button>
+        <button type="button" class="btn btn-ghost" data-act="toggle-temp">${showTemp ? 'ocultar' : 'mostrar'} modificadores nos dados</button>
         ${isMaster ? '<span class="ficha-master-badge">edição livre (mestre)</span>' : ''}
       </div>
       ${creationGuideHtml(msl, poolLeft)}
@@ -754,7 +753,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     const groups = [['basico', 'Básicos'], ['social', 'Sociais'], ['magico', 'Mágicos'], ['status', 'Status']];
     return `
       <div class="msl-help">
-        <div class="msl-help-head"><b>? Siglas pra usar nas fórmulas</b><span class="msl-hint">clique numa sigla pra inserir no campo de fórmula que você estava editando. O valor ao lado é o de ${escapeHtml(sheet.name)} (com bônus de vantagens e modificadores temporários).</span><button type="button" class="btn btn-ghost" data-act="ed-help">fechar</button></div>
+        <div class="msl-help-head"><b>? Siglas pra usar nas fórmulas</b><span class="msl-hint">clique numa sigla pra inserir no campo de fórmula que você estava editando. O valor ao lado é o de ${escapeHtml(sheet.name)} (com bônus de vantagens; os modificadores dos dados não entram).</span><button type="button" class="btn btn-ghost" data-act="ed-help">fechar</button></div>
         <div class="msl-help-grid">
           ${groups
             .map(
@@ -1228,7 +1227,8 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     if (roller.kind === 'd20') {
       if (roller.skill && !SKILLS.find((x) => x.id === roller.skill)) roller.skill = '';
       if (!attrDef(roller.attr) || (msl.noMagic && attrDef(roller.attr).group === 'magico')) roller.attr = 'forca';
-      parts.push({ label: attrDef(roller.attr).label, value: attrMod(sheet, roller.attr), kind: 'attr' });
+      parts.push({ label: attrDef(roller.attr).label, value: Math.floor(attrTotal(sheet, roller.attr) / 2), kind: 'attr' });
+      if (msl.temp[roller.attr]) parts.push({ label: 'Mod. de ' + attrDef(roller.attr).label, value: msl.temp[roller.attr], kind: 'temp' });
       if (roller.skill) {
         const s = SKILLS.find((x) => x.id === roller.skill);
         parts.push({ label: skillLabel(s), value: skillBonus(skillGrade(msl, s.id)), kind: 'skill' });
@@ -1239,7 +1239,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     const mod = parts.reduce((s, p) => s + p.value, 0);
     const qty = roller.kind === 'd20' ? 1 : roller.qty;
     const sides = roller.kind === 'd20' ? 20 : dieSides(roller.die);
-    const customs = parts.filter((p) => p.kind === 'custom');
+    const customs = parts.filter((p) => p.kind === 'custom' || p.kind === 'temp');
     let label = roller.name.trim();
     if (!label) {
       label = roller.kind === 'd20' ? parts.filter((p) => p.kind === 'attr' || p.kind === 'skill').map((p) => p.label).join(' + ') : `${qty}${roller.die}`;

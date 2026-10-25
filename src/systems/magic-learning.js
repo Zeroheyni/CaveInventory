@@ -97,7 +97,7 @@ export function mslOf(char) {
   });
   return {
     attrs,
-    temp, // modificadores temporários (magias, efeitos): afetam testes/CE/deslocamento, NÃO os máximos
+    temp, // modificadores temporários (magias, efeitos): +x/-x DIRETO nos dados dos testes desse atributo; não mexem no atributo nem em nada derivado
     initialized: !!raw.initialized,
     pool: { ...(raw.initialized ? { basicos: 0, sociais: 0, magicos: 0 } : CREATION_POOLS), ...(raw.pool || {}) },
     skillGrades: raw.skillGrades === undefined ? (raw.initialized ? 0 : CREATION_SKILL_GRADES) : Math.max(0, parseInt(raw.skillGrades, 10) || 0),
@@ -154,12 +154,13 @@ export function attrTotal(char, key) {
   const msl = mslOf(char);
   return Math.max(0, msl.attrs[key] + (perks(msl).bonus[key] || 0));
 }
-// efetivo pros TESTES: total + modificador temporário
+// valor do atributo pras contas (status derivados, dificuldade e fórmulas das magias). O modificador temporário NÃO entra aqui:
+// ele não aumenta o atributo, só soma +x/-x direto no teste (ver attrMod)
 export function attrEffective(char, key) {
-  return Math.max(0, attrTotal(char, key) + mslOf(char).temp[key]);
+  return attrTotal(char, key);
 }
-// modificador de teste do atributo (atributo // 2)
-export const attrMod = (char, key) => Math.floor(attrEffective(char, key) / 2);
+// modificador de teste do atributo: atributo // 2 + o modificador temporário (que vale direto nos dados)
+export const attrMod = (char, key) => Math.floor(attrTotal(char, key) / 2) + (mslOf(char).temp[key] || 0);
 
 // ------------------------------------------------------------- perícias e testes
 export const skillGrade = (msl, id) => Math.min(3, Math.max(0, parseInt(msl.skills[id], 10) || 0));
@@ -201,7 +202,7 @@ export function derive(char) {
     deteccao: 5 + t('sensitividade') * 2,
     decifracao: 1 + Math.floor(t('interpretacao') / 4) + (p.flags.decifracao || 0),
     sanidadeMax: 100,
-    iniciativaMod: Math.floor(e('reflexos') / 2) + (p.flags.iniciativa || 0),
+    iniciativaMod: attrMod(char, 'reflexos') + (p.flags.iniciativa || 0),
     armadura: msl.armor + (p.flags.armadura || 0),
     exaustaoMax: p.flags.exaustaoMax || 5, // desmaia quando o nível chega nele
     exaustaoPenalidade: exaustPenalty,
