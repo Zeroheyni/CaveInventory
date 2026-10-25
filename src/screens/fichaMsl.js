@@ -14,6 +14,7 @@ import {
   BASIC_SUBGROUPS,
   mslOf,
   derive,
+  upkeepTurn,
   attrTotal,
   attrEffective,
   attrMod,
@@ -910,35 +911,12 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
 
   // novo turno: cobra a manutenção, conta a duração, encerra o que acabou ou não pôde ser pago e zera o Fluxo (a manutenção já conta nele)
   async function newTurn() {
-    const msl = mslOf(sheet);
-    const d = derive(sheet);
-    let mp = msl.mp === null ? d.mpMax : msl.mp;
-    let paid = 0;
-    const next = [];
-    const lines = [];
-    msl.active.forEach((e) => {
-      const item = { ...e };
-      if (item.turns !== null && item.turns !== undefined) item.turns -= 1;
-      if (item.turns !== null && item.turns !== undefined && item.turns <= 0) {
-        lines.push(`${e.name} acabou (duração)`);
-        return;
-      }
-      if (item.upkeep > 0) {
-        if (mp >= item.upkeep) {
-          mp -= item.upkeep;
-          paid += item.upkeep;
-        } else {
-          lines.push(`${e.name} se encerrou: faltou MP pra manutenção`);
-          return;
-        }
-      }
-      next.push(item);
-    });
-    spellMsg = `Novo turno: manutenção ${paid} MP${msl.active.length ? ` · ${next.length}/${msl.active.length} continuam ativas` : ''}${lines.length ? ' · ' + lines.join('; ') : ''}.`;
+    const r = upkeepTurn(sheet);
+    spellMsg = `Novo turno: manutenção ${r.paid} MP${r.before ? ` · ${r.active.length}/${r.before} continuam ativas` : ''}${r.lines.length ? ' · ' + r.lines.join('; ') : ''}.`;
     await commit((m) => {
-      m.active = next;
-      m.mp = mp;
-      m.fluxoUsed = paid;
+      m.active = r.active;
+      m.mp = r.mp;
+      m.fluxoUsed = r.paid;
     });
   }
 

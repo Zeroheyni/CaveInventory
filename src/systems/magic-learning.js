@@ -258,6 +258,37 @@ export function pvSummary(msl) {
   return { gained: Math.min(gained, 8), rawGained: gained, spent, left: Math.min(gained, 8) - spent, lvl3dis };
 }
 
+// ------------------------------------------------------------- manutenção das magias ativas (início do turno)
+// cobra o MP de manutenção de cada magia sustentada / criatura invocada (conta no Fluxo do turno), desconta a duração e encerra o que
+// acabou ou não pôde ser pago (na ordem da lista). Devolve o novo estado, sem gravar nada.
+export function upkeepTurn(char) {
+  const msl = mslOf(char);
+  const d = derive(char);
+  let mp = msl.mp === null ? d.mpMax : msl.mp;
+  let paid = 0;
+  const next = [];
+  const lines = [];
+  msl.active.forEach((e) => {
+    const item = { ...e };
+    if (item.turns !== null && item.turns !== undefined) item.turns -= 1;
+    if (item.turns !== null && item.turns !== undefined && item.turns <= 0) {
+      lines.push(`${e.name} acabou (duração)`);
+      return;
+    }
+    if (item.upkeep > 0) {
+      if (mp >= item.upkeep) {
+        mp -= item.upkeep;
+        paid += item.upkeep;
+      } else {
+        lines.push(`${e.name} se encerrou: faltou MP pra manutenção`);
+        return;
+      }
+    }
+    next.push(item);
+  });
+  return { active: next, before: msl.active.length, mp, paid, lines };
+}
+
 // ------------------------------------------------------------- sanidade
 export function sanityStage(s) {
   if (s <= 0) return { id: 'colapso', label: 'Colapso (o mestre controla até o fim da cena)' };

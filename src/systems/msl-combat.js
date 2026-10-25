@@ -3,7 +3,7 @@
 // Não importa src/combat.js (que importa este arquivo no passar-de-turno): condições vão direto pela RPC e o log por battleLog.js.
 import { supabase } from '../supabaseClient.js';
 import { logEvent } from '../battleLog.js';
-import { derive, mslOf, attrTotal, woundState, rollDie } from './magic-learning.js';
+import { derive, mslOf, attrTotal, woundState, rollDie, upkeepTurn } from './magic-learning.js';
 import { DAMAGE_TYPES } from './msl-data.js';
 
 export const PA_PER_ROUND = 6;
@@ -220,14 +220,41 @@ export async function applyDamage(p, char, { amount, type, origin, undead }) {
 }
 
 // início do turno de alguém: sangramento/queimadura causam % do HP máximo (mín. 1, máx. 10; −1 por 5 de RF/RM, mín. 1) e ignoram armadura
+// Magia sustentada / criatura invocada: no início do turno de QUEM conjurou, cobra a manutenção da ficha (mesma conta do "novo turno" da ficha).
+async function chargeUpkeep(p) {
+  if (!p.character_id) return [];
+  const { data: ch } = await supabase.from('characters').select('id, name, system_data').eq('id', p.character_id).maybeSingle();
+  if (!ch || !ch.system_data || !ch.system_data.msl) return [];
+  const msl = mslOf(ch);
+  if (!msl.active.length && !msl.fluxoUsed) return [];
+  const r = upkeepTurn(ch);
+  const raw = ch.system_data.msl;
+  const system_data = { ...ch.system_data, msl: { ...raw, initialized: true, active: r.active, mp: r.mp, fluxoUsed: r.paid } };
+  await syncChar(ch.id, { system_data });
+  const out = [];
+  if (r.before) {
+    const txt = `Manutenção: ${r.paid} MP (${r.active.length}/${r.before} magias/criaturas continuam)${r.lines.length ? ' · ' + r.lines.join('; ') : ''}`;
+    say(p.campaign_id, p, txt, r.paid);
+    out.push(`${p.display_name}: ${txt}`);
+  }
+  return out;
+}
+
 export async function startTurnEffects(participantId) {
   const { data: p } = await supabase.from('combat_participants').select('*').eq('id', participantId).maybeSingle();
-  if (!p || !Array.isArray(p.conditions) || !p.conditions.length) return [];
+  if (!p) return [];
+  let upkeepLines = [];
+  try {
+    upkeepLines = await chargeUpkeep(p);
+  } catch (_) {
+    /* sem permissão / ficha sem dados: segue só com os efeitos de dano */
+  }
+  if (!Array.isArray(p.conditions) || !p.conditions.length) return upkeepLines;
   const burns = [
     ['sangrando', 0.05, 'sangramento', 'res_fisica'],
     ['queimando', 0.07, 'queimadura', 'res_magica'],
   ].filter(([k]) => hasCond(p, k));
-  if (!burns.length) return [];
+  if (!burns.length) return upkeepLines;
   let char = null;
   if (p.character_id) {
     const { data } = await supabase.from('characters').select('id, system_data').eq('id', p.character_id).maybeSingle();
@@ -244,5 +271,5 @@ export async function startTurnEffects(participantId) {
   }
   await patchParticipant(p.id, { hp_current: hp });
   await syncChar(p.character_id, { hp_current: hp });
-  return out;
+  return [...upkeepLines, ...out];
 }
