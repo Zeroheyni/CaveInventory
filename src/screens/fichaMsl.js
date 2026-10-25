@@ -9,6 +9,7 @@ import { nameInCampaign } from '../accounts.js';
 import {
   magicLearning,
   ATTRIBUTE_GROUPS,
+  BASIC_SUBGROUPS,
   mslOf,
   derive,
   attrTotal,
@@ -325,7 +326,8 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   }
 
   // ---------------------------------------------------------------- aba: atributos
-  function attrCard(a, msl, view) {
+  // uma linha de atributo: nome · [−] valor [+] · modificador de teste · 🎲
+  function attrRow(a, msl, view, labelKey = 'short') {
     const base = view.attrs[a.key];
     const total = Math.max(0, base + (view.bonus[a.key] || 0));
     const eff = Math.max(0, total + msl.temp[a.key]);
@@ -334,23 +336,30 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     const draftMode = draft && isOwner() && !isMaster;
     const canUp = isMaster || (draftMode && view.poolLeft[pk] > 0);
     const canDown = isMaster ? base > 0 : draftMode && base > sheet_base(a.key);
+    const gained = draft && base > sheet_base(a.key) ? ` <small class="msl-new" title="pontos novos neste rascunho">+${base - sheet_base(a.key)}</small>` : '';
     return `
-      <div class="msl-attr" style="--c:${a.color};">
-        <div class="msl-attr-top">
-          <span class="msl-attr-ico">${a.icon}</span>
-          <span class="msl-attr-name" title="${escapeHtml(a.label)}">${escapeHtml(a.label)}</span>
+      <div class="msl-arow" style="--c:${a.color};">
+        <div class="msl-arow-name" title="${escapeHtml(a.label)}">${escapeHtml(a[labelKey])}</div>
+        <div class="msl-arow-val">
+          <button type="button" class="msl-step" data-attr="${a.key}" data-d="-1" ${canDown ? '' : 'disabled'} aria-label="diminuir">−</button>
+          <b>${total}</b>
+          <button type="button" class="msl-step" data-attr="${a.key}" data-d="1" ${canUp ? '' : 'disabled'} aria-label="aumentar">+</button>
         </div>
-        <div class="msl-attr-val">
-          <b>${total}</b>${view.bonus[a.key] ? `<small title="bônus de vantagens: ${signed(view.bonus[a.key])}">(${base}${signed(view.bonus[a.key])})</small>` : ''}
-          ${msl.temp[a.key] ? `<small class="msl-temp-tag" title="modificador temporário">${signed(msl.temp[a.key])} temp</small>` : ''}
+        <div class="msl-arow-info">
+          <span class="msl-arow-mod" title="modificador de teste (atributo ÷ 2)">${signed(mod)}</span>
+          ${view.bonus[a.key] ? `<small title="bônus de vantagens: ${signed(view.bonus[a.key])}">(${base}${signed(view.bonus[a.key])})</small>` : ''}
+          ${msl.temp[a.key] ? `<small class="msl-temp-tag" title="modificador temporário">${signed(msl.temp[a.key])} temp</small>` : ''}${gained}
         </div>
-        <div class="msl-attr-mod">teste ${signed(mod)}</div>
-        <div class="msl-attr-ctl">
-          ${canDown ? `<button type="button" data-attr="${a.key}" data-d="-1">−</button>` : '<span></span>'}
-          <button type="button" class="msl-roll" data-roll-attr="${a.key}" title="rolar ${escapeHtml(a.label)}">🎲</button>
-          ${canUp ? `<button type="button" data-attr="${a.key}" data-d="1">+</button>` : '<span></span>'}
-        </div>
+        <button type="button" class="msl-roll" data-roll-attr="${a.key}" title="rolar ${escapeHtml(a.label)}">🎲</button>
         ${showTemp && canEdit() ? `<input type="number" class="msl-temp-input" data-temp="${a.key}" value="${msl.temp[a.key]}" title="modificador temporário (não muda HP/PE/MP máximos)">` : ''}
+      </div>`;
+  }
+  // cartão de um grupo de atributos (um par dos básicos, ou os sociais/mágicos inteiros)
+  function attrBlock(title, icon, color, attrs, msl, view, labelKey) {
+    return `
+      <div class="msl-ablock" style="--c:${color};">
+        <div class="msl-ablock-head"><span class="msl-ablock-ico">${icon}</span><b>${escapeHtml(title)}</b></div>
+        ${attrs.map((a) => attrRow(a, msl, view, labelKey)).join('')}
       </div>`;
   }
   // valor confirmado (base salva) -- o rascunho do jogador nunca desce abaixo disso
@@ -371,26 +380,37 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     }
     const poolLeft = { basicos: msl.pool.basicos - used.basicos, sociais: msl.pool.sociais - used.sociais, magicos: msl.pool.magicos - used.magicos };
     const view = { attrs, bonus, poolLeft };
-    const canDraft = isOwner() && !isMaster && (msl.pool.basicos + msl.pool.sociais + msl.pool.magicos > 0);
+    const canDraft = isOwner() && !isMaster && msl.pool.basicos + msl.pool.sociais + msl.pool.magicos > 0;
+    const pool = (k) => `<span class="msl-pool" title="pontos pra distribuir">pontos <b>${poolLeft[k]}</b></span>`;
+    const byGroup = (g) => attrDefs.filter((a) => a.group === g);
     return `
-      <div class="ficha-section">
-        <div class="ficha-section-head">
-          <span class="ficha-section-title">ATRIBUTOS</span>
-          <button type="button" class="btn btn-ghost" data-act="toggle-temp">${showTemp ? 'ocultar' : 'mostrar'} modificadores temporários</button>
-          ${isMaster ? '<span class="ficha-master-badge">edição livre (mestre)</span>' : ''}
+      <div class="msl-attr-top">
+        <button type="button" class="btn btn-ghost" data-act="toggle-temp">${showTemp ? 'ocultar' : 'mostrar'} modificadores temporários</button>
+        ${isMaster ? '<span class="ficha-master-badge">edição livre (mestre)</span>' : ''}
+      </div>
+      ${
+        canDraft && !draft
+          ? `<div class="msl-pointsbar"><span>Você tem pontos pra distribuir:</span>${poolBadges(msl.pool)}<button type="button" class="btn" data-act="draft-start">distribuir pontos</button></div>`
+          : ''
+      }
+      ${draft ? `<div class="msl-pointsbar"><span>Pontos restantes:</span>${poolBadges(poolLeft)}<button type="button" class="btn" data-act="draft-confirm" ${Object.values(poolLeft).some((v) => v < 0) ? 'disabled' : ''}>confirmar</button><button type="button" class="btn btn-ghost" data-act="draft-cancel">cancelar</button></div>` : ''}
+      ${isMaster ? `<div class="msl-pointsbar"><span>Pontos disponíveis (jogador):</span>${poolInputs(msl.pool)}<span class="msl-sep"></span><span>graus de perícia:</span><input type="number" min="0" class="msl-pool-input" data-skillgrades value="${msl.skillGrades}"></div>` : ''}
+
+      <section class="msl-asection">
+        <div class="msl-asection-head"><h3>📊 Atributos básicos</h3>${pool('basicos')}</div>
+        <div class="msl-ablocks">
+          ${BASIC_SUBGROUPS.map((sg) => attrBlock(sg.label, sg.icon, sg.color, byGroup('basico').filter((a) => a.sub === sg.id), msl, view, 'short')).join('')}
         </div>
-        ${
-          canDraft && !draft
-            ? `<div class="msl-pointsbar"><span>Você tem pontos pra distribuir:</span>${poolBadges(msl.pool)}<button type="button" class="btn" data-act="draft-start">distribuir pontos</button></div>`
-            : ''
-        }
-        ${draft ? `<div class="msl-pointsbar"><span>Pontos restantes:</span>${poolBadges(poolLeft)}<button type="button" class="btn" data-act="draft-confirm" ${Object.values(poolLeft).some((v) => v < 0) ? 'disabled' : ''}>confirmar</button><button type="button" class="btn btn-ghost" data-act="draft-cancel">cancelar</button></div>` : ''}
-        ${isMaster ? `<div class="msl-pointsbar"><span>Pontos disponíveis (jogador):</span>${poolInputs(msl.pool)}<span class="msl-sep"></span><span>graus de perícia:</span><input type="number" min="0" class="msl-pool-input" data-skillgrades value="${msl.skillGrades}"></div>` : ''}
-        ${ATTRIBUTE_GROUPS.map(
-          (g) => `
-          <div class="msl-group-title">${g.label}</div>
-          <div class="msl-attr-grid">${attrDefs.filter((a) => a.group === g.id).map((a) => attrCard(a, msl, view)).join('')}</div>`
-        ).join('')}
+      </section>
+      <div class="msl-asection-pair">
+        <section class="msl-asection">
+          <div class="msl-asection-head"><h3>🗣️ Atributos sociais</h3>${pool('sociais')}</div>
+          <div class="msl-ablocks msl-ablocks-one">${attrBlock('Sociais', '🗣️', '#e879f9', byGroup('social'), msl, view, 'label')}</div>
+        </section>
+        <section class="msl-asection">
+          <div class="msl-asection-head"><h3>✨ Atributos mágicos</h3>${pool('magicos')}</div>
+          <div class="msl-ablocks msl-ablocks-one">${attrBlock('Mágicos', '🔮', '#a78bfa', byGroup('magico'), msl, view, 'label')}</div>
+        </section>
       </div>`;
   }
   function poolBadges(pool) {

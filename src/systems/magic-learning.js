@@ -4,25 +4,25 @@
 // Convenções do livro: divisões arredondam pra baixo; atributo nunca fica abaixo de 0; "teste" = 1d20 + atributo//2 + modificadores.
 import { ADVANTAGES, DISADVANTAGES, SKILLS, SKILL_BONUS, MSL_CONDITIONS, SANITY_LOSS } from './msl-data.js';
 
-const A = (key, label, abbr, icon, color, group) => ({ key, label, abbr, icon, color, group });
+const A = (key, label, abbr, icon, color, group, sub, short) => ({ key, label, abbr, icon, color, group, sub, short: short || label });
 export const ATTRIBUTE_GROUPS = [
   { id: 'basico', label: 'Básicos' },
   { id: 'social', label: 'Sociais' },
   { id: 'magico', label: 'Mágicos' },
 ];
 const attributes = [
-  A('forca', 'Força', 'FOR', '💪', '#ff8a4c', 'basico'),
-  A('poder_magico', 'Poder Mágico', 'POD', '✨', '#b98bff', 'basico'),
-  A('agilidade', 'Agilidade', 'AGI', '🏃', '#5ad4ff', 'basico'),
-  A('reflexos', 'Reflexos', 'REF', '⚡', '#ffd93d', 'basico'),
-  A('res_fisica', 'Resistência Física', 'RF', '🛡', '#c9b878', 'basico'),
-  A('res_magica', 'Resistência Mágica', 'RM', '🔮', '#9d7bff', 'basico'),
-  A('intelecto', 'Intelecto', 'INT', '🧠', '#5ad4ff', 'basico'),
-  A('disciplina', 'Disciplina', 'DIS', '📿', '#2dd4bf', 'basico'),
-  A('prec_fisica', 'Precisão Física', 'PFí', '🎯', '#4ade80', 'basico'),
-  A('prec_magica', 'Precisão Mágica', 'PMá', '🌠', '#e879f9', 'basico'),
-  A('estamina', 'Estamina', 'EST', '🔋', '#ffb84d', 'basico'),
-  A('vitalidade', 'Vitalidade', 'VIT', '❤', '#ff5a5a', 'basico'),
+  A('forca', 'Força', 'FOR', '💪', '#ff8a4c', 'basico', 'potencia', 'Força'),
+  A('poder_magico', 'Poder Mágico', 'POD', '✨', '#b98bff', 'basico', 'potencia', 'Poder Mágico'),
+  A('agilidade', 'Agilidade', 'AGI', '🏃', '#5ad4ff', 'basico', 'mobilidade', 'Agilidade'),
+  A('reflexos', 'Reflexos', 'REF', '⚡', '#ffd93d', 'basico', 'mobilidade', 'Reflexos'),
+  A('res_fisica', 'Resistência Física', 'RF', '🛡', '#c9b878', 'basico', 'resistencia', 'Física'),
+  A('res_magica', 'Resistência Mágica', 'RM', '🔮', '#9d7bff', 'basico', 'resistencia', 'Mágica'),
+  A('intelecto', 'Intelecto', 'INT', '🧠', '#5ad4ff', 'basico', 'foco', 'Intelecto'),
+  A('disciplina', 'Disciplina', 'DIS', '📿', '#2dd4bf', 'basico', 'foco', 'Disciplina'),
+  A('prec_fisica', 'Precisão Física', 'PFí', '🎯', '#4ade80', 'basico', 'precisao', 'Física'),
+  A('prec_magica', 'Precisão Mágica', 'PMá', '🌠', '#e879f9', 'basico', 'precisao', 'Mágica'),
+  A('estamina', 'Estamina', 'EST', '🔋', '#ffb84d', 'basico', 'vigor', 'Estamina'),
+  A('vitalidade', 'Vitalidade', 'VIT', '❤', '#ff5a5a', 'basico', 'vigor', 'Vitalidade'),
   A('ameacar', 'Ameaçar', 'AME', '😠', '#ff5a5a', 'social'),
   A('acalmar', 'Acalmar', 'ACA', '🕊', '#4ade80', 'social'),
   A('enganacao', 'Enganação', 'ENG', '🎭', '#e879f9', 'social'),
@@ -36,6 +36,16 @@ const attributes = [
   A('interpretacao', 'Interpretação', 'ITP', '📜', '#ff8a4c', 'magico'),
 ];
 const ATTR_KEYS = attributes.map((a) => a.key);
+
+// os atributos básicos aparecem em 6 pares (como no livro)
+export const BASIC_SUBGROUPS = [
+  { id: 'potencia', label: 'Potência', icon: '⚡', color: '#ff8a4c' },
+  { id: 'mobilidade', label: 'Mobilidade', icon: '🏃', color: '#5ad4ff' },
+  { id: 'resistencia', label: 'Resistência', icon: '🛡️', color: '#c9b878' },
+  { id: 'precisao', label: 'Precisão', icon: '🎯', color: '#4ade80' },
+  { id: 'foco', label: 'Foco', icon: '🧠', color: '#b98bff' },
+  { id: 'vigor', label: 'Vigor', icon: '🔥', color: '#ff5a5a' },
+];
 
 export const CREATION_POOLS = { basicos: 19, sociais: 8, magicos: 10 };
 export const CREATION_SKILL_GRADES = 4; // graus de perícia na criação (máx. grau 2 por perícia)
