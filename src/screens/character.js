@@ -26,6 +26,8 @@ let activeChannel = null;
 // playCharacterId: o DONO jogando o próprio personagem (escolhido na tela de seleção; onSwitchCharacter volta pra ela).
 export function renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, playCharacterId, ownerName, onBack, onSwitchCharacter }) {
   setActiveSystem(campaign.system);
+  const singleMoney = !!activeRuleset().singleCurrency; // dinheiro único (Magic Learning) em vez das 4 moedas
+  const hasPublicInv = activeRuleset().hasPublicInventory !== false; // sem público/veículo no Magic Learning
   const campaignId = campaign.id;
   const userId = session.user.id;
   const isAdminView = !!presetCharacterId;
@@ -80,7 +82,29 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     </div>
   </div>
 
-  <div class="currency-wrap" id="currency-wrap" style="display:flex; align-items:flex-start; gap:8px;">
+${singleMoney ? `  <div class="currency-wrap" id="currency-wrap" style="display:flex; align-items:flex-start; gap:8px;">
+    <button class="currency-strip" id="currency-strip" title="clique para editar seu dinheiro">
+      <span class="coin-badge coin-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.8"/><path d="M6 9.5v.01M18 14.5v.01"/></svg><span id="coin-bronze-val"></span></span>
+    </button>
+    <div class="currency-edit-menu" id="currency-edit-menu" style="display:none;">
+      <div class="currency-edit-row"><span class="coin-badge coin-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.8"/><path d="M6 9.5v.01M18 14.5v.01"/></svg></span><input type="number" id="currency-input-bronze" min="0" step="1" value="0"></div>
+      <div class="currency-hint">dinheiro normal: um valor só.</div>
+      <button class="btn" id="currency-save-btn">salvar</button>
+    </div>
+    <button class="currency-transfer-btn" id="currency-transfer-btn" title="transferir dinheiro">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M7 7h13M17 4l3 3-3 3"/><path d="M17 17H4M7 20l-3-3 3-3"/></svg>
+    </button>
+    <div class="currency-transfer-menu" id="currency-transfer-menu" style="display:none;">
+      <button type="button" class="icon-btn" id="currency-transfer-close" title="fechar" style="align-self:flex-end;">✕</button>
+      <div class="field" style="margin-bottom:8px;"><label style="font-size:9px;">Para</label><select class="transfer-select" id="transfer-to-select"></select></div>
+      <div class="currency-edit-row"><span class="coin-badge coin-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.8"/><path d="M6 9.5v.01M18 14.5v.01"/></svg></span><input type="number" id="transfer-input-bronze" min="0" step="1" value="0"></div>
+      <div class="transfer-balance" id="transfer-balance"></div>
+      <p class="admin-error" id="transfer-error" style="display:none;"></p>
+      <button class="btn" id="currency-transfer-confirm">transferir</button>
+    </div>
+  </div>
+
+` : `  <div class="currency-wrap" id="currency-wrap" style="display:flex; align-items:flex-start; gap:8px;">
     <button class="currency-strip" id="currency-strip" title="clique para editar suas moedas">
       <span class="coin-badge coin-bronze"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(0,0,0,0.3)" stroke-width="1"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="1"/></svg><b id="coin-bronze-val">0</b></span>
       <span class="coin-badge coin-silver"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="currentColor"/><circle cx="12" cy="12" r="9" fill="none" stroke="rgba(0,0,0,0.25)" stroke-width="1"/><circle cx="12" cy="12" r="5.5" fill="none" stroke="rgba(0,0,0,0.18)" stroke-width="1"/></svg><b id="coin-silver-val">0</b></span>
@@ -111,6 +135,8 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       <button class="btn" id="currency-transfer-confirm">transferir</button>
     </div>
   </div>
+
+`}
 
   <div id="inventory-mode-wrap">
     <div class="gauge-panel" id="gauge-panel-main">
@@ -347,7 +373,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   <div id="board-embed"></div>
 </div>
 
-<button class="vehicle-dropzone" id="vehicle-dropzone" title="arraste um item aqui para guardar no veículo, sem peso">
+<button class="vehicle-dropzone" id="vehicle-dropzone" title="arraste um item aqui para guardar no veículo, sem peso" ${hasPublicInv ? '' : 'hidden'}>
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 9V7a2 2 0 012-2h8a2 2 0 012 2v2"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/><path d="M9.5 12h1.5M13 12h1.5"/></svg>
 </button>
 <button class="vehicle-dropzone" id="backpack-return-btn" title="voltar pro inventário" style="display:none;">
@@ -416,7 +442,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
 <div class="selection-bar" id="selection-bar" style="display:none;">
   <span class="selection-count" id="selection-count">0 selecionados</span>
   <button class="selection-btn" data-batch-move="top">→ Inventário</button>
-  <button class="selection-btn" data-batch-move="transport-personal">→ Pessoal</button>
+  ${hasPublicInv ? '<button class="selection-btn" data-batch-move="transport-personal">→ Pessoal</button>' : ''}
   <button class="selection-btn danger" id="batch-delete-btn">Excluir</button>
   <button class="selection-btn cancel-btn" id="batch-cancel-btn">✕</button>
 </div>
@@ -1065,6 +1091,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     c.platinum += Math.floor(c.gold / 100); c.gold = c.gold % 100;
   }
   function renderCurrencyObj(c, suffix){
+    if(singleMoney){ document.getElementById('coin-bronze-val' + suffix).textContent = coinsToBronze(c).toLocaleString('pt-BR'); return; }
     document.getElementById('coin-bronze-val' + suffix).textContent = c.bronze;
     document.getElementById('coin-silver-val' + suffix).textContent = c.silver;
     document.getElementById('coin-gold-val' + suffix).textContent = c.gold;
@@ -1586,7 +1613,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       <div class="summary-row"><span>Carga usada</span><b class="${pctClass}">${pct}%</b></div>
       <div class="summary-row"><span>Equipados</span><b>${equippedCount}/${state.equipSlots.length}</b></div>
       <div class="summary-row"><span>Fixados</span><b>${pinnedCount}</b></div>
-      <div class="summary-row"><span>No veículo</span><b>${transportItemsCount}</b></div>
+      ${hasPublicInv ? `<div class="summary-row"><span>No veículo</span><b>${transportItemsCount}</b></div>` : ''}
     `;
   }
 
@@ -2423,25 +2450,32 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       const opening = menu.style.display === 'none';
       menu.style.display = opening ? 'flex' : 'none';
       if(opening){
-        document.getElementById('currency-input-bronze' + suffix).value = currencyObj.bronze;
-        document.getElementById('currency-input-silver' + suffix).value = currencyObj.silver;
-        document.getElementById('currency-input-gold' + suffix).value = currencyObj.gold;
-        document.getElementById('currency-input-platinum' + suffix).value = currencyObj.platinum;
+        document.getElementById('currency-input-bronze' + suffix).value = singleMoney ? coinsToBronze(currencyObj) : currencyObj.bronze;
+        if(!singleMoney){
+          document.getElementById('currency-input-silver' + suffix).value = currencyObj.silver;
+          document.getElementById('currency-input-gold' + suffix).value = currencyObj.gold;
+          document.getElementById('currency-input-platinum' + suffix).value = currencyObj.platinum;
+        }
         setTimeout(()=> document.getElementById('currency-input-bronze' + suffix).focus(), 10);
       }
     });
     document.addEventListener('click', (e)=>{ if(!e.target.closest('#' + wrapId)) menu.style.display = 'none'; });
     function save(){
       const currencyObj = getCurrencyObj();
-      currencyObj.bronze = Math.max(0, parseInt(document.getElementById('currency-input-bronze' + suffix).value) || 0);
-      currencyObj.silver = Math.max(0, parseInt(document.getElementById('currency-input-silver' + suffix).value) || 0);
-      currencyObj.gold = Math.max(0, parseInt(document.getElementById('currency-input-gold' + suffix).value) || 0);
-      currencyObj.platinum = Math.max(0, parseInt(document.getElementById('currency-input-platinum' + suffix).value) || 0);
-      normalizeCurrencyObj(currencyObj);
+      if(singleMoney){
+        // o valor único mora no mesmo formato de 4 moedas (a conta é feita em unidades), então nada no banco muda
+        Object.assign(currencyObj, bronzeToCoins(Math.max(0, parseInt(document.getElementById('currency-input-bronze' + suffix).value) || 0)));
+      } else {
+        currencyObj.bronze = Math.max(0, parseInt(document.getElementById('currency-input-bronze' + suffix).value) || 0);
+        currencyObj.silver = Math.max(0, parseInt(document.getElementById('currency-input-silver' + suffix).value) || 0);
+        currencyObj.gold = Math.max(0, parseInt(document.getElementById('currency-input-gold' + suffix).value) || 0);
+        currencyObj.platinum = Math.max(0, parseInt(document.getElementById('currency-input-platinum' + suffix).value) || 0);
+        normalizeCurrencyObj(currencyObj);
+      }
       renderCurrency();
       menu.style.display = 'none';
       if(statusMsg) flashStatus(statusMsg);
-      addLog(`Moedas de ${logLabel} editadas`);
+      addLog(`${singleMoney ? 'Dinheiro' : 'Moedas'} de ${logLabel} editado${singleMoney ? '' : 's'}`);
       saveState();
     }
     document.getElementById('currency-save-btn' + suffix).addEventListener('click', save);
@@ -2458,16 +2492,18 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
     const silver = Math.floor(total / 100); total %= 100;
     return { bronze: total, silver, gold, platinum };
   }
-  function coinsLabel(c){ return `${c.bronze}b ${c.silver}s ${c.gold}g ${c.platinum}p`; }
+  function coinsLabel(c){ return singleMoney ? coinsToBronze(c).toLocaleString('pt-BR') : `${c.bronze}b ${c.silver}s ${c.gold}g ${c.platinum}p`; }
 
   let transferMenuOpen = false;
   let transferPlayersLoaded = false;
   const transferBtn = document.getElementById('currency-transfer-btn');
   const transferMenu = document.getElementById('currency-transfer-menu');
   const transferToSelect = document.getElementById('transfer-to-select');
+  if(!hasPublicInv) transferToSelect.innerHTML = '<option value="">escolha o jogador…</option>';
   const transferErrorEl = document.getElementById('transfer-error');
   const transferBalanceEl = document.getElementById('transfer-balance');
   function transferAmounts(){
+    if(singleMoney) return bronzeToCoins(Math.max(0, parseInt(document.getElementById('transfer-input-bronze').value) || 0));
     return {
       bronze: Math.max(0, parseInt(document.getElementById('transfer-input-bronze').value) || 0),
       silver: Math.max(0, parseInt(document.getElementById('transfer-input-silver').value) || 0),
@@ -2507,7 +2543,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
   document.addEventListener('click', (e)=>{
     if(transferMenuOpen && !e.target.closest('#currency-transfer-menu') && !e.target.closest('#currency-transfer-btn')) closeTransferMenu();
   });
-  ['bronze','silver','gold','platinum'].forEach(k => {
+  (singleMoney ? ['bronze'] : ['bronze','silver','gold','platinum']).forEach(k => {
     document.getElementById('transfer-input-' + k).addEventListener('input', updateTransferBalance);
   });
   document.getElementById('currency-transfer-confirm').addEventListener('click', async ()=>{
@@ -2525,13 +2561,18 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       return;
     }
     const toValue = transferToSelect.value;
+    if(!toValue){
+      transferErrorEl.textContent = 'escolha pra quem transferir.';
+      transferErrorEl.style.display = 'block';
+      return;
+    }
     try{
       const target = transferToSelect.options[transferToSelect.selectedIndex].textContent;
       await transferCurrencyRpc(characterId, toValue === 'avulso' ? { toAvulso: true } : { toCharacterId: toValue }, amounts);
-      ['bronze','silver','gold','platinum'].forEach(k => { document.getElementById('transfer-input-' + k).value = 0; });
+      (singleMoney ? ['bronze'] : ['bronze','silver','gold','platinum']).forEach(k => { document.getElementById('transfer-input-' + k).value = 0; });
       closeTransferMenu();
-      addLog(`Moedas transferidas pra ${target}`);
-      flashStatus('MOEDAS TRANSFERIDAS');
+      addLog(`${singleMoney ? 'Dinheiro transferido' : 'Moedas transferidas'} pra ${target}`);
+      flashStatus(singleMoney ? 'DINHEIRO TRANSFERIDO' : 'MOEDAS TRANSFERIDAS');
       const { data: freshRow } = await supabase.from('characters').select('currency').eq('id', characterId).single();
       if(freshRow && freshRow.currency) state.currency = freshRow.currency;
       renderCurrency();
@@ -2725,7 +2766,7 @@ export function renderCharacterScreen(app, { session, profile, campaign, charact
       } else {
         invWrap.style.display = 'block';
         invWrap.classList.remove('mode-fade-in'); void invWrap.offsetWidth; invWrap.classList.add('mode-fade-in');
-        vehicleBtn.style.display = 'flex';
+        vehicleBtn.style.display = hasPublicInv ? 'flex' : 'none';
         titleText.textContent = 'INVENTÁRIO';
         copyBtn.title = 'copiar inventário para a área de transferência';
       }

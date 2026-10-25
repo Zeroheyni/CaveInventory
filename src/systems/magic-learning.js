@@ -307,6 +307,8 @@ export const rollDice = (n, sides) => Array.from({ length: n }, () => rollDie(si
 export const magicLearning = {
   id: 'magic-learning',
   label: 'Magic Learning',
+  singleCurrency: true, // dinheiro normal (um valor só), não as 4 moedas bronze/prata/ouro/platina
+  hasPublicInventory: false, // sem inventário público nem baú do veículo (transporte)
   hasOwnSheet: true, // a ficha tem tela própria (screens/fichaMsl.js) -- ficha.js do Cave Story não vale aqui
 
   attributes,
