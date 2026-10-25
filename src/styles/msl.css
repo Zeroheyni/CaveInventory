@@ -222,3 +222,14 @@
 @media (max-width:520px){
   .msl-ablocks{ grid-template-columns:1fr; }
 }
+
+/* linha de atributo em duas linhas: nome inteiro em cima (+ dado), valor e modificador embaixo -- o nome nunca é cortado */
+.msl-arow{
+  grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "name roll" "val info"; row-gap:6px; column-gap:10px; align-items:center; padding:9px 4px 8px;
+}
+.msl-arow-name{ grid-area:name; white-space:normal; overflow:visible; text-overflow:clip; font-size:13.5px; line-height:1.2; }
+.msl-arow-val{ grid-area:val; }
+.msl-arow-info{ grid-area:info; flex-direction:row; align-items:baseline; justify-content:flex-end; gap:6px; }
+.msl-arow-mod{ font-size:14px; }
+.msl-arow .msl-roll{ grid-area:roll; }
+.msl-arow .msl-temp-input{ grid-area: auto; grid-column:1 / -1; }
