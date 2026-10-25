@@ -115,6 +115,7 @@ export function mslOf(char) {
     traumas: Array.isArray(raw.traumas) ? raw.traumas : [], // [{ d, name, text }]
     notes: raw.notes || '',
     armor: Math.max(0, parseInt(raw.armor, 10) || 0), // armadura de itens
+    active: Array.isArray(raw.active) ? raw.active : [], // magias ativas: sustentadas, formas e criaturas invocadas
     fluxoUsed: Math.max(0, parseInt(raw.fluxoUsed, 10) || 0), // MP gasto no turno atual (limite = Fluxo)
     done: !!raw.done, // criação concluída
     family: String(raw.family || ''), // família mágica (Herança Arcana): libera as magias de família dessa família

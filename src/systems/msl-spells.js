@@ -209,6 +209,8 @@ function categoryOf(unit) {
   return null;
 }
 function baseOf(spell, cat) {
+  const own = spell.base && spell.base[cat];
+  if (own !== undefined && own !== null && String(own).trim() !== '') return cat === 'dano' ? String(own).replace(/\s+/g, '') : Number(own);
   const alvo = String(spell.alvo || '');
   const efeito = String(spell.efeito || '');
   if (cat === 'dano') {
@@ -302,6 +304,7 @@ export function computeSpell(spell, char, level = 1) {
   // 2) fórmulas da magia personalizada
   (spell.calc || []).forEach((row) => {
     try {
+      const cat = categoryOf((row.label || '') + ' ' + (row.unit || ''));
       if (row.type === 'passos') {
         const key = row.attr;
         const v = attrVal(key);
@@ -310,13 +313,27 @@ export function computeSpell(spell, char, level = 1) {
         const amount = parseFloat(row.amount) || 0;
         const total = steps * amount;
         out.rows.push({ source: 'custom', label: row.label, attr: magicLearning.attributes.find((a) => a.key === key)?.label || '?', value: v, steps, every, text: `${total >= 0 ? '+' : ''}${total} ${row.unit || ''}`.trim(), formulaText: `+${amount} a cada ${every} pontos`, active: steps > 0 });
-        const cat = categoryOf((row.label || '') + ' ' + (row.unit || ''));
-        if (cat && cat !== 'dano') bonus[cat] += total;
+        if (cat === 'dano') {
+          bonus.dano.flat.v += total;
+          bonus.dano.any = true;
+        } else if (cat) {
+          bonus[cat] += total;
+          bonus.has[cat] = true;
+        }
+        if (/dificuldade/.test(norm((row.label || '') + ' ' + (row.unit || '')))) out.dcBonus += total;
       } else {
         const r = evalFormula(row.formula, vars);
         const sides = Math.max(2, parseInt(row.sides, 10) || 6);
         const text = row.type === 'dados' ? `${r.value}d${sides}${row.unit ? ' ' + row.unit : ''}` : `${r.value}${row.unit ? ' ' + row.unit : ''}`;
         out.rows.push({ source: 'custom', label: row.label, text, formulaText: `${row.formula} → ${r.text} = ${r.value}`, value: r.value, active: true });
+        if (cat === 'dano') {
+          if (row.type === 'dados') bonus.dano.dice[sides] = (bonus.dano.dice[sides] || 0) + r.value;
+          else bonus.dano.flat.v += r.value;
+          bonus.dano.any = true;
+        } else if (cat && row.type !== 'dados') {
+          bonus[cat] += r.value;
+          bonus.has[cat] = true;
+        }
         if (/dificuldade/.test(norm((row.label || '') + ' ' + (row.unit || ''))) && row.type !== 'dados') out.dcBonus += r.value;
       }
     } catch (err) {
@@ -332,7 +349,7 @@ export function computeSpell(spell, char, level = 1) {
     const b = base('dano');
     if (b) addBaseDamage(dice, flat, b);
     out.totals.push({ label: 'Dano', text: joinDice(dice, flat.v), note: b ? `base ${b} + escalamentos` : 'escalamentos (some ao dano base da magia)' });
-  } else if (base('dano') && spell.escalamentos && spell.escalamentos.length) {
+  } else if (base('dano') && ((spell.escalamentos && spell.escalamentos.length) || spell.custom)) {
     out.totals.push({ label: 'Dano', text: String(base('dano')), note: 'base (seus atributos ainda não somam nada)' });
   }
   [['alcance', 'Alcance', 'm'], ['raio', 'Raio', 'm'], ['duracao', 'Duração', 'turnos']].forEach(([cat, label, unit]) => {
@@ -383,6 +400,12 @@ export function normalizeCustomSpell(raw) {
     sustentada: !!raw.sustentada,
     rastro: String(raw.rastro || 'Efêmero'),
     escalamentos: [],
+    base: {
+      dano: String((raw.base && raw.base.dano) || '').trim().slice(0, 30),
+      alcance: String((raw.base && raw.base.alcance) ?? '').trim().slice(0, 10),
+      raio: String((raw.base && raw.base.raio) ?? '').trim().slice(0, 10),
+      duracao: String((raw.base && raw.base.duracao) ?? '').trim().slice(0, 10),
+    },
     calc,
     custom: true,
   };

@@ -299,8 +299,8 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
             ? []
             : [
                 ['Fluxo', d.fluxo, 'MP máximo gasto por turno'],
-                ['Manut.', d.manutencao, 'vagas de magias sustentadas'],
-                ['Formas', d.formas, 'vagas de estruturas mágicas'],
+                ['Manut.', slotsUsed(msl).m + '/' + d.manutencao, 'vagas de Manutenção usadas: magias sustentadas e criaturas invocadas'],
+                ['Formas', slotsUsed(msl).f + '/' + d.formas, 'vagas de Formas usadas: estruturas, armas e terrenos moldados'],
                 ['Detecção', d.deteccao + ' m', 'percepção de rastros mágicos'],
                 ['Decifração', d.decifracao, 'nível máximo de magia que identifica/aprende'],
               ]),
@@ -647,7 +647,10 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   async function allSpells() {
     const base = await loadSpells();
     const fam = familyOf();
-    const extra = customSpells.filter((s) => !s.familia || isMaster || s.familia.trim().toLowerCase() === fam);
+    const extra = customSpells.filter((s) => {
+      if (s.privateTo) return s.privateTo === sheet.id; // pessoal: só do personagem dono (nem o mestre vê as dos outros aqui)
+      return !s.familia || isMaster || s.familia.trim().toLowerCase() === fam;
+    });
     return [...base, ...extra];
   }
 
@@ -691,11 +694,12 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     manutencao: '',
     sustentada: false,
     rastro: 'Efêmero',
+    base: { dano: '', alcance: '', raio: '', duracao: '' },
     calc: [{ label: 'Alcance', type: 'valor', formula: 'ARM * 2', sides: 6, unit: 'm de alcance', attr: 'armazenamento', every: 10, amount: 1 }],
   });
   function startEditor(spell) {
     if (!spell) spellEditor = blankSpell();
-    else spellEditor = { ...blankSpell(), ...JSON.parse(JSON.stringify(spell)), dbId: spell.dbId || null, family: spell.familia || '', calc: (spell.calc || []).map((r) => ({ ...r })) };
+    else spellEditor = { ...blankSpell(), ...JSON.parse(JSON.stringify(spell)), dbId: spell.dbId || null, family: spell.familia || '', base: { dano: '', alcance: '', raio: '', duracao: '', ...(spell.base || {}) }, calc: (spell.calc || []).map((r) => ({ ...r })) };
     helpOpen = false;
     render();
     const box = $('msl-editor');
@@ -770,9 +774,15 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
           ${f('ativacao', 'Ativação')}
           ${f('alvo', 'Alvo')}
           ${f('resistencia', 'Resistência')}
-          <label class="msl-ed-wide">Família (deixe vazio = qualquer um pode aprender)<input type="text" data-ed="family" value="${escapeHtml(e.family)}" placeholder="ex.: Lunaris — só personagens dessa família veem e aprendem"></label>
+          ${isMaster ? `<label class="msl-ed-wide">Família (deixe vazio = qualquer um pode aprender)<input type="text" data-ed="family" value="${escapeHtml(e.family)}" placeholder="ex.: Lunaris — só personagens dessa família veem e aprendem"></label>` : `<p class="msl-hint msl-ed-wide">✚ Esta magia fica só no seu personagem (o mestre também vê).</p>`}
         </div>
         <label class="msl-ed-block">Descrição curta<input type="text" data-ed="descricao" value="${escapeHtml(e.descricao)}"></label>
+        <div class="msl-ed-bases"><span class="msl-hint">Valores base (opcional — os cálculos abaixo SOMAM com eles no total):</span>
+          <label>dano<input type="text" data-ed-base="dano" value="${escapeHtml(e.base.dano)}" placeholder="1d6+2"></label>
+          <label>alcance (m)<input type="number" data-ed-base="alcance" value="${escapeHtml(e.base.alcance)}"></label>
+          <label>raio (m)<input type="number" data-ed-base="raio" value="${escapeHtml(e.base.raio)}"></label>
+          <label>duração (turnos)<input type="number" data-ed-base="duracao" value="${escapeHtml(e.base.duracao)}"></label>
+        </div>
         <label class="msl-ed-block">Efeito (texto)<textarea data-ed="efeito" rows="3" placeholder="o que a magia faz; cite os valores calculados pelas linhas abaixo">${escapeHtml(e.efeito)}</textarea></label>
 
         <div class="msl-ed-calc">
@@ -809,12 +819,167 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     edError = '';
     try {
       const wasEditing = !!spellEditor.dbId;
-      await saveCustomSpell(campaign.id, spellEditor, spellEditor.family, spellEditor.dbId);
+      await saveCustomSpell(campaign.id, spellEditor, isMaster ? spellEditor.family : '', spellEditor.dbId, { userId: session.user.id, privateTo: isMaster ? null : sheet.id });
       await refreshCustomSpells();
       spellEditor = null;
-      spellMsg = wasEditing ? 'Magia atualizada.' : 'Magia criada! Já aparece no grimório (quem for da família indicada também a vê).';
+      spellMsg = wasEditing ? 'Magia atualizada.' : isMaster ? 'Magia criada! Já aparece no grimório (se tiver família, só quem é dela a vê).' : 'Magia criada! Ela é só do seu personagem — procure no grimório (+ aprender magia).';
     } catch (err) {
       edError = err.message;
+    }
+    render();
+  }
+
+  // ---------------------------------------------------------------- magias ATIVAS: sustentadas, formas e invocações
+  // Manutenção (vagas) = magias sustentadas + criaturas invocadas; Formas (vagas) = estruturas, armas e terrenos moldados.
+  // Sustentada paga a manutenção a CADA turno (padrão 1 MP); forma não paga manutenção; invocação custa MP = tier por turno.
+  const KIND = {
+    sustentada: { icon: '🔁', label: 'sustentada' },
+    forma: { icon: '🗿', label: 'forma' },
+    invocacao: { icon: '🐾', label: 'invocação' },
+  };
+  function slotsUsed(msl) {
+    return msl.active.reduce((a, e) => ({ m: a.m + (e.manut || 0), f: a.f + (e.formas || 0), mp: a.mp + (e.upkeep || 0) }), { m: 0, f: 0, mp: 0 });
+  }
+  const newId = () => 'a' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+  // quantas vagas de Formas a magia ocupa (0 = não é uma forma): texto "Ocupa N vagas" ou estilo Construções/Armamento/Terreno
+  function formasSlots(s) {
+    const ef = String(s.efeito || '');
+    const m = /Ocupa\s+(\d+)\s+vagas?\s+de\s+Formas/i.exec(ef);
+    if (m) return parseInt(m[1], 10);
+    if (/vaga de Formas/i.test(ef)) return 1;
+    if (s.escola === 'Mágica' && ['Construções', 'Armamento', 'Terreno'].includes(s.estilo)) return 1;
+    return 0;
+  }
+  function durationTurns(s) {
+    const m = /Dura[çc][ãa]o\s+(\d+)\s+turnos?/i.exec(String(s.efeito || '')) || /por\s+(\d+)\s+turnos?/i.exec(String(s.efeito || ''));
+    return m ? parseInt(m[1], 10) : null;
+  }
+
+  function activePanelHtml(msl, d) {
+    const u = slotsUsed(msl);
+    const pill = (label, used, max, tip) => `<span class="msl-stat ${used > max ? 'over' : ''}" title="${escapeHtml(tip)}"><b>${used}/${max}</b>${label}</span>`;
+    const vinc = msl.active.filter((e) => e.kind === 'invocacao').length;
+    return `
+      <div class="ficha-section msl-active">
+        <div class="ficha-section-head">
+          <span class="ficha-section-title">MAGIAS ATIVAS</span>
+          <div class="msl-active-pills">
+            ${pill('Manutenção', u.m, d.manutencao, 'vagas de magias sustentadas e criaturas invocadas')}
+            ${pill('Formas', u.f, d.formas, 'vagas de estruturas, armas e terrenos moldados')}
+            ${pill('Vínculos', vinc, d.decifracao, 'criaturas vinculadas ao mesmo tempo (máx. = Decifração)')}
+            <span class="msl-stat" title="MP de manutenção que sai todo turno"><b>${u.mp}</b>MP/turno</span>
+          </div>
+        </div>
+        ${
+          msl.active.length
+            ? msl.active
+                .map((e) => {
+                  const k = KIND[e.kind] || KIND.sustentada;
+                  const bits = [
+                    e.manut ? `${e.manut} vaga de Manutenção` : '',
+                    e.formas ? `${e.formas} vaga(s) de Formas` : '',
+                    e.upkeep ? `${e.upkeep} MP por turno` : 'sem custo de manutenção',
+                    e.turns !== null && e.turns !== undefined ? `${e.turns} turno(s) restantes` : '',
+                    e.kind === 'invocacao' ? `tier ${e.tier} · age logo depois de você` : '',
+                  ].filter(Boolean);
+                  return `
+          <div class="msl-act-item ${e.kind}">
+            <span class="msl-act-ico">${k.icon}</span>
+            <div class="msl-act-main"><b>${escapeHtml(e.name)}</b><small>${escapeHtml(k.label)} — ${bits.map(escapeHtml).join(' · ')}</small>${e.note ? `<small class="msl-act-note">${escapeHtml(e.note)}</small>` : ''}</div>
+            ${e.kind === 'invocacao' && canEdit() ? `<button type="button" class="btn btn-ghost" data-act-ctrl="${e.id}" title="teste de controle: Interpretação contra CD 10 + 2 × tier">🎲 controle (CD ${10 + 2 * (e.tier || 1)})</button>` : ''}
+            ${canEdit() ? `<button type="button" class="msl-x" data-act-del="${e.id}" title="encerrar">✕</button>` : ''}
+          </div>`;
+                })
+                .join('')
+            : '<p class="msl-hint">nada ativo. Conjurar uma magia sustentada ou moldada registra aqui sozinho (você confirma).</p>'
+        }
+        ${
+          canEdit()
+            ? `<div class="msl-act-btns">
+          <button type="button" class="btn btn-ghost" data-act="act-add-forma" title="estrutura, arma ou terreno moldado, ou âncora de maldição de gatilho: ocupa vaga de Formas">+ forma / âncora</button>
+          <button type="button" class="btn btn-ghost" data-act="act-add-inv" title="criatura invocada: ocupa 1 vaga de Manutenção e custa MP = tier por turno">+ invocar criatura</button>
+          <button type="button" class="btn" data-act="new-turn" title="novo turno: paga a manutenção de tudo que está ativo, desconta a duração e zera o Fluxo">↺ novo turno</button>
+        </div>
+        <p class="msl-hint">Pontuais gastam MP uma vez. "Novo turno" cobra a manutenção (conta no Fluxo); se faltar MP, as últimas magias da lista se encerram.</p>`
+            : ''
+        }
+      </div>`;
+  }
+
+  // novo turno: cobra a manutenção, conta a duração, encerra o que acabou ou não pôde ser pago e zera o Fluxo (a manutenção já conta nele)
+  async function newTurn() {
+    const msl = mslOf(sheet);
+    const d = derive(sheet);
+    let mp = msl.mp === null ? d.mpMax : msl.mp;
+    let paid = 0;
+    const next = [];
+    const lines = [];
+    msl.active.forEach((e) => {
+      const item = { ...e };
+      if (item.turns !== null && item.turns !== undefined) item.turns -= 1;
+      if (item.turns !== null && item.turns !== undefined && item.turns <= 0) {
+        lines.push(`${e.name} acabou (duração)`);
+        return;
+      }
+      if (item.upkeep > 0) {
+        if (mp >= item.upkeep) {
+          mp -= item.upkeep;
+          paid += item.upkeep;
+        } else {
+          lines.push(`${e.name} se encerrou: faltou MP pra manutenção`);
+          return;
+        }
+      }
+      next.push(item);
+    });
+    spellMsg = `Novo turno: manutenção ${paid} MP${msl.active.length ? ` · ${next.length}/${msl.active.length} continuam ativas` : ''}${lines.length ? ' · ' + lines.join('; ') : ''}.`;
+    await commit((m) => {
+      m.active = next;
+      m.mp = mp;
+      m.fluxoUsed = paid;
+    });
+  }
+
+  async function addForma() {
+    const name = window.prompt('Nome da forma (ex.: Parede de pedra, Lança de gelo, âncora da maldição):');
+    if (!name || !name.trim()) return;
+    const n = Math.max(1, parseInt(window.prompt('Quantas vagas de Formas ela ocupa?', '1'), 10) || 1);
+    const msl = mslOf(sheet);
+    const d = derive(sheet);
+    if (slotsUsed(msl).f + n > d.formas && !window.confirm(`Você só tem ${d.formas} vaga(s) de Formas (já usa ${slotsUsed(msl).f}). Registrar mesmo assim?`)) return;
+    const turns = parseInt(window.prompt('Duração em turnos (deixe vazio = até encerrar):', ''), 10);
+    await commit((m) => m.active.push({ id: newId(), kind: 'forma', name: name.trim().slice(0, 60), manut: 0, formas: n, upkeep: 0, tier: null, turns: Number.isFinite(turns) && turns > 0 ? turns : null, note: '' }));
+  }
+
+  async function addInvocation() {
+    const name = window.prompt('Nome da criatura invocada:');
+    if (!name || !name.trim()) return;
+    const tier = Math.min(5, Math.max(1, parseInt(window.prompt('Tier da criatura (1 a 5):', '1'), 10) || 1));
+    const msl = mslOf(sheet);
+    const d = derive(sheet);
+    const u = slotsUsed(msl);
+    const vinc = msl.active.filter((e) => e.kind === 'invocacao').length;
+    const problems = [];
+    if (tier > d.decifracao) problems.push(`tier ${tier} acima da sua Decifração (${d.decifracao}): você não consegue invocar nem comandar`);
+    if (vinc + 1 > d.decifracao) problems.push(`vínculos ao mesmo tempo passariam da Decifração (${d.decifracao})`);
+    if (u.m + 1 > d.manutencao) problems.push(`sem vaga de Manutenção (${u.m}/${d.manutencao})`);
+    const curMp = msl.mp === null ? d.mpMax : msl.mp;
+    if (curMp < tier) problems.push(`MP insuficiente pra manutenção (${tier} por turno)`);
+    if (problems.length && !window.confirm('Atenção: ' + problems.join('; ') + '.\nRegistrar mesmo assim?')) return;
+    await commit((m) => m.active.push({ id: newId(), kind: 'invocacao', name: name.trim().slice(0, 60), manut: 1, formas: 0, upkeep: tier, tier, turns: null, note: '' }));
+  }
+
+  async function controlTest(id) {
+    const e = mslOf(sheet).active.find((x) => x.id === id);
+    if (!e) return;
+    const cd = 10 + 2 * (e.tier || 1);
+    const mod = attrMod(sheet, 'interpretacao') + derive(sheet).exaustaoPenalidade;
+    try {
+      const row = await rollD20Test(campaign.id, session.user.id, rollerName(), mod, `Controle: ${e.name}`, rollMode, getHiddenRollMode() && isMaster);
+      const ok = row.total >= cd;
+      spellMsg = `Controle de ${e.name} (tier ${e.tier}): d20 ${row.kept} ${signed(mod)} = ${row.total} contra CD ${cd} → ${ok ? 'mantém o controle: a criatura obedece neste turno' : 'FALHOU: a criatura age sozinha neste turno'}.`;
+    } catch (err) {
+      spellMsg = 'não deu pra rolar: ' + err.message;
     }
     render();
   }
@@ -832,11 +997,12 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
         </div>
         ${spellMsg ? `<div class="msl-lastroll">${escapeHtml(spellMsg)}</div>` : ''}
       </div>
-      ${spellEditor && isMaster ? editorHtml() : ''}
+      ${spellEditor && (isMaster || isOwner()) ? editorHtml() : ''}
+      ${activePanelHtml(msl, d)}
       <div class="ficha-section">
         <div class="ficha-section-head">
           <span class="ficha-section-title">MAGIAS CONHECIDAS (${known.length})</span>
-          ${isMaster ? '<button type="button" class="btn btn-ghost" data-act="ed-new" title="cria uma magia da campanha, com cálculos automáticos a partir da ficha">✚ criar magia</button>' : ''}
+          ${isMaster || isOwner() ? '<button type="button" class="btn btn-ghost" data-act="ed-new" title="' + (isMaster ? 'cria uma magia da campanha (ou de uma família), com cálculos automáticos a partir da ficha' : 'cria uma magia só pro seu personagem, com cálculos automáticos a partir da ficha') + '">' + (isMaster ? '✚ criar magia' : '✚ criar minha magia') + '</button>' : ''}
           ${canEdit() ? `<button type="button" class="btn btn-ghost" data-act="spell-browser">${spellBrowserOpen ? 'fechar' : '+ aprender magia'}</button>` : ''}
         </div>
         <div id="msl-known-spells">${known.length ? '<p class="msl-hint">carregando magias...</p>' : '<p class="msl-hint">nenhuma magia conhecida ainda — use "+ aprender magia"</p>'}</div>
@@ -890,7 +1056,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     const famMismatch = !!s.familia && s.familia.trim().toLowerCase() !== familyOf();
     const tooHigh = s.nivel > d.decifracao;
     const learned = msl.spells.includes(s.id);
-    const tags = [s.escola, s.estilo, 'nív ' + s.nivel, s.classificacao + (s.contexto_legal ? ` (${s.contexto_legal})` : ''), s.rastro, s.familia ? '🏛 família ' + s.familia : '', s.custom && !s.familia ? '✚ personalizada' : ''].filter(Boolean);
+    const tags = [s.escola, s.estilo, 'nív ' + s.nivel, s.classificacao + (s.contexto_legal ? ` (${s.contexto_legal})` : ''), s.rastro, s.familia ? '🏛 família ' + s.familia : '', s.privateTo ? '✚ pessoal' : s.custom && !s.familia ? '✚ personalizada' : ''].filter(Boolean);
     return `
       <div class="msl-spell ${open ? 'open' : ''}" data-spell-card="${(known ? 'k' : 'b') + s.id}">
         <div class="msl-spell-head" data-spell-toggle="${(known ? 'k' : 'b') + s.id}">
@@ -917,7 +1083,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
         }
         <div class="msl-spell-btns">
           ${known && canEdit() ? `<button type="button" class="btn" data-cast="${s.id}">✨ Conjurar</button><button type="button" class="btn btn-ghost" data-forget="${s.id}">esquecer</button>` : ''}
-          ${isMaster && s.custom ? `<button type="button" class="btn btn-ghost" data-ed-edit="${s.dbId}">✎ editar</button><button type="button" class="btn btn-ghost" data-ed-delete="${s.dbId}">🗑 apagar</button>` : ''}
+          ${s.custom && (isMaster || (s.privateTo && s.createdBy === session.user.id)) ? `<button type="button" class="btn btn-ghost" data-ed-edit="${s.dbId}">✎ editar</button><button type="button" class="btn btn-ghost" data-ed-delete="${s.dbId}">🗑 apagar</button>` : ''}
           ${famMismatch && !known && isMaster ? `<span class="msl-hint">⚠ esse personagem não é da família ${escapeHtml(s.familia)}</span>` : ''}
           ${!known && canEdit() ? (learned ? '<span class="msl-hint">já conhecida</span>' : `<button type="button" class="btn ${tooHigh ? 'btn-ghost' : ''}" data-learn="${s.id}" title="${tooHigh ? 'acima da sua Decifração' : ''}">${tooHigh ? 'aprender (acima da Decifração)' : 'aprender'}</button>`) : ''}
         </div>
@@ -948,13 +1114,30 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     if (curMp < mp) problems.push(`MP insuficiente (precisa de ${mp}, tem ${curMp})`);
     if (used > d.fluxo) problems.push(`passa do Fluxo do turno (${used}/${d.fluxo})`);
     if (s.nivel > d.decifracao) problems.push(`nível ${s.nivel} acima da sua Decifração (${d.decifracao})`);
+    // sustentada ocupa 1 vaga de Manutenção; estrutura/arma/terreno moldado ocupa vaga(s) de Formas
+    const others = msl.active.filter((e) => e.spellId !== s.id);
+    const u0 = slotsUsed({ active: others });
+    const regs = [];
+    if (s.sustentada) regs.push({ kind: 'sustentada', manut: 1, formas: 0, upkeep: Math.max(0, parseInt(s.manutencao, 10) || 1) });
+    const fn = formasSlots(s);
+    if (fn > 0) regs.push({ kind: 'forma', manut: 0, formas: fn, upkeep: 0 });
+    const addM = regs.reduce((a, r) => a + r.manut, 0);
+    const addF = regs.reduce((a, r) => a + r.formas, 0);
+    if (u0.m + addM > d.manutencao) problems.push(`sem vaga de Manutenção (${u0.m + addM}/${d.manutencao})`);
+    if (u0.f + addF > d.formas) problems.push(`sem vaga de Formas (${u0.f + addF}/${d.formas})`);
     if (problems.length && !window.confirm('Atenção: ' + problems.join('; ') + '.\nConjurar mesmo assim?')) return;
     const dc = computeSpell(s, sheet, sheet.level).dc;
     spellMsg = `${s.nome}: −${pa} PE, −${mp} MP${dc ? ` · dificuldade pra resistir ${dc}` : ''}${/instabilidade_magica/.test(JSON.stringify(msl.disadvantages)) ? ' · Instabilidade Mágica: role 1d10 (1 = falha)' : ''}`;
+    const turns = durationTurns(s);
+    if (regs.length) spellMsg += ' · registrada em Magias ativas (' + regs.map((r) => r.kind === 'forma' ? r.formas + ' vaga(s) de Formas' : 'Manutenção ' + r.upkeep + ' MP/turno').join(' + ') + ')';
     await commit(
       (m) => {
         m.mp = Math.max(0, curMp - mp);
         m.fluxoUsed = used;
+        if (regs.length) {
+          m.active = m.active.filter((e) => e.spellId !== s.id);
+          regs.forEach((r) => m.active.push({ id: newId(), spellId: s.id, name: s.nome, tier: null, turns, note: '', ...r }));
+        }
       },
       { estamina_current: Math.max(0, sheet.estamina_current - pa) }
     );
@@ -1122,6 +1305,8 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       return;
     }
 
+    if ((el = btn('[data-act-del]'))) return commit((m) => (m.active = m.active.filter((x) => x.id !== el.dataset.actDel)));
+    if ((el = btn('[data-act-ctrl]'))) return controlTest(el.dataset.actCtrl);
     if ((el = btn('[data-ed-insert]'))) {
       insertSigla(el.dataset.edInsert);
       return;
@@ -1196,7 +1381,9 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
           render();
         });
       }
-      if (act === 'new-turn') return commit((m) => (m.fluxoUsed = 0));
+      if (act === 'new-turn') return msl.active.length ? newTurn() : commit((m) => (m.fluxoUsed = 0));
+      if (act === 'act-add-forma') return addForma();
+      if (act === 'act-add-inv') return addInvocation();
       if (act === 'xp-give' || act === 'xp-take') {
         const v = parseInt($('msl-xp-input').value, 10);
         if (!v || v < 1) return;
@@ -1376,7 +1563,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       busy = false;
       return;
     }
-    if ((el = t.closest('[data-ed], [data-ed-row]'))) {
+    if ((el = t.closest('[data-ed], [data-ed-row], [data-ed-base]'))) {
       applyEditorField(el, true);
       return;
     }
@@ -1421,7 +1608,9 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   // editor de magia: guarda o que é digitado e atualiza só a prévia (sem refazer a tela e perder o cursor)
   function applyEditorField(el, fromChange) {
     if (!spellEditor) return;
-    if (el.dataset.ed) {
+    if (el.dataset.edBase) {
+      spellEditor.base = { ...(spellEditor.base || {}), [el.dataset.edBase]: el.value };
+    } else if (el.dataset.ed) {
       spellEditor[el.dataset.ed] = el.type === 'checkbox' ? el.checked : el.value;
     } else if (el.dataset.edRow) {
       const [i, f] = el.dataset.edRow.split(':');
@@ -1432,7 +1621,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     if (pv) pv.innerHTML = editorPreviewHtml();
   }
   function handleInput(e) {
-    const el = e.target.closest && e.target.closest('[data-ed], [data-ed-row]');
+    const el = e.target.closest && e.target.closest('[data-ed], [data-ed-row], [data-ed-base]');
     if (el && el.tagName !== 'SELECT') applyEditorField(el, false);
   }
   function handleFocusIn(e) {

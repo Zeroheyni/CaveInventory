@@ -344,3 +344,19 @@
 .msl-help-tips{ margin-top:10px; }
 .msl-help-tips code, .msl-ed-calc-head code{ color:#86efac; background: var(--stone-800); padding:1px 5px; border-radius:5px; }
 @media (max-width:760px){ .msl-ed-row{ grid-template-columns: 1fr 1fr; } .msl-ed-rowbody{ grid-column:1 / -1; } }
+
+/* magias ativas (sustentadas, formas, invocações) e valores base do criador */
+.msl-active-pills{ display:flex; gap:8px; flex-wrap:wrap; }
+.msl-stat.over{ border-color:#ff5a5a; } .msl-stat.over b{ color:#ff5a5a; }
+.msl-act-item{ display:flex; align-items:center; gap:10px; padding:9px 12px; margin-bottom:7px; border-radius:11px; background: var(--stone-900); border:1px solid var(--stone-line); border-left-width:4px; }
+.msl-act-item.sustentada{ border-left-color:#c084fc; } .msl-act-item.forma{ border-left-color:#c9b878; } .msl-act-item.invocacao{ border-left-color:#4ade80; }
+.msl-act-ico{ font-size:20px; }
+.msl-act-main{ flex:1; display:flex; flex-direction:column; gap:2px; min-width:0; }
+.msl-act-main b{ font:700 13px var(--font-mono); color: var(--ink); }
+.msl-act-main small{ font:11px var(--font-mono); color: var(--ink-faint); }
+.msl-act-note{ font-style:italic; }
+.msl-act-btns{ display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+.msl-ed-bases{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-bottom:10px; }
+.msl-ed-bases .msl-hint{ flex-basis:100%; }
+.msl-ed-bases label{ display:flex; flex-direction:column; gap:3px; font:10px var(--font-mono); color: var(--ink-faint); }
+.msl-ed-bases input{ width:110px !important; }
