@@ -5,7 +5,7 @@ import { useSystemOf } from '../systems/index.js';
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
 import { getCharacterSheet, subscribeCharacterSheet, sheetDataOf, updateSheetData, uploadAvatar, grantXp, revokeXp, hpBarClass } from '../characterSheet.js';
-import { rollD20Test, getHiddenRollMode } from '../dice.js';
+import { rollD20Test, getHiddenRollMode, rollDice as rollDiceLogged } from '../dice.js';
 import { nameInCampaign } from '../accounts.js';
 import { computeSpell, variableTable, normalizeCustomSpell } from '../systems/msl-spells.js';
 import { listCustomSpells, saveCustomSpell, deleteCustomSpell } from '../mslSpells.js';
@@ -61,6 +61,7 @@ async function loadSpells() {
 const TABS = [
   ['atributos', 'Atributos'],
   ['pericias', 'Perícias'],
+  ['rolador', '🎲 Rolador'],
   ['tracos', 'Traços'],
   ['magias', 'Magias'],
   ['regras', 'Regras'],
@@ -90,6 +91,13 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   let draft = null; // rascunho de atributos do jogador (ainda não confirmado)
   let rollMode = 'normal'; // normal | vantagem | desvantagem
   let lastRoll = null;
+  // rolador (aba 🎲): montagem da rolagem, atalhos guardados e resultado
+  let roller = { kind: 'd20', attr: 'forca', skill: '', qty: 1, die: 'd6', name: '', mods: [] };
+  let rollerPresets = null;
+  let rollerLast = null;
+  let rollerFresh = false;
+  let rollerBusy = false;
+  let rollHistory = [];
   let showTemp = false;
   let showHelp = false; // descrições dos atributos (Função, "o alvo resiste com", "costuma escalar")
   let uploadingAvatar = false;
@@ -345,6 +353,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   function tabHtml(msl, d) {
     if (tab === 'atributos') return attributesTab(msl, d);
     if (tab === 'pericias') return skillsTab(msl);
+    if (tab === 'rolador') return rollerTab(msl);
     if (tab === 'tracos') return traitsTab(msl);
     if (tab === 'magias') return spellsTab(msl, d);
     if (tab === 'regras') return rulesTab(d);
@@ -1182,6 +1191,282 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       </div>`;
   }
 
+  // ---------------------------------------------------------------- aba: rolador (teste com modificadores customizados)
+  // Monta uma rolagem a partir da ficha (atributo + perícia + exaustão, tudo automático) e soma modificadores avulsos (cobertura, bênção,
+  // arma...). Cada modificador liga/desliga sem apagar; os que você usa sempre ficam guardados como atalhos (⭐, só neste navegador).
+  // A rolagem vai pro mesmo log de dados da mesa (e pro Discord), com o nome do teste e dos modificadores no rótulo.
+  const ROLL_DICE = ['d4', 'd6', 'd8', 'd10', 'd12', 'd20', 'd100'];
+  const MOD_QUICK = [-5, -3, -2, -1, 1, 2, 3, 5];
+  const presetKey = () => 'msl.rollmods.' + characterId;
+  function loadPresets() {
+    try {
+      const v = JSON.parse(localStorage.getItem(presetKey()) || '[]');
+      return Array.isArray(v) ? v.filter((p) => p && typeof p.label === 'string' && Number.isFinite(p.value)).slice(0, 24) : [];
+    } catch (_) {
+      return [];
+    }
+  }
+  function savePresets(list) {
+    try {
+      localStorage.setItem(presetKey(), JSON.stringify(list.slice(0, 24)));
+    } catch (_) {
+      /* sem storage: os atalhos só valem nesta sessão */
+    }
+  }
+  const skillLabel = (s) => (s.custom && mslOf(sheet).oficio ? `${s.name} (${mslOf(sheet).oficio})` : s.name);
+  const dieSides = (die) => Math.max(2, parseInt(String(die).slice(1), 10) || 20);
+
+  // tudo que entra na conta, na ordem: [{ label, value, kind }]
+  function rollerPlan() {
+    const msl = mslOf(sheet);
+    const d = derive(sheet);
+    const parts = [];
+    if (roller.kind === 'd20') {
+      if (roller.skill && !SKILLS.find((x) => x.id === roller.skill)) roller.skill = '';
+      if (!attrDef(roller.attr) || (msl.noMagic && attrDef(roller.attr).group === 'magico')) roller.attr = 'forca';
+      parts.push({ label: attrDef(roller.attr).label, value: attrMod(sheet, roller.attr), kind: 'attr' });
+      if (roller.skill) {
+        const s = SKILLS.find((x) => x.id === roller.skill);
+        parts.push({ label: skillLabel(s), value: skillBonus(skillGrade(msl, s.id)), kind: 'skill' });
+      }
+      if (d.exaustaoPenalidade) parts.push({ label: 'Exaustão', value: d.exaustaoPenalidade, kind: 'exh' });
+    }
+    roller.mods.filter((m) => m.on && m.value).forEach((m) => parts.push({ label: m.label.trim() || 'Modificador', value: m.value, kind: 'custom' }));
+    const mod = parts.reduce((s, p) => s + p.value, 0);
+    const qty = roller.kind === 'd20' ? 1 : roller.qty;
+    const sides = roller.kind === 'd20' ? 20 : dieSides(roller.die);
+    const customs = parts.filter((p) => p.kind === 'custom');
+    let label = roller.name.trim();
+    if (!label) {
+      label = roller.kind === 'd20' ? parts.filter((p) => p.kind === 'attr' || p.kind === 'skill').map((p) => p.label).join(' + ') : `${qty}${roller.die}`;
+      if (customs.length) label += ` (${customs.map((p) => `${p.label} ${signed(p.value)}`).join(', ')})`;
+    }
+    return { parts, mod, qty, sides, label, min: qty + mod, max: qty * sides + mod, crit: d.critico };
+  }
+
+  function rollerPreviewHtml() {
+    const p = rollerPlan();
+    const die = roller.kind === 'd20' ? '1d20' : `${p.qty}${roller.die}`;
+    const modeTxt = roller.kind === 'd20' && rollMode !== 'normal' ? ` · ${rollMode}: rola 2d20 e fica o ${rollMode === 'vantagem' ? 'maior' : 'menor'}` : '';
+    const note = roller.kind === 'd20' ? ` · crítico no ${p.crit}+, falha crítica no 1` : '';
+    return `
+      <div class="rl-formula">
+        <span class="rl-chip rl-chip-die">${die}</span>
+        ${p.parts.map((x) => `<span class="rl-chip rl-chip-${x.kind} ${x.value < 0 ? 'neg' : 'pos'}"><i>${escapeHtml(x.label)}</i><b>${signed(x.value)}</b></span>`).join('')}
+        <span class="rl-eq">=</span>
+        <span class="rl-chip rl-chip-total"><i>modificador</i><b>${signed(p.mod)}</b></span>
+      </div>
+      <div class="rl-range">resultado entre <b>${p.min}</b> e <b>${p.max}</b>${modeTxt}${note}</div>`;
+  }
+  function updateRollerPreview() {
+    const box = app.querySelector('#rl-preview');
+    if (box) box.innerHTML = rollerPreviewHtml();
+    const btn = app.querySelector('[data-rl-act="roll"] small');
+    if (btn) btn.textContent = `${roller.kind === 'd20' ? '1d20' : roller.qty + roller.die} ${signed(rollerPlan().mod)}`;
+  }
+
+  function rollerResultHtml(r, compact) {
+    if (!r) return '';
+    if (r.error) return `<div class="rl-result rl-result-err">não deu pra rolar: ${escapeHtml(r.error)}</div>`;
+    const keptAt = r.kind === 'd20' ? r.results.indexOf(r.kept) : -1;
+    const dice = r.results
+      .map((v, i) => `<span class="rl-die-face ${r.kind === 'd20' && i !== keptAt ? 'dim' : ''} ${r.kind === 'd20' && i === keptAt && r.crit ? 'crit' : ''} ${r.kind === 'd20' && i === keptAt && r.fumble ? 'fumble' : ''}">${v}</span>`)
+      .join('');
+    const calc = [`${r.kind === 'd20' ? 'd20' : r.qty + r.die} ${r.kind === 'd20' ? r.kept : r.results.reduce((a, b) => a + b, 0)}`, ...r.parts.map((x) => `${x.label} ${signed(x.value)}`)].join(' · ');
+    if (compact) return `<div class="rl-hist-row ${r.crit ? 'crit' : ''} ${r.fumble ? 'fumble' : ''}"><span class="rl-hist-label">${escapeHtml(r.label)}${r.hidden ? ' 🙈' : ''}</span><span class="rl-hist-calc">${escapeHtml(calc)}</span><b>${r.total}</b></div>`;
+    return `
+      <div class="rl-result ${r.crit ? 'crit' : ''} ${r.fumble ? 'fumble' : ''} ${rollerFresh ? 'pop' : ''}">
+        <div class="rl-res-label">${escapeHtml(r.label)}${r.hidden ? ' <span title="rolagem oculta: só os mestres veem">🙈</span>' : ''}</div>
+        <div class="rl-res-main">
+          <div class="rl-dice">${dice}</div>
+          <span class="rl-res-mod">${signed(r.mod)}</span>
+          <b class="rl-total">${r.total}</b>
+        </div>
+        <div class="rl-res-calc">${escapeHtml(calc)}</div>
+        ${r.crit ? '<em>CRÍTICO!</em>' : r.fumble ? '<em>falha crítica</em>' : ''}
+      </div>`;
+  }
+
+  function rollerTab(msl) {
+    if (!rollerPresets) rollerPresets = loadPresets();
+    const attrOpts = ATTRIBUTE_GROUPS.filter((g) => !(msl.noMagic && g.id === 'magico'))
+      .map((g) => `<optgroup label="${escapeHtml(g.label)}">${attrDefs.filter((a) => a.group === g.id).map((a) => `<option value="${a.key}" ${roller.attr === a.key ? 'selected' : ''}>${escapeHtml(a.label)} (${signed(attrMod(sheet, a.key))})</option>`).join('')}</optgroup>`)
+      .join('');
+    const skillOpts = SKILL_GROUPS.map(
+      (g) => `<optgroup label="${escapeHtml(g)}">${SKILLS.filter((s) => s.group === g).map((s) => {
+        const gr = skillGrade(msl, s.id);
+        return `<option value="${s.id}" ${roller.skill === s.id ? 'selected' : ''}>${escapeHtml(s.name)} · ${SKILL_GRADE_LABEL[gr]}${gr ? ' (' + signed(skillBonus(gr)) + ')' : ''}</option>`;
+      }).join('')}</optgroup>`
+    ).join('');
+    const mods = roller.mods
+      .map(
+        (m, i) => `
+        <div class="rl-mod ${m.on ? '' : 'off'}" data-ri="${i}">
+          <label class="rl-switch" title="liga/desliga sem apagar"><input type="checkbox" data-rl="on" ${m.on ? 'checked' : ''}><span></span></label>
+          <input type="text" class="rl-mod-label" data-rl="label" maxlength="40" placeholder="nome (ex.: cobertura, bênção)" value="${escapeHtml(m.label)}">
+          <div class="rl-stepper">
+            <button type="button" data-rl-act="step" data-v="-1" title="−1">−</button>
+            <input type="number" data-rl="val" value="${m.value}">
+            <button type="button" data-rl-act="step" data-v="1" title="+1">+</button>
+          </div>
+          <button type="button" class="rl-icon" data-rl-act="save-preset" title="guardar como atalho">⭐</button>
+          <button type="button" class="rl-icon" data-rl-act="del-mod" title="remover">✕</button>
+        </div>`
+      )
+      .join('');
+    return `
+      <div class="rl-wrap">
+        <div class="rl-card">
+          <div class="rl-seg">
+            <button type="button" class="${roller.kind === 'd20' ? 'active' : ''}" data-rl-act="kind" data-v="d20">🎯 Teste da ficha <small>d20</small></button>
+            <button type="button" class="${roller.kind === 'dice' ? 'active' : ''}" data-rl-act="kind" data-v="dice">🎲 Dados livres <small>dano, sorteio…</small></button>
+          </div>
+          ${
+            roller.kind === 'd20'
+              ? `<div class="rl-grid">
+                  <label class="rl-field"><span>Atributo</span><select data-rl="attr">${attrOpts}</select></label>
+                  <label class="rl-field"><span>Perícia <small>(opcional)</small></span><select data-rl="skill"><option value="">— sem perícia —</option>${skillOpts}</select></label>
+                </div>
+                <div class="rl-modes">
+                  <span class="rl-sub">Como rolar</span>
+                  <div class="msl-rollmode" title="vantagem: rola 2d20 e fica o maior; desvantagem: o menor">
+                    ${['normal', 'vantagem', 'desvantagem'].map((m) => `<button type="button" class="${rollMode === m ? 'active' : ''}" data-rollmode="${m}">${m}</button>`).join('')}
+                  </div>
+                </div>`
+              : `<div class="rl-dicebox">
+                  <div class="rl-qty"><span class="rl-sub">Quantidade</span>
+                    <div class="rl-stepper"><button type="button" data-rl-act="qty" data-v="-1">−</button><input type="number" min="1" max="30" data-rl="qty" value="${roller.qty}"><button type="button" data-rl-act="qty" data-v="1">+</button></div>
+                  </div>
+                  <div class="rl-dice-pick"><span class="rl-sub">Dado</span>
+                    <div class="rl-dice-chips">${ROLL_DICE.map((x) => `<button type="button" class="${roller.die === x ? 'active' : ''}" data-rl-act="die" data-v="${x}">${x}</button>`).join('')}
+                      <input type="text" class="rl-die-custom" data-rl="customdie" maxlength="5" placeholder="dX" title="outro dado, ex.: d3, d30" value="${ROLL_DICE.includes(roller.die) ? '' : escapeHtml(roller.die)}"></div>
+                  </div>
+                </div>`
+          }
+          <label class="rl-field"><span>Nome da rolagem <small>(opcional; aparece no log da mesa)</small></span><input type="text" data-rl="name" maxlength="50" placeholder="${roller.kind === 'd20' ? 'ex.: acertar o goblin' : 'ex.: dano da espada'}" value="${escapeHtml(roller.name)}"></label>
+        </div>
+
+        <div class="rl-card">
+          <div class="rl-card-head"><b>Modificadores</b><span class="rl-sub">some ao teste, positivo ou negativo</span></div>
+          <div class="rl-quick">
+            ${MOD_QUICK.map((v) => `<button type="button" class="${v < 0 ? 'neg' : 'pos'}" data-rl-act="quick" data-v="${v}">${signed(v)}</button>`).join('')}
+            <button type="button" class="rl-add" data-rl-act="add-mod">+ modificador com nome</button>
+            ${roller.mods.length ? '<button type="button" class="rl-clear" data-rl-act="clear-mods">limpar</button>' : ''}
+          </div>
+          <div class="rl-mods">${mods || '<div class="rl-empty">nenhum modificador: use os botões acima, por exemplo +2 de uma bênção ou −2 de cobertura</div>'}</div>
+          ${
+            rollerPresets.length
+              ? `<div class="rl-presets"><span class="rl-sub">⭐ Meus atalhos</span>${rollerPresets.map((p, i) => `<span class="rl-preset ${p.value < 0 ? 'neg' : 'pos'}"><button type="button" data-rl-act="use-preset" data-v="${i}">${escapeHtml(p.label)} <b>${signed(p.value)}</b></button><button type="button" class="x" data-rl-act="del-preset" data-v="${i}" title="apagar atalho">×</button></span>`).join('')}</div>`
+              : ''
+          }
+        </div>
+
+        <div class="rl-card rl-card-roll">
+          <div id="rl-preview">${rollerPreviewHtml()}</div>
+          <button type="button" class="rl-roll-btn" data-rl-act="roll" ${rollerBusy ? 'disabled' : ''}>🎲 ROLAR <small>${roller.kind === 'd20' ? '1d20' : roller.qty + roller.die} ${signed(rollerPlan().mod)}</small></button>
+          ${rollerResultHtml(rollerLast, false)}
+        </div>
+
+        ${
+          rollHistory.length > 1
+            ? `<div class="rl-card"><div class="rl-card-head"><b>Últimas rolagens</b><button type="button" class="rl-clear" data-rl-act="clear-history">limpar</button></div>${rollHistory.slice(1).map((r) => rollerResultHtml(r, true)).join('')}</div>`
+            : ''
+        }
+      </div>`;
+  }
+
+  async function doRollerRoll() {
+    if (rollerBusy) return;
+    const plan = rollerPlan();
+    const d = derive(sheet);
+    rollerBusy = true;
+    let res;
+    try {
+      if (roller.kind === 'd20') {
+        const row = await rollD20Test(campaign.id, session.user.id, rollerName(), plan.mod, plan.label, rollMode, getHiddenRollMode() && isMaster);
+        res = { kind: 'd20', label: row.label, kept: row.kept, results: row.results, mod: plan.mod, total: row.total, crit: row.kept >= d.critico, fumble: row.kept === 1, parts: plan.parts, hidden: !!row.hidden };
+      } else {
+        const row = await rollDiceLogged(campaign.id, session.user.id, rollerName(), roller.die, roller.qty, plan.mod, plan.label, getHiddenRollMode() && isMaster);
+        res = { kind: 'dice', label: row.label || plan.label, results: row.results, mod: plan.mod, total: row.total, parts: plan.parts, die: roller.die, qty: roller.qty, hidden: !!row.hidden };
+      }
+      rollHistory.unshift(res);
+      rollHistory = rollHistory.slice(0, 9);
+    } catch (err) {
+      res = { error: err.message };
+    }
+    rollerBusy = false;
+    rollerLast = res;
+    rollerFresh = true;
+    lastRoll = null; // o aviso do topo é das rolagens dos botões 🎲 da ficha; aqui o resultado aparece no próprio rolador
+    render();
+    rollerFresh = false;
+  }
+
+  function rollerClick(el) {
+    const act = el.dataset.rlAct;
+    const v = el.dataset.v;
+    const ri = el.closest('[data-ri]') ? parseInt(el.closest('[data-ri]').dataset.ri, 10) : -1;
+    if (act === 'roll') return doRollerRoll();
+    if (act === 'kind') roller.kind = v;
+    else if (act === 'die') roller.die = v;
+    else if (act === 'qty') roller.qty = Math.max(1, Math.min(30, roller.qty + parseInt(v, 10)));
+    else if (act === 'quick') roller.mods.push({ label: '', value: parseInt(v, 10), on: true });
+    else if (act === 'add-mod') roller.mods.push({ label: '', value: 1, on: true });
+    else if (act === 'clear-mods') roller.mods = [];
+    else if (act === 'del-mod' && ri >= 0) roller.mods.splice(ri, 1);
+    else if (act === 'step' && ri >= 0) roller.mods[ri].value += parseInt(v, 10);
+    else if (act === 'save-preset' && ri >= 0) {
+      const m = roller.mods[ri];
+      const label = m.label.trim() || (m.value < 0 ? 'Penalidade' : 'Bônus');
+      m.label = m.label.trim() || label;
+      if (!rollerPresets.some((p) => p.label === label && p.value === m.value)) rollerPresets.push({ label, value: m.value });
+      savePresets(rollerPresets);
+    } else if (act === 'use-preset') {
+      const p = rollerPresets[parseInt(v, 10)];
+      if (p) roller.mods.push({ label: p.label, value: p.value, on: true });
+    } else if (act === 'del-preset') {
+      rollerPresets.splice(parseInt(v, 10), 1);
+      savePresets(rollerPresets);
+    } else if (act === 'clear-history') {
+      rollHistory = rollerLast && !rollerLast.error ? [rollerLast] : [];
+    }
+    render();
+  }
+
+  // campos do rolador: digitar não pode refazer a tela (perderia o foco), então só o resumo é atualizado
+  function rollerInput(e) {
+    const el = e.target.closest('[data-rl]');
+    const kind = el.dataset.rl;
+    const row = el.closest('[data-ri]');
+    const ri = row ? parseInt(row.dataset.ri, 10) : -1;
+    if (kind === 'label' && ri >= 0) roller.mods[ri].label = el.value;
+    else if (kind === 'val' && ri >= 0) roller.mods[ri].value = parseInt(el.value, 10) || 0;
+    else if (kind === 'name') roller.name = el.value;
+    else if (kind === 'qty') roller.qty = Math.max(1, Math.min(30, parseInt(el.value, 10) || 1));
+    else if (kind === 'customdie') {
+      const m = /^d(\d{1,3})$/i.exec(el.value.trim());
+      if (m && parseInt(m[1], 10) >= 2) roller.die = 'd' + parseInt(m[1], 10);
+    } else return;
+    updateRollerPreview();
+  }
+  function rollerChange(e) {
+    const el = e.target.closest('[data-rl]');
+    const kind = el.dataset.rl;
+    const row = el.closest('[data-ri]');
+    const ri = row ? parseInt(row.dataset.ri, 10) : -1;
+    if (kind === 'attr') roller.attr = el.value;
+    else if (kind === 'skill') {
+      roller.skill = el.value;
+      const s = SKILLS.find((x) => x.id === el.value);
+      if (s) roller.attr = s.attr; // a perícia sugere o atributo dela (dá pra trocar depois)
+    } else if (kind === 'on' && ri >= 0) roller.mods[ri].on = el.checked;
+    else if (kind === 'customdie') {
+      if (!/^d\d{1,3}$/i.test(el.value.trim())) el.value = ROLL_DICE.includes(roller.die) ? '' : roller.die;
+      return;
+    } else return; // name/qty/label/val já foram guardados no 'input' (refazer a tela aqui roubaria o clique do botão)
+    render();
+  }
+
   // ---------------------------------------------------------------- aba: notas
   function notesTab(msl) {
     const data = sheetDataOf(sheet);
@@ -1231,6 +1516,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     const btn = (sel) => t.closest(sel);
     let el;
 
+    if ((el = btn('[data-rl-act]'))) return rollerClick(el);
     if ((el = btn('[data-tab]'))) {
       tab = el.dataset.tab;
       render();
@@ -1538,6 +1824,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   async function handleChange(e) {
     const t = e.target;
     let el;
+    if (t.closest('[data-rl]')) return rollerChange(e);
     if ((el = t.closest('[data-vital-input]'))) return saveVital(el.dataset.vitalInput, parseInt(el.value, 10) || 0);
     if ((el = t.closest('[data-temp]'))) return commit((m) => (m.temp[el.dataset.temp] = parseInt(el.value, 10) || 0));
     if ((el = t.closest('[data-pool]'))) return commit((m) => (m.pool[el.dataset.pool] = Math.max(0, parseInt(el.value, 10) || 0)));
@@ -1625,6 +1912,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     if (pv) pv.innerHTML = editorPreviewHtml();
   }
   function handleInput(e) {
+    if (e.target.closest && e.target.closest('[data-rl]')) return rollerInput(e);
     const el = e.target.closest && e.target.closest('[data-ed], [data-ed-row], [data-ed-base]');
     if (el && el.tagName !== 'SELECT') applyEditorField(el, false);
   }
