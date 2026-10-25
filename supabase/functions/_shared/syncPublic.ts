@@ -19,6 +19,9 @@ async function syncPublicAreaInner(campaignId: string) {
   // channel_id é opcional desde a Fase 8 (db/034) -- a linha pode existir só
   // por causa do combat_channel_id, sem o canal de transporte vinculado.
   if (!config?.channel_id) return;
+  // o sistema da campanha decide como o dinheiro aparece (moedas em cascata x dinheiro normal)
+  const { data: camp } = await client.from('campaigns').select('system').eq('id', campaignId).maybeSingle();
+  const system = camp?.system ?? null;
 
   const [{ data: compartments }, { data: items }, { data: containers }, { data: currency }, { data: sections }] = await Promise.all([
     client.from('public_compartments').select('id, name, currency').eq('campaign_id', campaignId),
@@ -59,7 +62,7 @@ async function syncPublicAreaInner(campaignId: string) {
   // avulso + cada compartimento em paralelo — seções independentes, sem
   // motivo pra esperar uma terminar antes de começar a próxima
   const avulsoTask = (async () => {
-    const avulsoText = buildPublicAvulsoText(itemsList, containersList, currency ?? null);
+    const avulsoText = buildPublicAvulsoText(itemsList, containersList, currency ?? null, system);
     const avulsoChunks = splitIntoChunks(avulsoText);
     const avulsoSection = sectionByCompartment.get(null);
     const avulsoIds = await syncMessageList(config.channel_id, avulsoSection?.message_ids ?? [], avulsoChunks, (i) => `rp:avulso:${campaignId}:${i}`);
@@ -67,7 +70,7 @@ async function syncPublicAreaInner(campaignId: string) {
   })();
 
   const compartmentTasks = (compartments ?? []).map(async (comp) => {
-    const text = buildPublicCompartmentText(comp.name, comp.id, itemsList, containersList, comp.currency ?? null);
+    const text = buildPublicCompartmentText(comp.name, comp.id, itemsList, containersList, comp.currency ?? null, system);
     const chunks = splitIntoChunks(text);
     const section = sectionByCompartment.get(comp.id);
     const ids = await syncMessageList(config.channel_id, section?.message_ids ?? [], chunks, (i) => `rp:${comp.id}:${campaignId}:${i}`);

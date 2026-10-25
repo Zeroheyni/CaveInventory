@@ -317,6 +317,7 @@ export function buildPublicCompartmentText(
   items: PublicItem[],
   containers: PublicContainer[],
   currency: PublicCurrency,
+  system?: string | null,
 ): string {
   const lines: string[] = [];
   const total = round(scopeWeight(compartmentId, items, containers));
@@ -345,16 +346,16 @@ export function buildPublicCompartmentText(
   }
   while (lines.length && lines[lines.length - 1] === '') lines.pop();
   lines.push('╚═══════════════════════════╝');
-  const coinLines = currencyBox(currency);
+  const coinLines = currencyBox(currency, system);
   if (coinLines.length) { lines.push(''); lines.push(...coinLines); }
   return lines.join('\n');
 }
 
-export function buildPublicAvulsoText(items: PublicItem[], containers: PublicContainer[], currency: PublicCurrency): string {
+export function buildPublicAvulsoText(items: PublicItem[], containers: PublicContainer[], currency: PublicCurrency, system?: string | null): string {
   // null é o valor real de compartment_id pros itens soltos — usar a string
   // 'avulso' aqui (como antes) nunca batia com nenhum item de verdade, então
   // a seção avulso no Discord ficava sempre "(vazio)" mesmo com item dentro.
-  return buildPublicCompartmentText('Avulso', null, items, containers, currency).replace('📦 AVULSO', '🌐 AVULSO');
+  return buildPublicCompartmentText('Avulso', null, items, containers, currency, system).replace('📦 AVULSO', '🌐 AVULSO');
 }
 
 // ============================================================

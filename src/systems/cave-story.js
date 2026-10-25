@@ -8,6 +8,7 @@ export const caveStory = {
   id: 'cave-story',
   label: 'Cave Story',
   currency: COIN_CURRENCY, // bronze/prata/ouro/platina, base 100
+  transport: { id: 'veiculo', name: 'Veículo', title: 'BAÚ DO VEÍCULO', inName: 'no veículo', gender: 'o' }, // baú de transporte (espaço pessoal + público)
 
   // atributos de status (chave = coluna em `characters`)
   attributes: [

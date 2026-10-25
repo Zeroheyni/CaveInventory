@@ -27,7 +27,11 @@ let activeChannel = null;
 export function renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, playCharacterId, ownerName, onBack, onSwitchCharacter }) {
   setActiveSystem(campaign.system);
   const singleMoney = activeRuleset().currency?.mode === 'single'; // dinheiro único (Magic Learning) em vez das 4 moedas
-  const hasPublicInv = activeRuleset().hasPublicInventory !== false; // sem público/veículo no Magic Learning
+  const hasPublicInv = activeRuleset().hasPublicInventory !== false; // sistemas sem baú de transporte/público podem desligar com hasPublicInventory:false
+  const transport = activeRuleset().transport || { id: 'veiculo', name: 'Veículo', title: 'BAÚ DO VEÍCULO', inName: 'no veículo' }; // Cave Story: veículo; Magic Learning: barco
+  const transportIcon = transport.id === 'barco'
+    ? '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 3v11"/><path d="M12 4c3 1.5 5 4.5 5.5 9H12"/><path d="M12 6c-2 1.2-3.7 3.8-4.2 7H12"/><path d="M3 16h18l-2.2 3.6a2 2 0 01-1.7 1H6.9a2 2 0 01-1.7-1z"/></svg>'
+    : '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 9V7a2 2 0 012-2h8a2 2 0 012 2v2"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/><path d="M9.5 12h1.5M13 12h1.5"/></svg>';
   const campaignId = campaign.id;
   const userId = session.user.id;
   const isAdminView = !!presetCharacterId;
@@ -96,7 +100,7 @@ ${singleMoney ? `  <div class="currency-wrap" id="currency-wrap" style="display:
     </button>
     <div class="currency-transfer-menu" id="currency-transfer-menu" style="display:none;">
       <button type="button" class="icon-btn" id="currency-transfer-close" title="fechar" style="align-self:flex-end;">✕</button>
-      <div class="field" style="margin-bottom:8px;"><label style="font-size:9px;">Para</label><select class="transfer-select" id="transfer-to-select"></select></div>
+      <div class="field" style="margin-bottom:8px;"><label style="font-size:9px;">Para</label><select class="transfer-select" id="transfer-to-select"><option value="avulso">Público (avulso)</option></select></div>
       <div class="currency-edit-row"><span class="coin-badge coin-gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.8"/><path d="M6 9.5v.01M18 14.5v.01"/></svg></span><input type="number" id="transfer-input-bronze" min="0" step="1" value="0"></div>
       <div class="transfer-balance" id="transfer-balance"></div>
       <p class="admin-error" id="transfer-error" style="display:none;"></p>
@@ -286,7 +290,7 @@ ${singleMoney ? `  <div class="currency-wrap" id="currency-wrap" style="display:
     <footer>SISTEMA DE INVENTÁRIO — SINCRONIZADO NA CAMPANHA</footer>
   </div>
 
-  <!-- MODO TRANSPORTE (baú do veículo, inventário à parte) -->
+  <!-- MODO TRANSPORTE (baú do veículo/barco, inventário à parte) -->
   <div id="transport-mode-wrap" style="display:none;">
     <div class="tabs transport-subtabs">
       <button class="tab-btn transport-subtab-btn active" data-transport-tab="personal">ESPAÇO PESSOAL</button>
@@ -316,7 +320,7 @@ ${singleMoney ? `  <div class="currency-wrap" id="currency-wrap" style="display:
       <div id="public-area-embed"></div>
     </div>
 
-    <footer>BAÚ DO VEÍCULO — SEPARADO DO INVENTÁRIO PRINCIPAL</footer>
+    <footer>${transport.title} — SEPARADO DO INVENTÁRIO PRINCIPAL</footer>
   </div>
 
   <div id="master-inventory-chooser-wrap" style="display:none;">
@@ -373,8 +377,8 @@ ${singleMoney ? `  <div class="currency-wrap" id="currency-wrap" style="display:
   <div id="board-embed"></div>
 </div>
 
-<button class="vehicle-dropzone" id="vehicle-dropzone" title="arraste um item aqui para guardar no veículo, sem peso" ${hasPublicInv ? '' : 'hidden'}>
-  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M6 9V7a2 2 0 012-2h8a2 2 0 012 2v2"/><circle cx="7.5" cy="17" r="1.5"/><circle cx="16.5" cy="17" r="1.5"/><path d="M9.5 12h1.5M13 12h1.5"/></svg>
+<button class="vehicle-dropzone" id="vehicle-dropzone" title="arraste um item aqui para guardar ${transport.inName}, sem peso" ${hasPublicInv ? '' : 'hidden'}>
+  ${transportIcon}
 </button>
 <button class="vehicle-dropzone" id="backpack-return-btn" title="voltar pro inventário" style="display:none;">
   <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M7 8V6a5 5 0 0110 0v2"/><rect x="5" y="8" width="14" height="13" rx="2"/><rect x="9.5" y="12" width="5" height="4" rx="1"/></svg>
@@ -1503,7 +1507,7 @@ ${singleMoney ? `  <div class="currency-wrap" id="currency-wrap" style="display:
   }
 
   function renderTransportList(){
-    renderTransportSubList(state.transportPersonal, 'transport-personal-list', 'transport-personal', 'ESPAÇO PESSOAL VAZIO<br>arraste um item até o ícone do veículo, na aba Itens, pra guardar aqui');
+    renderTransportSubList(state.transportPersonal, 'transport-personal-list', 'transport-personal', 'ESPAÇO PESSOAL VAZIO<br>arraste um item até o ícone d' + (transport.gender || 'o') + ' ' + transport.name.toLowerCase() + ', na aba Itens, pra guardar aqui');
   }
 
   function renderTagChips(){
@@ -1613,7 +1617,7 @@ ${singleMoney ? `  <div class="currency-wrap" id="currency-wrap" style="display:
       <div class="summary-row"><span>Carga usada</span><b class="${pctClass}">${pct}%</b></div>
       <div class="summary-row"><span>Equipados</span><b>${equippedCount}/${state.equipSlots.length}</b></div>
       <div class="summary-row"><span>Fixados</span><b>${pinnedCount}</b></div>
-      ${hasPublicInv ? `<div class="summary-row"><span>No veículo</span><b>${transportItemsCount}</b></div>` : ''}
+      ${hasPublicInv ? `<div class="summary-row"><span>${transport.inName.replace(/^./, (c) => c.toUpperCase())}</span><b>${transportItemsCount}</b></div>` : ''}
     `;
   }
 
@@ -2666,8 +2670,8 @@ ${singleMoney ? `  <div class="currency-wrap" id="currency-wrap" style="display:
       transWrap.style.display = 'block';
       transWrap.classList.remove('mode-fade-in'); void transWrap.offsetWidth; transWrap.classList.add('mode-fade-in');
       backpackBtn.style.display = 'flex';
-      titleText.textContent = 'BAÚ DO VEÍCULO';
-      copyBtn.title = 'copiar baú do veículo para a área de transferência';
+      titleText.textContent = transport.title;
+      copyBtn.title = 'copiar ' + transport.title.toLowerCase() + ' para a área de transferência';
     } else if(mode === 'combat'){
       combatWrap.style.display = 'block';
       combatWrap.classList.remove('mode-fade-in'); void combatWrap.offsetWidth; combatWrap.classList.add('mode-fade-in');
@@ -2793,7 +2797,7 @@ ${singleMoney ? `  <div class="currency-wrap" id="currency-wrap" style="display:
     state.transportPersonal.push({type, id});
     sanitizeAmmoLinks(); // desfaz vínculos de munição que cruzariam os mundos
     dragSource = null;
-    addLog(`"${name}" guardado no Espaço Pessoal (veículo)`);
+    addLog(`"${name}" guardado no Espaço Pessoal (${transport.name.toLowerCase()})`);
     renderAll(); saveState();
     flashStatus('GUARDADO NO ESPAÇO PESSOAL');
   });
@@ -2912,7 +2916,7 @@ ${singleMoney ? `  <div class="currency-wrap" id="currency-wrap" style="display:
   }
   function buildTransportText(){
     const lines = [];
-    lines.push('╔══════ BAÚ DO VEÍCULO ══════╗');
+    lines.push(`╔══════ ${transport.title} ══════╗`);
     buildTransportSection(lines, state.transportPersonal, 'Espaço Pessoal', '🎒');
     while(lines.length && lines[lines.length-1] === '') lines.pop();
     lines.push('╚═══════════════════════════╝');

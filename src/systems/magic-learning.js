@@ -310,7 +310,8 @@ export const magicLearning = {
   id: 'magic-learning',
   label: 'Magic Learning',
   currency: SINGLE_CURRENCY, // dinheiro normal (um valor só), não as 4 moedas bronze/prata/ouro/platina
-  hasPublicInventory: false, // sem inventário público nem baú do veículo (transporte)
+  // o "transporte" (baú com espaço pessoal + público) existe, mas aqui é o BARCO
+  transport: { id: 'barco', name: 'Barco', title: 'BAÚ DO BARCO', inName: 'no barco', gender: 'o' },
   hasOwnSheet: true, // a ficha tem tela própria (screens/fichaMsl.js) -- ficha.js do Cave Story não vale aqui
 
   attributes,

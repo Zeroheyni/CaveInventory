@@ -20,6 +20,7 @@ import {
   getMyCharacter,
   appendPersonalEntry,
 } from '../publicArea.js';
+import { activeRuleset, useSystemOf } from '../systems/index.js';
 
 let activeChannel = null;
 
@@ -27,6 +28,8 @@ let activeChannel = null;
 // mais uma tela cheia à parte, então não desenha wrap/header/footer/campaign-strip
 // próprios (o character.js já tem os dele em volta).
 export function renderPublicAreaScreen(app, { session, profile, campaign, characterId: playingCharacterId = null }) {
+  useSystemOf(campaign);
+  const singleMoney = activeRuleset().currency?.mode === 'single'; // dinheiro normal (Magic Learning) em vez das 4 moedas
   const campaignId = campaign.id;
   const userId = session.user.id;
   let maxCarga = campaign.max_carga_publico;
@@ -261,18 +264,19 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, charac
         ${canManage() ? '<div class="members-panel" id="members-panel"></div>' : ''}
 
         <div class="currency-wrap" id="currency-wrap" style="display:flex; align-items:flex-start; gap:8px;">
-          <button class="currency-strip" id="currency-strip" title="clique para editar as moedas avulsas do público">
-            <span class="coin-badge coin-bronze">${coinSvg()}<b id="coin-bronze-val">${currency.bronze}</b></span>
+          <button class="currency-strip" id="currency-strip" title="clique para editar o dinheiro avulso do público">
+            ${singleMoney ? `<span class="coin-badge coin-gold">${coinSvg()}<b id="coin-bronze-val">${coinsToBronze(currency).toLocaleString('pt-BR')}</b></span>` : `<span class="coin-badge coin-bronze">${coinSvg()}<b id="coin-bronze-val">${currency.bronze}</b></span>
             <span class="coin-badge coin-silver">${coinSvg()}<b id="coin-silver-val">${currency.silver}</b></span>
             <span class="coin-badge coin-gold">${coinSvg()}<b id="coin-gold-val">${currency.gold}</b></span>
-            <span class="coin-badge coin-platinum">${coinSvg()}<b id="coin-platinum-val">${currency.platinum}</b></span>
+            <span class="coin-badge coin-platinum">${coinSvg()}<b id="coin-platinum-val">${currency.platinum}</b></span>`}
           </button>
           <div class="currency-edit-menu" id="currency-edit-menu" style="display:none;">
-            <div class="currency-edit-row"><span class="coin-badge coin-bronze">${coinSvg()}</span><input type="number" id="currency-input-bronze" min="0" step="1" value="${currency.bronze}"></div>
+            ${singleMoney ? `<div class="currency-edit-row"><span class="coin-badge coin-gold">${coinSvg()}</span><input type="number" id="currency-input-bronze" min="0" step="1" value="${coinsToBronze(currency)}"></div>
+            <div class="currency-hint">dinheiro normal: um valor só.</div>` : `<div class="currency-edit-row"><span class="coin-badge coin-bronze">${coinSvg()}</span><input type="number" id="currency-input-bronze" min="0" step="1" value="${currency.bronze}"></div>
             <div class="currency-edit-row"><span class="coin-badge coin-silver">${coinSvg()}</span><input type="number" id="currency-input-silver" min="0" step="1" value="${currency.silver}"></div>
             <div class="currency-edit-row"><span class="coin-badge coin-gold">${coinSvg()}</span><input type="number" id="currency-input-gold" min="0" step="1" value="${currency.gold}"></div>
             <div class="currency-edit-row"><span class="coin-badge coin-platinum">${coinSvg()}</span><input type="number" id="currency-input-platinum" min="0" step="1" value="${currency.platinum}"></div>
-            <div class="currency-hint">100 bronze = 1 prata · 100 prata = 1 ouro · 100 ouro = 1 platina</div>
+            <div class="currency-hint">100 bronze = 1 prata · 100 prata = 1 ouro · 100 ouro = 1 platina</div>`}
             <button class="btn" id="currency-save-btn">salvar</button>
           </div>
           <button class="currency-transfer-btn" id="currency-transfer-btn" title="transferir moedas">
@@ -282,11 +286,11 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, charac
             <button type="button" class="icon-btn" id="currency-transfer-close" title="fechar" style="align-self:flex-end;">✕</button>
             <div class="field" style="margin-bottom:8px;"><label style="font-size:9px;">De</label><select class="transfer-select" id="transfer-from-select">${transferOptions()}</select></div>
             <div class="field" style="margin-bottom:8px;"><label style="font-size:9px;">Para</label><select class="transfer-select" id="transfer-to-select">${transferOptions()}</select></div>
-            <div class="currency-edit-row"><span class="coin-badge coin-bronze">${coinSvg()}</span><input type="number" id="transfer-input-bronze" min="0" step="1" value="0"></div>
+            ${singleMoney ? `<div class="currency-edit-row"><span class="coin-badge coin-gold">${coinSvg()}</span><input type="number" id="transfer-input-bronze" min="0" step="1" value="0"></div>` : `<div class="currency-edit-row"><span class="coin-badge coin-bronze">${coinSvg()}</span><input type="number" id="transfer-input-bronze" min="0" step="1" value="0"></div>
             <div class="currency-edit-row"><span class="coin-badge coin-silver">${coinSvg()}</span><input type="number" id="transfer-input-silver" min="0" step="1" value="0"></div>
             <div class="currency-edit-row"><span class="coin-badge coin-gold">${coinSvg()}</span><input type="number" id="transfer-input-gold" min="0" step="1" value="0"></div>
             <div class="currency-edit-row"><span class="coin-badge coin-platinum">${coinSvg()}</span><input type="number" id="transfer-input-platinum" min="0" step="1" value="0"></div>
-            <div class="currency-hint">se faltar de uma moeda específica, quebra as maiores automaticamente.</div>
+            <div class="currency-hint">se faltar de uma moeda específica, quebra as maiores automaticamente.</div>`}
             <div class="transfer-balance" id="transfer-balance"></div>
             <p class="admin-error" id="transfer-error" style="display:none;"></p>
             <button class="btn" id="currency-transfer-confirm">transferir</button>
@@ -652,7 +656,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, charac
         <div class="compartment-meta">
           <span><b>${total}</b> carga total dentro</span>
           <span class="compartment-currency" title="moedas deste compartimento (transfira pelo botão de transferir moedas)">
-            ${coinSvg()}<b>${comp.currency.bronze}</b>·${coinSvg()}<b>${comp.currency.silver}</b>·${coinSvg()}<b>${comp.currency.gold}</b>·${coinSvg()}<b>${comp.currency.platinum}</b>
+            ${singleMoney ? `${coinSvg()}<b>${coinsToBronze(comp.currency).toLocaleString('pt-BR')}</b>` : `${coinSvg()}<b>${comp.currency.bronze}</b>·${coinSvg()}<b>${comp.currency.silver}</b>·${coinSvg()}<b>${comp.currency.gold}</b>·${coinSvg()}<b>${comp.currency.platinum}</b>`}
           </span>
         </div>
         <div class="container-dropzone ${collapsed ? 'is-collapsed' : ''}" data-container-id="comp:${comp.id}" data-compartment-target="${comp.id}"><div class="dropzone-inner">${contentsHtml}</div></div>
@@ -767,7 +771,14 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, charac
     return { bronze: total, silver, gold, platinum };
   }
   function coinsLabel(c) {
+    if (singleMoney) return coinsToBronze(c).toLocaleString('pt-BR');
     return `${c.bronze}b ${c.silver}s ${c.gold}g ${c.platinum}p`;
+  }
+  // o que foi digitado nos campos de transferência/edição, no formato de 4 moedas do banco (dinheiro único = total em unidades)
+  function readCoinInputs(prefix) {
+    const n = (id) => Math.max(0, parseInt($(prefix + id).value) || 0);
+    if (singleMoney) return bronzeToCoins(n('bronze'));
+    return { bronze: n('bronze'), silver: n('silver'), gold: n('gold'), platinum: n('platinum') };
   }
   function resolveCurrencyByKey(key) {
     if (key === 'avulso') return currency;
@@ -1015,12 +1026,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, charac
       currencyMenu.style.display = currencyMenu.style.display === 'none' ? 'flex' : 'none';
     });
     $('currency-save-btn').addEventListener('click', async () => {
-      const newCur = {
-        bronze: Math.max(0, parseInt($('currency-input-bronze').value) || 0),
-        silver: Math.max(0, parseInt($('currency-input-silver').value) || 0),
-        gold: Math.max(0, parseInt($('currency-input-gold').value) || 0),
-        platinum: Math.max(0, parseInt($('currency-input-platinum').value) || 0),
-      };
+      const newCur = readCoinInputs('currency-input-');
       normalizeCurrency(newCur);
       await updatePublicCurrency(campaignId, newCur);
       await load();
@@ -1034,12 +1040,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, charac
       const fromKey = $('transfer-from-select').value;
       const from = resolveCurrencyByKey(fromKey);
       const balance = coinsToBronze(from);
-      const requested = coinsToBronze({
-        bronze: parseInt($('transfer-input-bronze').value) || 0,
-        silver: parseInt($('transfer-input-silver').value) || 0,
-        gold: parseInt($('transfer-input-gold').value) || 0,
-        platinum: parseInt($('transfer-input-platinum').value) || 0,
-      });
+      const requested = coinsToBronze(readCoinInputs('transfer-input-'));
       const after = balance - requested;
       transferBalanceEl.innerHTML = `
         <span>saldo: <b>${coinsLabel(bronzeToCoins(balance))}</b></span>
@@ -1066,7 +1067,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, charac
       });
     }
     $('transfer-from-select').addEventListener('change', updateTransferBalance);
-    ['bronze', 'silver', 'gold', 'platinum'].forEach((k) => {
+    (singleMoney ? ['bronze'] : ['bronze', 'silver', 'gold', 'platinum']).forEach((k) => {
       $('transfer-input-' + k).addEventListener('input', updateTransferBalance);
     });
     $('currency-transfer-confirm').addEventListener('click', () => onTransferConfirm(transferErrorEl));
@@ -1119,12 +1120,7 @@ export function renderPublicAreaScreen(app, { session, profile, campaign, charac
 
   async function onTransferConfirm(transferErrorEl) {
     transferErrorEl.style.display = 'none';
-    const amounts = {
-      bronze: Math.max(0, parseInt($('transfer-input-bronze').value) || 0),
-      silver: Math.max(0, parseInt($('transfer-input-silver').value) || 0),
-      gold: Math.max(0, parseInt($('transfer-input-gold').value) || 0),
-      platinum: Math.max(0, parseInt($('transfer-input-platinum').value) || 0),
-    };
+    const amounts = readCoinInputs('transfer-input-');
     const fromKey = $('transfer-from-select').value;
     const toKey = $('transfer-to-select').value;
     const fromLabel = $('transfer-from-select').options[$('transfer-from-select').selectedIndex].textContent;
