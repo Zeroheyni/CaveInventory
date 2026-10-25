@@ -3953,5 +3953,293 @@
     ],
     "rastro": "Persistente",
     "sustentada": false
+  },
+  {
+    "id": "voz_da_cripta",
+    "nome": "Voz da Cripta",
+    "escola": "Vesper",
+    "estilo": null,
+    "nivel": 1,
+    "classificacao": "Autorização Especial",
+    "contexto_legal": null,
+    "descricao": "O Vesper conversa com um dos ancestrais que carrega.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [],
+    "ativacao": "instantânea, ação, 2 PA (de graça fora de combate)",
+    "alvo": "1 ancestral da cripta",
+    "resistencia": "nenhuma",
+    "efeito": "o ancestral responde o que sabia em vida e dá a sua opinião. Uma vez por cena, o Vesper ganha +2 num teste ligado à especialidade dele.",
+    "sustentada": false,
+    "custo_mp": 1,
+    "manutencao": null,
+    "custo_texto": "1 MP",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 no bônus a cada 10 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "familia": "Vesper"
+  },
+  {
+    "id": "mao_emprestada",
+    "nome": "Mão Emprestada",
+    "escola": "Vesper",
+    "estilo": null,
+    "nivel": 1,
+    "classificacao": "Autorização Especial",
+    "contexto_legal": null,
+    "descricao": "O ancestral entra um pouco no corpo do Vesper e guia os movimentos dele.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "o Vesper usa uma perícia da especialidade do ancestral no grau do ancestral, no lugar do próprio. Os olhos ficam brancos e a voz muda. Duração 3 turnos.",
+    "sustentada": true,
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Interpretação",
+        "efeito": "a cada 10 pontos, usa as duas perícias do ancestral ao mesmo tempo."
+      }
+    ],
+    "rastro": "Efêmero",
+    "familia": "Vesper"
+  },
+  {
+    "id": "erguer_casca",
+    "nome": "Erguer Casca",
+    "escola": "Vesper",
+    "estilo": null,
+    "nivel": 1,
+    "classificacao": "Autorização Especial",
+    "contexto_legal": null,
+    "descricao": "Um cadáver levanta, vazio, e obedece.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 cadáver a até 5 m",
+    "resistencia": "nenhuma",
+    "efeito": "o corpo vira uma casca, com o físico do morto (atributos físicos, ataque e metade do HP máximo dele) ou, sem ficha, com a tabela de corpos. A casca não usa perícias nem magias. Dura até ser destruída, até o Vesper soltá-la ou até o próximo descanso.",
+    "sustentada": true,
+    "custo_mp": 2,
+    "manutencao": 1,
+    "custo_texto": "2 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+3 de HP da casca a cada 5 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "familia": "Vesper"
+  },
+  {
+    "id": "receptaculo",
+    "nome": "Receptáculo",
+    "escola": "Vesper",
+    "estilo": null,
+    "nivel": 2,
+    "classificacao": "Autorização Especial",
+    "contexto_legal": null,
+    "descricao": "O Vesper põe a alma de um ancestral dentro de um corpo, e o morto volta a andar com a cabeça de quem ele foi.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 3 PA",
+    "alvo": "1 cadáver ou casca a até 5 m, e 1 ancestral da cripta",
+    "resistencia": "nenhuma",
+    "efeito": "o corpo vira um receptáculo, com o físico do morto (atributos físicos, ataque e metade do HP máximo dele) ou, sem ficha, com a tabela de corpos. Ele fala, pensa, usa as perícias do ancestral e age com a personalidade dele. Dura até ser destruído, até o Vesper soltá-lo ou até o próximo descanso.",
+    "sustentada": true,
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+3 de HP do receptáculo a cada 5 pontos."
+      },
+      {
+        "atributo": "Interpretação",
+        "efeito": "a cada 10 pontos, o receptáculo ganha +2 no acerto e no dano."
+      }
+    ],
+    "rastro": "Persistente",
+    "familia": "Vesper"
+  },
+  {
+    "id": "espectro",
+    "nome": "Espectro",
+    "escola": "Vesper",
+    "estilo": null,
+    "nivel": 2,
+    "classificacao": "Autorização Especial",
+    "contexto_legal": null,
+    "descricao": "O ancestral sai da cripta na forma de um fantasma.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 ancestral da cripta",
+    "resistencia": "RM, só para quem for assombrado",
+    "efeito": "o espectro aparece a até 20 m do Vesper. Ele voa, atravessa paredes, não pode ser ferido por ataques comuns e vê e ouve pelo Vesper. Com 2 PA do Vesper, ele assombra uma criatura: se ela falhar, tem desvantagem no próximo teste. Duração 10 turnos.",
+    "sustentada": true,
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Canalização",
+        "efeito": "+20 m de distância a cada 10 pontos."
+      },
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 na dificuldade para resistir a cada 5 pontos."
+      }
+    ],
+    "rastro": "Efêmero",
+    "familia": "Vesper"
+  },
+  {
+    "id": "possessao",
+    "nome": "Possessão",
+    "escola": "Vesper",
+    "estilo": null,
+    "nivel": 3,
+    "classificacao": "Autorização Especial",
+    "contexto_legal": null,
+    "descricao": "O Vesper manda um ancestral entrar no corpo de alguém vivo.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "instantânea, ação, 3 PA",
+    "alvo": "1 criatura a até 5 m, e 1 ancestral da cripta",
+    "resistencia": "RM",
+    "efeito": "se falhar, o ancestral controla o corpo do alvo no próximo turno dele, agindo com a personalidade do ancestral (que pode não ser exatamente o que o Vesper queria). Depois, o ancestral volta para a cripta.",
+    "sustentada": false,
+    "custo_mp": 4,
+    "manutencao": null,
+    "custo_texto": "4 MP",
+    "escalamentos": [
+      {
+        "atributo": "Interpretação",
+        "efeito": "+1 na dificuldade para resistir a cada 5 pontos."
+      },
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de possessão a cada 10 pontos. O alvo repete o teste no fim de cada turno."
+      }
+    ],
+    "rastro": "Persistente",
+    "familia": "Vesper"
+  },
+  {
+    "id": "vespera",
+    "nome": "Véspera",
+    "escola": "Vesper",
+    "estilo": null,
+    "nivel": 3,
+    "classificacao": "Autorização Especial",
+    "contexto_legal": null,
+    "descricao": "O Vesper sai do próprio corpo, entra num cadáver e passa a ser, por um tempo, a pessoa que morreu.",
+    "atributo_principal": "Controle",
+    "atributos_secundarios": [
+      "Interpretação",
+      "Canalização"
+    ],
+    "ativacao": "sustentada, ação, 2 PA",
+    "alvo": "1 cadáver ou casca a até 100 m, com a cabeça inteira",
+    "resistencia": "nenhuma",
+    "efeito": "a alma do Vesper passa para o corpo escolhido. O corpo real fica desacordado. No corpo novo: Físico do morto: o Vesper usa os atributos físicos que a pessoa tinha em vida (Força, Agilidade, Reflexos, Resistência Física, Precisão Física, Estamina e Vitalidade) e as perícias físicas dela. O HP é metade do HP máximo dela. Se o mestre não tiver a ficha da pessoa, usa a tabela de corpos. Mente do Vesper: atributos mentais, magias, MP e Sanidade continuam sendo os do Vesper. Ele não usa as magias que o morto sabia. Memórias: o Vesper sabe o nome, a voz, os hábitos e as pessoas próximas do morto. Para lembrar algo específico (uma senha, um lugar, um segredo), rola d20 + Interpretação ÷ 2 contra 12, +2 para cada dia desde a morte. Duração 10 minutos. Quando a magia acaba, o Vesper faz um teste de Sanidade de gravidade leve, por ter carregado as lembranças de outra pessoa. Se o corpo emprestado for destruído, ele volta na hora e o teste é de gravidade moderada.",
+    "informacoes": "quem conhecia bem o morto pode estranhar o jeito dele (Perspicácia dela contra a Enganação do Vesper, com +2 para ela se forem muito próximos). Um corpo muito decomposto chama atenção de qualquer jeito.",
+    "sustentada": true,
+    "custo_mp": 3,
+    "manutencao": 1,
+    "custo_texto": "3 MP (manutenção 1)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+10 minutos de duração a cada 5 pontos."
+      },
+      {
+        "atributo": "Interpretação",
+        "efeito": "+2 nos testes de memória a cada 10 pontos."
+      },
+      {
+        "atributo": "Canalização",
+        "efeito": "+100 m de distância a cada 10 pontos."
+      }
+    ],
+    "rastro": "Persistente",
+    "familia": "Vesper"
+  },
+  {
+    "id": "coro_dos_mortos",
+    "nome": "Coro dos Mortos",
+    "escola": "Vesper",
+    "estilo": null,
+    "nivel": 4,
+    "classificacao": "Autorização Especial",
+    "contexto_legal": null,
+    "descricao": "Todos os ancestrais falam e agem através do Vesper ao mesmo tempo.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "sustentada, ação, 3 PA",
+    "alvo": "próprio",
+    "resistencia": "nenhuma",
+    "efeito": "o Vesper usa as perícias de todos os ancestrais da cripta, cada uma no grau do ancestral, e tem vantagem em testes de Sanidade e contra efeitos mentais. Ancestrais resistentes não participam. Duração 3 turnos. Quando acaba, o Vesper faz um teste de Sanidade de gravidade moderada.",
+    "sustentada": true,
+    "custo_mp": 6,
+    "manutencao": 2,
+    "custo_texto": "6 MP (manutenção 2)",
+    "escalamentos": [
+      {
+        "atributo": "Controle",
+        "efeito": "+1 turno de duração a cada 10 pontos."
+      }
+    ],
+    "rastro": "Instável",
+    "familia": "Vesper"
+  },
+  {
+    "id": "encarnacao",
+    "nome": "Encarnação",
+    "escola": "Vesper",
+    "estilo": null,
+    "nivel": 5,
+    "classificacao": "Proibida",
+    "contexto_legal": null,
+    "descricao": "O maior tabu da família: devolver a vida de verdade a um morto.",
+    "atributo_principal": "Interpretação",
+    "atributos_secundarios": [
+      "Controle"
+    ],
+    "ativacao": "ritual de 1 hora",
+    "alvo": "1 ancestral da cripta, e 1 corpo inteiro e recente",
+    "resistencia": "nenhuma",
+    "efeito": "o ancestral volta a viver no corpo, de forma permanente. Ele deixa a cripta e vira um personagem vivo, com a mente de quem foi e o corpo de outra pessoa. O Vesper faz um teste de Sanidade de gravidade grave.",
+    "informacoes": "proibida por lei e pela própria família. Um Vesper que usa a Encarnação costuma ser expulso da linhagem, e ninguém sabe dizer se quem volta é mesmo a pessoa de antes.",
+    "sustentada": false,
+    "custo_mp": 10,
+    "manutencao": null,
+    "custo_texto": "10 MP, e o Vesper perde 5 de HP máximo para sempre",
+    "escalamentos": [],
+    "rastro": "Marcante",
+    "familia": "Vesper"
   }
 ]

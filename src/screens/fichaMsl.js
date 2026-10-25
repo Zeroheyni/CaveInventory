@@ -49,6 +49,7 @@ import {
   ELEMENTS,
   SCHOOLS,
   ACTIONS,
+  FAMILY_RULES,
 } from '../systems/msl-data.js';
 
 let activeChannel = null;
@@ -669,8 +670,9 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   const familyOf = () => (mslOf(sheet).family || '').trim().toLowerCase();
   // magias do livro + as personalizadas que este personagem pode ver (família: só a dele; o mestre vê todas)
   async function allSpells() {
-    const base = await loadSpells();
     const fam = familyOf();
+    // magias de família do próprio livro (campo "familia") também só aparecem pra quem é da família (e pro mestre)
+    const base = (await loadSpells()).filter((s) => !s.familia || isMaster || s.familia.trim().toLowerCase() === fam);
     const extra = customSpells.filter((s) => {
       if (s.privateTo) return s.privateTo === sheet.id; // pessoal: só do personagem dono (nem o mestre vê as dos outros aqui)
       return !s.familia || isMaster || s.familia.trim().toLowerCase() === fam;
@@ -1147,7 +1149,9 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
 
   // ---------------------------------------------------------------- aba: regras (consulta)
   function rulesTab(d) {
+    const famRules = FAMILY_RULES[(mslOf(sheet).family || '').trim().toLowerCase()];
     return `
+      ${famRules ? `<div class="ficha-section"><div class="ficha-section-head"><span class="ficha-section-title">🏛 ${escapeHtml(famRules.title.toUpperCase())}</span></div><ul class="msl-hint">${famRules.items.map((t) => `<li>${escapeHtml(t)}</li>`).join('')}</ul></div>` : ''}
       <div class="ficha-section">
         <div class="ficha-section-head"><span class="ficha-section-title">AÇÕES (6 PA por rodada — ação e reação saem do mesmo total; cada PA gasta também custa 1 PE)</span></div>
         <table class="msl-table"><tr><th>Ação</th><th>Tipo</th><th>PA</th></tr>${ACTIONS.map((a) => `<tr><td>${escapeHtml(a.name)}</td><td>${a.kind}</td><td>${a.pa}</td></tr>`).join('')}</table>

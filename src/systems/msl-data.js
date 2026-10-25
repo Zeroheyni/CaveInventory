@@ -162,6 +162,23 @@ export const DAMAGE_TYPES = [
 export const ELEMENTS = ['fogo', 'gelo', 'eletricidade', 'vento', 'terra', 'sombra', 'luz'];
 export const SCHOOLS = ['Mágica', 'Encantamentos', 'Maldições', 'Sentivar', 'Arcanismo', 'Invocação'];
 
+// Regras de cada FAMÍLIA mágica (chave = nome da família em minúsculas). Aparecem na aba Regras pra quem é da família (e pro mestre),
+// porque as magias de família (msl-magias.json, campo "familia") usam essas regras.
+export const FAMILY_RULES = {
+  vesper: {
+    title: 'Família Vesper',
+    items: [
+      'Cripta: o Vesper guarda até (Decifração) ancestrais; começa com 2. Cada ancestral tem nome, época, personalidade, especialidade (1 ou 2 perícias com grau), assunto pendente e disposição (cooperativo, neutro ou resistente).',
+      'Cooperativo: +2 nos testes de controle das magias que usam o ancestral.',
+      'Resistente: toda vez que for usado, teste d20 + Interpretação ÷ 2 contra 14. Se falhar, a magia não funciona e o MP é gasto. Cada sessão com um ancestral resistente: teste de Sanidade de gravidade leve.',
+      'Corpos (Erguer Casca, Receptáculo, Véspera): o corpo usa os atributos físicos do morto (Força, Agilidade, Reflexos, Resistência Física, Precisão Física, Estamina e Vitalidade), o ataque dele e metade do HP máximo dele. Nunca usa as magias do morto. Criaturas místicas de tier maior que a Decifração do Vesper não podem ser erguidas.',
+      'Corpo sem ficha: esqueleto (HP 8, CE 12, 6 m, 1d4 impacto); cadáver recente (HP 15, CE 10, 5 m, 1d6 impacto); corpo grande (HP 25, CE 9, 5 m, 1d8 impacto).',
+      'Cada casca ou receptáculo ocupa 1 vaga de Manutenção, tem 4 PA e age logo depois do Vesper. Dano de luz causa +20% contra eles. Se o Vesper desmaiar, todos caem.',
+      'Magias de nível 4 ou mais pedem teste de Sanidade quando usadas.',
+    ],
+  },
+};
+
 export const ACTIONS = [
   { name: 'Ação menor (sacar, pegar item)', kind: 'Ação', pa: 1 },
   { name: 'Atacar', kind: 'Ação', pa: 2 },
