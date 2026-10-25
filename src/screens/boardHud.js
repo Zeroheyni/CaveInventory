@@ -34,6 +34,7 @@ import { getCombatState, getParticipants, subscribeCombat, isVisibleToPlayer, up
 import { renderCombatScreen } from './combat.js';
 import { renderDiceScreen } from './dice.js';
 import { hpMax, estaminaMax, statusStats, testModOf, compactStats } from '../characterSheet.js';
+import { paOf, isExhaustedRound, PA_PER_ROUND } from '../systems/msl-combat.js';
 import { activeRuleset } from '../systems/index.js';
 import { listCharacterCustomBarsFor, customBarMax, updateCharacterCustomBarValue } from '../customBars.js';
 import { rollDice, subscribeDiceRolls, DICE_PRESETS, sidesFromDie, getHiddenRollMode, setHiddenRollMode, onHiddenRollMode, revealRoll } from '../dice.js';
@@ -484,6 +485,17 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
     return `<span class="trk-avatar trk-avatar-letter">${escapeHtml(letter)}</span>`;
   }
 
+  // Magic Learning: Pontos de Ação da rodada (bolinhas) e nível de exaustão; some em sistemas sem PA
+  function paHtml(p) {
+    if (activeRuleset().id !== 'magic-learning') return '';
+    const now = paOf(p, combat.state.round);
+    const exh = isExhaustedRound(p, combat.state.round);
+    let dots = '';
+    for (let i = 0; i < PA_PER_ROUND; i++) dots += '<i class="' + (i < now ? 'on' : '') + '"></i>';
+    const ex = p.exaustao ? '<span class="trk-exh" title="exaustão ' + p.exaustao + ': −' + 2 * p.exaustao + ' em testes e CE">😮‍💨' + p.exaustao + '</span>' : '';
+    return '<span class="trk-pa' + (exh ? ' exh' : '') + '" title="Pontos de Ação desta rodada: ' + now + '/' + PA_PER_ROUND + (exh ? ' (agindo exausto)' : '') + '">' + dots + '</span>' + ex;
+  }
+
   // ícones pequenos das condições do participante (só o ícone; o texto completo vai no title)
   function condChipsHtml(p) {
     const conds = Array.isArray(p.conditions) ? p.conditions : [];
@@ -577,6 +589,7 @@ function mountTracker(root, { campaignId, profile, characterId, isMaster, combat
                 ${p.initiative !== null && p.initiative !== undefined ? '<span class="trk-init" title="iniciativa">' + escapeHtml(String(p.initiative)) + '</span>' : ''}
                 ${condChipsHtml(p)}
                 ${showHp ? `<span class="trk-hp"><span class="trk-hp-fill tone-${hpTone(pct)}" style="width:${pct}%"></span></span>` : ''}
+                ${paHtml(p)}
                 ${isMe ? '<span class="trk-me-tag">você</span>' : ''}
               </button>`;
                   })
