@@ -550,7 +550,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       if (has) blocked = 'já está na ficha';
       else if (creating && isAdv && p.level > pv.left) blocked = `faltam PV: custa ${p.level}, você tem ${Math.max(0, pv.left)} — pegue desvantagens primeiro`;
       else if (creating && !isAdv && pv.rawGained + p.level > DISADVANTAGE_PV_MAX) blocked = `passaria de ${DISADVANTAGE_PV_MAX} PV de desvantagens`;
-      else if (creating && !isAdv && p.level === 3 && pv.lvl3dis >= 1) blocked = 'só uma desvantagem de nível 3';
+      else if (creating && isAdv && p.level === 3 && pv.lvl3adv >= 1) blocked = 'jogador só pode ter uma vantagem de nível 3 (o mestre pode liberar mais)';
       return `
         <div class="msl-pcard lvl${p.level} ${has ? 'has' : ''} ${blocked && !has ? 'blocked' : ''}">
           <div class="msl-pcard-head">
@@ -591,7 +591,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     if (!msl.done) {
       if (pv.rawGained > DISADVANTAGE_PV_MAX) warn.push(`desvantagens somam ${pv.rawGained} PV; só ${DISADVANTAGE_PV_MAX} contam`);
       if (pv.left < 0) warn.push(`você gastou ${-pv.left} PV a mais do que ganhou`);
-      if (pv.lvl3dis > 1) warn.push('no máximo uma desvantagem de nível 3');
+      if (pv.lvl3adv > 1 && !isMaster) warn.push('só uma vantagem de nível 3 na criação');
     }
     return `
       <div class="ficha-section">

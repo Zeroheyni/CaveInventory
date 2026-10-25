@@ -113,7 +113,7 @@ export const DISADVANTAGES = [
   { id: 'odio_ancestral', level: 3, kind: 'Mágica', name: 'Ódio Ancestral', text: '-4 em Autocontrole perto de um grupo escolhido; não coopera com ele', choice: 'grupo' },
   { id: 'marca_da_morte', level: 3, kind: 'Mágica', name: 'Marca da Morte', text: 'Criaturas mágicas percebem você; -2 RM contra maldições; +50% de dano de sombra recebido' },
 ];
-export const DISADVANTAGE_PV_MAX = 8; // soma máxima de PV de desvantagens na criação (no máx. uma de nível 3 em cada lista)
+export const DISADVANTAGE_PV_MAX = 8; // soma máxima de PV de desvantagens na criação (várias de nível 3 são permitidas; já vantagem de nível 3, o jogador só pode ter uma)
 
 // ---------------------------------------------------------------- talentos (ações/reações exclusivas; vêm de vencer campanhas)
 export const TALENTS = [

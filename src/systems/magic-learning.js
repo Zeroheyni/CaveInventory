@@ -255,7 +255,8 @@ export function pvSummary(msl) {
   const gained = msl.disadvantages.reduce((s, e) => s + ((disById[e.id] || {}).level || 0), 0);
   const spent = msl.advantages.reduce((s, e) => s + ((advById[e.id] || {}).level || 0), 0);
   const lvl3dis = msl.disadvantages.filter((e) => (disById[e.id] || {}).level === 3).length;
-  return { gained: Math.min(gained, 8), rawGained: gained, spent, left: Math.min(gained, 8) - spent, lvl3dis };
+  const lvl3adv = msl.advantages.filter((e) => (advById[e.id] || {}).level === 3).length;
+  return { gained: Math.min(gained, 8), rawGained: gained, spent, left: Math.min(gained, 8) - spent, lvl3dis, lvl3adv };
 }
 
 // ------------------------------------------------------------- manutenção das magias ativas (início do turno)
