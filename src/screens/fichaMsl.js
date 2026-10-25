@@ -91,6 +91,8 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   let spellOpen = new Set();
   let spellMsg = '';
   let spellBrowserOpen = false;
+  let perkPicker = null; // 'adv' | 'dis' quando o seletor visual está aberto
+  let perkFilter = { level: '', text: '' };
   let busy = false;
   let reloadTimer = null;
 
@@ -491,6 +493,55 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
         ${def.choice ? `<input type="text" class="msl-inline" data-perk-note="${kind}:${e.id}" placeholder="${escapeHtml(def.choice)}…" value="${escapeHtml(e.note || '')}" ${canEdit() ? '' : 'disabled'}>` : ''}
       </div>`;
   }
+  // ---- seletor visual de vantagens/desvantagens: cartões com o texto inteiro, filtro por nível e busca ----
+  function perkPickerHtml(msl, pv) {
+    const kind = perkPicker; // 'adv' | 'dis'
+    const isAdv = kind === 'adv';
+    const list = isAdv ? ADVANTAGES : DISADVANTAGES;
+    const taken = (isAdv ? msl.advantages : msl.disadvantages).map((e) => e.id);
+    const norm = (x) => String(x || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    const f = perkFilter;
+    const rows = list.filter((p) => (!f.level || String(p.level) === String(f.level)) && (!f.text || norm(p.name + ' ' + p.text + ' ' + (p.kind || '')).includes(norm(f.text))));
+    const creating = !msl.done && !isMaster;
+    const card = (p) => {
+      const has = taken.includes(p.id);
+      let blocked = '';
+      if (has) blocked = 'já está na ficha';
+      else if (creating && isAdv && p.level > pv.left) blocked = `faltam PV: custa ${p.level}, você tem ${Math.max(0, pv.left)} — pegue desvantagens primeiro`;
+      else if (creating && !isAdv && pv.rawGained + p.level > DISADVANTAGE_PV_MAX) blocked = `passaria de ${DISADVANTAGE_PV_MAX} PV de desvantagens`;
+      else if (creating && !isAdv && p.level === 3 && pv.lvl3dis >= 1) blocked = 'só uma desvantagem de nível 3';
+      return `
+        <div class="msl-pcard lvl${p.level} ${has ? 'has' : ''} ${blocked && !has ? 'blocked' : ''}">
+          <div class="msl-pcard-head">
+            <b>${escapeHtml(p.name)}</b>
+            ${p.kind ? `<span class="msl-pkind ${p.kind === 'Mágica' ? 'magic' : ''}">${p.kind}</span>` : ''}
+            <span class="msl-pcost">${isAdv ? 'custa' : 'dá'} ${p.level} PV</span>
+          </div>
+          <div class="msl-pcard-text">${escapeHtml(p.text)}</div>
+          ${p.choice ? `<div class="msl-pcard-choice">você escolhe: ${escapeHtml(p.choice)}</div>` : ''}
+          <div class="msl-pcard-foot">
+            ${has ? '<span class="msl-hint">✔ já na ficha</span>' : `<button type="button" class="btn ${blocked ? 'btn-ghost' : ''}" data-perk-add="${kind}:${p.id}" ${blocked ? 'disabled' : ''} title="${escapeHtml(blocked)}">${isAdv ? 'pegar vantagem' : 'pegar desvantagem'}</button>`}
+            ${blocked && !has ? `<small class="msl-pblock">${escapeHtml(blocked)}</small>` : ''}
+          </div>
+        </div>`;
+    };
+    return `
+      <div class="msl-picker ${isAdv ? 'adv' : 'dis'}">
+        <div class="msl-picker-head">
+          <h4>${isAdv ? '✨ Escolher vantagem' : '⚠️ Escolher desvantagem'}</h4>
+          ${!msl.done ? `<span class="msl-pool">${isAdv ? `PV disponíveis <b>${Math.max(0, pv.left)}</b>` : `PV de desvantagens <b>${pv.gained}</b> / ${DISADVANTAGE_PV_MAX}`}</span>` : ''}
+          <button type="button" class="btn btn-ghost" data-act="perk-close">fechar ✕</button>
+        </div>
+        <div class="msl-picker-filters">
+          <div class="msl-lvlchips">
+            ${['', 1, 2, 3].map((n) => `<button type="button" class="${String(f.level) === String(n) ? 'active' : ''}" data-perkf-level="${n}">${n === '' ? 'todas' : 'nível ' + n + ' · ' + n + ' PV'}</button>`).join('')}
+          </div>
+          <input type="text" data-perkf-text placeholder="buscar pelo nome ou pelo que faz…" value="${escapeHtml(f.text)}">
+        </div>
+        <div class="msl-pcards">${rows.map(card).join('') || '<p class="msl-hint">nada encontrado</p>'}</div>
+      </div>`;
+  }
+
   function traitsTab(msl) {
     const pv = pvSummary(msl);
     const advTaken = msl.advantages.map((e) => e.id);
@@ -508,16 +559,17 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
           ${!msl.done ? `<span class="msl-pool">PV ganhos <b>${pv.gained}</b> / ${DISADVANTAGE_PV_MAX}</span><span class="msl-pool">gastos <b>${pv.spent}</b></span><span class="msl-pool ${pv.left < 0 ? 'bad' : ''}">sobra <b>${pv.left}</b></span>` : ''}
         </div>
         ${warn.length ? `<p class="admin-error" style="display:block;">${warn.map(escapeHtml).join(' · ')}</p>` : ''}
+        ${perkPicker && canEditTraits() ? perkPickerHtml(msl, pv) : ''}
         <div class="msl-twocol">
           <div>
             <div class="msl-group-title">Vantagens</div>
             ${msl.advantages.map((e) => perkRow(e, advantageById(e.id), 'adv')).join('') || '<p class="msl-hint">nenhuma</p>'}
-            ${canEditTraits() ? `<div class="msl-add"><select id="msl-adv-select"><option value="">+ vantagem…</option>${perkOptions(ADVANTAGES, advTaken)}</select><button type="button" class="btn btn-ghost" data-act="add-adv">adicionar</button></div>` : ''}
+            ${canEditTraits() ? `<button type="button" class="btn msl-pick-btn" data-act="perk-open" data-kind="adv">✨ escolher vantagem…</button>` : ''}
           </div>
           <div>
             <div class="msl-group-title">Desvantagens</div>
             ${msl.disadvantages.map((e) => perkRow(e, disadvantageById(e.id), 'dis')).join('') || '<p class="msl-hint">nenhuma</p>'}
-            ${canEditTraits() ? `<div class="msl-add"><select id="msl-dis-select"><option value="">+ desvantagem…</option>${perkOptions(DISADVANTAGES, disTaken)}</select><button type="button" class="btn btn-ghost" data-act="add-dis">adicionar</button></div>` : ''}
+            ${canEditTraits() ? `<button type="button" class="btn msl-pick-btn" data-act="perk-open" data-kind="dis">⚠️ escolher desvantagem…</button>` : ''}
           </div>
         </div>
       </div>
@@ -799,6 +851,14 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     if ((el = btn('[data-del-dis]'))) return commit((m) => (m.disadvantages = m.disadvantages.filter((x) => x.id !== el.dataset.delDis)), {}, { syncMax: true });
     if ((el = btn('[data-del-talent]'))) return commit((m) => (m.talents = m.talents.filter((x) => x !== el.dataset.delTalent)));
     if ((el = btn('[data-del-trauma]'))) return commit((m) => m.traumas.splice(parseInt(el.dataset.delTrauma, 10), 1));
+    if ((el = btn('[data-perk-add]'))) {
+      const [kind, id] = el.dataset.perkAdd.split(':');
+      return commit((m) => m[kind === 'adv' ? 'advantages' : 'disadvantages'].push({ id, note: '' }), {}, { syncMax: true });
+    }
+    if ((el = btn('[data-perkf-level]'))) {
+      perkFilter.level = el.dataset.perkfLevel;
+      return render();
+    }
     if ((el = btn('[data-sanity]'))) return sanityHit(el.dataset.sanity);
     if ((el = btn('[data-cast]'))) return cast(el.dataset.cast);
     if ((el = btn('[data-forget]'))) {
@@ -885,10 +945,17 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
           m.pool = { basicos: m.pool.basicos - used.basicos, sociais: m.pool.sociais - used.sociais, magicos: m.pool.magicos - used.magicos };
         }, {}, { syncMax: true });
       }
-      if (act === 'add-adv' || act === 'add-dis') {
-        const sel = $(act === 'add-adv' ? 'msl-adv-select' : 'msl-dis-select');
-        if (!sel.value) return;
-        return commit((m) => m[act === 'add-adv' ? 'advantages' : 'disadvantages'].push({ id: sel.value, note: '' }), {}, { syncMax: true });
+      if (act === 'perk-open') {
+        perkPicker = el.dataset.kind;
+        perkFilter = { level: '', text: '' };
+        render();
+        const box = app.querySelector('.msl-picker');
+        if (box) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+        return;
+      }
+      if (act === 'perk-close') {
+        perkPicker = null;
+        return render();
       }
       if (act === 'add-talent') {
         const sel = $('msl-talent-select');
@@ -1025,6 +1092,10 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       }
       busy = false;
       return;
+    }
+    if ((el = t.closest('[data-perkf-text]'))) {
+      perkFilter.text = el.value;
+      return render();
     }
     if ((el = t.closest('[data-spellf]'))) {
       const k = el.dataset.spellf;

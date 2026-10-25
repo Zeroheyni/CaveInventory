@@ -233,3 +233,46 @@
 .msl-arow-mod{ font-size:14px; }
 .msl-arow .msl-roll{ grid-area:roll; }
 .msl-arow .msl-temp-input{ grid-area: auto; grid-column:1 / -1; }
+
+/* atributo: nome centralizado em cima do número; 🎲 à esquerda, modificador à direita */
+.msl-arow{ grid-template-columns: minmax(0,1fr) auto minmax(0,1fr); grid-template-areas: "name name name" "roll val info"; row-gap:7px; }
+.msl-arow-name{ text-align:center; font-weight:700; letter-spacing:0.02em; }
+.msl-arow .msl-roll{ justify-self:start; }
+.msl-arow-info{ justify-self:end; }
+
+/* seletor visual de vantagens e desvantagens */
+.msl-pick-btn{ width:100%; margin-top:8px; }
+.msl-picker{
+  margin:4px 0 16px; padding:14px; border-radius:14px; border:1px solid var(--stone-line); background: var(--stone-900);
+  box-shadow: 0 10px 28px rgba(0,0,0,0.35), inset 0 1px 0 rgba(255,255,255,0.04);
+}
+.msl-picker.adv{ border-color: rgba(74,222,128,0.4); background: linear-gradient(170deg, rgba(74,222,128,0.07), var(--stone-900) 40%); }
+.msl-picker.dis{ border-color: rgba(255,138,76,0.45); background: linear-gradient(170deg, rgba(255,90,90,0.07), var(--stone-900) 40%); }
+.msl-picker-head{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; margin-bottom:10px; }
+.msl-picker-head h4{ margin:0; flex:1; font:800 13px var(--font-display); letter-spacing:0.1em; text-transform:uppercase; color: var(--ink); }
+.msl-picker-filters{ display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:12px; }
+.msl-picker-filters input{ flex:1; min-width:200px; background: var(--stone-800); border:1px solid var(--stone-line); color: var(--ink); border-radius:9px; padding:8px 11px; font:12px var(--font-mono); }
+.msl-lvlchips{ display:flex; gap:5px; flex-wrap:wrap; }
+.msl-lvlchips button{ background: var(--stone-800); border:1px solid var(--stone-line); color: var(--ink-faint); border-radius:20px; padding:6px 12px; font:11px var(--font-mono); cursor:pointer; }
+.msl-lvlchips button.active{ background: var(--accent-faint); color: var(--accent); border-color: var(--accent-core); }
+.msl-pcards{ display:grid; grid-template-columns: repeat(auto-fill, minmax(290px, 1fr)); gap:10px; max-height:560px; overflow-y:auto; padding:2px 4px 2px 2px; }
+.msl-pcard{
+  display:flex; flex-direction:column; gap:7px; padding:12px 13px; border-radius:12px; background: var(--stone-800); border:1px solid var(--stone-line); border-left-width:4px;
+  transition: transform .15s ease, border-color .15s ease, box-shadow .15s ease;
+}
+.msl-pcard.lvl1{ border-left-color:#4ade80; } .msl-pcard.lvl2{ border-left-color:#ffd93d; } .msl-pcard.lvl3{ border-left-color:#c084fc; }
+.msl-pcard:hover:not(.blocked):not(.has){ transform: translateY(-2px); box-shadow: 0 8px 20px rgba(0,0,0,0.35); border-color: var(--accent-core); }
+.msl-pcard.blocked{ opacity:0.62; } .msl-pcard.has{ opacity:0.5; }
+.msl-pcard-head{ display:flex; align-items:center; gap:7px; flex-wrap:wrap; }
+.msl-pcard-head b{ font:800 13.5px var(--font-mono); color: var(--ink); flex:1; min-width:120px; }
+.msl-pcost{ font:700 10.5px var(--font-mono); padding:2px 9px; border-radius:12px; background: var(--accent-faint); color: var(--accent); border:1px solid var(--accent-core); white-space:nowrap; }
+.msl-pkind{ font:600 10px var(--font-mono); padding:2px 8px; border-radius:12px; background: var(--stone-900); color: var(--ink-faint); border:1px solid var(--stone-line); }
+.msl-pkind.magic{ color:#c4b5fd; border-color: rgba(167,139,250,0.5); }
+.msl-pcard-text{ font:12px/1.55 var(--font-mono); color: var(--ink-dim); }
+.msl-pcard-choice{ font:11px var(--font-mono); color: var(--ink-faint); font-style:italic; }
+.msl-pcard-foot{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:auto; }
+.msl-pblock{ font:10.5px var(--font-mono); color:#ff8a4c; }
+
+/* vantagens/desvantagens já na ficha: cartões legíveis com borda por nível */
+.msl-perk{ border-left:4px solid var(--stone-line); }
+.msl-perk-text{ font-size:12px; line-height:1.55; }
