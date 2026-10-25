@@ -451,7 +451,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       [left <= 0, '1. Atributos', left <= 0 ? 'todos os pontos distribuídos' + (msl.noMagic ? ' (sem magia por enquanto: os mágicos não contam)' : '') : 'faltam ' + poolLeft.basicos + ' básicos · ' + poolLeft.sociais + ' sociais' + (msl.noMagic ? '' : ' · ' + poolLeft.magicos + ' mágicos') + ' (pontos de um grupo não passam pro outro)'],
       [true, '2. Status', 'calculados sozinhos pelas fórmulas (barras e quadros acima)'],
       [msl.skillGrades <= 0, '3. Perícias', msl.skillGrades <= 0 ? 'os 4 graus foram usados' : 'faltam ' + msl.skillGrades + ' de ' + 4 + ' graus (básico custa 1, treinado 2; ninguém começa como mestre)'],
-      [pv.left >= 0 && pv.rawGained <= 8 && msl.perksConfirmed, '4. Vantagens e desvantagens', 'PV ganhos ' + pv.gained + '/8 · gastos ' + pv.spent + ' · sobra ' + pv.left + (msl.perksConfirmed ? ' · 🔒 confirmadas' : ' — falta CONFIRMAR na aba Traços (o que sobrar na criação é perdido)')],
+      [pv.left >= 0 && pv.rawGained <= 8 && msl.perksConfirmed, '4. Vantagens e desvantagens', 'PV ganhos ' + pv.gained + ' (máx. 8, não precisa chegar) · gastos ' + pv.spent + ' · sobra ' + pv.left + (msl.perksConfirmed ? ' · 🔒 confirmadas' : ' — falta CONFIRMAR na aba Traços (PV que não usar é perdido)')],
       [msl.sanidade >= 100 || true, '5. Sanidade', 'começa em 100'],
       [true, '6. Nível', 'nível 1, 0 de XP (sobe com XP do mestre)'],
     ];
@@ -573,7 +573,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       <div class="msl-picker ${isAdv ? 'adv' : 'dis'}">
         <div class="msl-picker-head">
           <h4>${isAdv ? '✨ Escolher vantagem' : '⚠️ Escolher desvantagem'}</h4>
-          ${!msl.done ? `<span class="msl-pool">${isAdv ? `PV disponíveis <b>${Math.max(0, pv.left)}</b>` : `PV de desvantagens <b>${pv.gained}</b> / ${DISADVANTAGE_PV_MAX}`}</span>` : ''}
+          ${!msl.done ? `<span class="msl-pool">${isAdv ? `PV disponíveis <b>${Math.max(0, pv.left)}</b>` : `PV de desvantagens <b>${pv.gained}</b> <small>(máx. ${DISADVANTAGE_PV_MAX})</small>`}</span>` : ''}
           <button type="button" class="btn btn-ghost" data-act="perk-close">fechar ✕</button>
         </div>
         <div class="msl-picker-filters">
@@ -600,7 +600,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       <div class="ficha-section">
         <div class="ficha-section-head">
           <span class="ficha-section-title">VANTAGENS E DESVANTAGENS</span>
-          ${!msl.done ? `<span class="msl-pool">PV ganhos <b>${pv.gained}</b> / ${DISADVANTAGE_PV_MAX}</span><span class="msl-pool">gastos <b>${pv.spent}</b></span><span class="msl-pool ${pv.left < 0 ? 'bad' : ''}">sobra <b>${pv.left}</b></span>` : ''}
+          ${!msl.done ? `<span class="msl-pool" title="as desvantagens dão no MÁXIMO ${DISADVANTAGE_PV_MAX} PV; não precisa chegar nesse valor">PV ganhos <b>${pv.gained}</b> <small>(máx. ${DISADVANTAGE_PV_MAX})</small></span><span class="msl-pool">gastos <b>${pv.spent}</b></span><span class="msl-pool ${pv.left < 0 ? 'bad' : ''}">sobra <b>${pv.left}</b></span>` : ''}
           ${msl.perksConfirmed ? `<span class="msl-pool msl-locked" title="as vantagens e desvantagens foram confirmadas">🔒 confirmadas</span>` : ''}
           ${isMaster && msl.perksConfirmed ? `<button type="button" class="btn btn-ghost" data-act="perks-unlock" title="deixa o jogador editar de novo">🔓 destrancar</button>` : ''}
           ${isOwner() && !isMaster && !msl.done && !msl.perksConfirmed ? `<button type="button" class="btn" data-act="perks-confirm" title="tranca as vantagens e desvantagens: depois só o mestre consegue mudar">✔ confirmar vantagens e desvantagens</button>` : ''}
@@ -1407,7 +1407,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
         const pv = pvSummary(msl);
         if (pv.left < 0) return window.alert('Você gastou ' + -pv.left + ' PV a mais do que ganhou. Tire alguma vantagem ou pegue mais desvantagens antes de confirmar.');
         if (pv.lvl3adv > 1) return window.alert('Só uma vantagem de nível 3 na criação. Tire a que sobra antes de confirmar.');
-        const rest = pv.left > 0 ? '\n\nAtenção: sobram ' + pv.left + ' PV, e o que sobra na criação é perdido.' : '';
+        const rest = pv.left > 0 ? '\n\nVocê ainda tem ' + pv.left + ' PV sem usar. Tudo bem: gastar todos não é obrigatório (PV não usado na criação se perde).' : '';
         if (!window.confirm('Confirmar as vantagens e desvantagens? Depois disso só o mestre consegue mudar.' + rest)) return;
         perkPicker = null;
         return commit((m) => (m.perksConfirmed = true));
