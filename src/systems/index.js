@@ -31,6 +31,13 @@ export function setActiveSystem(id) {
   return active;
 }
 
+// Toda tela que recebe `campaign` chama isto na entrada: o sistema ativo é um estado GLOBAL, e uma tela montada depois de outra
+// (trocar de mesa, abrir ficha pelo painel, atualização em tempo real) não pode herdar o sistema da anterior -- foi assim que a
+// ficha de um personagem do Magic Learning chegou a abrir com a ficha do Cave Story.
+export function useSystemOf(campaign) {
+  return setActiveSystem(campaign && campaign.system);
+}
+
 export function activeRuleset() {
   return active;
 }

@@ -38,7 +38,7 @@ import {
 } from '../combat.js';
 import { listCampaignMembers } from '../accounts.js';
 import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, statusStats, statValueOf, testModOf, compactStats } from '../characterSheet.js';
-import { activeRuleset } from '../systems/index.js';
+import { activeRuleset, useSystemOf } from '../systems/index.js';
 import { createMslCombatUi } from './combatMsl.js';
 import { initiativeFor } from '../systems/msl-combat.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
@@ -77,6 +77,7 @@ import {
 const vitalLabel = () => (activeRuleset().vitalLabels || {}).estamina || "Estamina";
 
 export function renderCombatScreen(app, { session, profile, campaign, characterId, characterName, topicSuffix, embedded }) {
+  useSystemOf(campaign);
   const campaignId = campaign.id;
   const isMaster = profile.role === 'master';
   const $ = (id) => app.querySelector('#' + id);

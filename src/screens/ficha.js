@@ -32,7 +32,7 @@ import { rollDice } from '../dice.js';
 import { listCharacterCustomBarsFor, updateCharacterCustomBarValue, customBarMax, createCustomBar, assignCustomBar } from '../customBars.js';
 import { applyGlobalTheme } from '../campaign.js';
 import { themeTraysHtml, toggleThemeTray } from '../themes.js';
-import { activeRuleset } from '../systems/index.js';
+import { activeRuleset, useSystemOf, getRuleset } from '../systems/index.js';
 import { renderFichaMslScreen } from './fichaMsl.js';
 
 let activeChannel = null;
@@ -43,8 +43,9 @@ const MODULE_COLLAPSED_H = 56;
 const NPC_THEME_UNLOCKED = new Set(['snake', 'tetris', 'flappy', '2048', 'breakout', 'pong', 'asteroids', 'dino', 'invaders', 'minas', 'frogger', 'farkle', 'blackjack', 'pacman']);
 
 export function renderFichaScreen(app, { session, profile, campaign, characterId, onBack }) {
+  useSystemOf(campaign);
   // sistemas com ficha própria (Magic Learning) usam a tela deles; esta é a do Cave Story
-  if (activeRuleset().hasOwnSheet) return renderFichaMslScreen(app, { session, profile, campaign, characterId, onBack });
+  if (getRuleset(campaign && campaign.system).hasOwnSheet) return renderFichaMslScreen(app, { session, profile, campaign, characterId, onBack });
   const isMaster = profile.role === 'master';
   const $ = (id) => app.querySelector('#' + id);
 

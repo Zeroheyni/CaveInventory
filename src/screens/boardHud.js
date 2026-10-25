@@ -35,7 +35,7 @@ import { renderCombatScreen } from './combat.js';
 import { renderDiceScreen } from './dice.js';
 import { hpMax, estaminaMax, statusStats, testModOf, compactStats } from '../characterSheet.js';
 import { paOf, isExhaustedRound, PA_PER_ROUND } from '../systems/msl-combat.js';
-import { activeRuleset } from '../systems/index.js';
+import { activeRuleset, useSystemOf } from '../systems/index.js';
 import { listCharacterCustomBarsFor, customBarMax, updateCharacterCustomBarValue } from '../customBars.js';
 import { rollDice, subscribeDiceRolls, DICE_PRESETS, sidesFromDie, getHiddenRollMode, setHiddenRollMode, onHiddenRollMode, revealRoll } from '../dice.js';
 
@@ -123,6 +123,7 @@ const TONE_COLOR = { low: '#ff5a5a', mid: '#ffb84d', ok: '#4ade80' };
 const signed = (n) => (n > 0 ? '+' + n : String(n));
 
 export function renderBoardHud(mountParent, { session, profile, campaign, characterId, characterName, isMaster }) {
+  useSystemOf(campaign);
   const campaignId = campaign.id;
   const root = document.createElement('div');
   root.className = 'board-hud-root';

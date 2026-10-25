@@ -2,11 +2,13 @@
 // Estamina) de cada jogador da campanha, com acesso direto à ficha
 // completa de qualquer um, e o menu de dar XP em massa (todos
 // marcados por padrão — o mestre só desmarca quem não deve ganhar).
+import { useSystemOf } from '../systems/index.js';
 import { escapeHtml } from '../shared/gameData.js';
 import { listCampaignCharacterSheets, listCampaignNpcs, subscribeCampaignSheets, hpMax, estaminaMax, grantXp, revokeXp, demoteLevel, hpBarClass } from '../characterSheet.js';
 import { renderFichaScreen } from './ficha.js';
 
 export function renderMasterFichaScreen(app, { session, profile, campaign, onBack }) {
+  useSystemOf(campaign);
   const campaignId = campaign.id;
   const $ = (id) => app.querySelector('#' + id);
 

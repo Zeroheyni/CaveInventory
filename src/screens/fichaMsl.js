@@ -1,6 +1,7 @@
 // Ficha do sistema Magic Learning (Magical Skill Learning) -- ver src/systems/magic-learning.js e MSL_Regras_para_Site.md.
 // Dados em characters.system_data.msl; nível/XP e HP/PE atuais ficam nas colunas de sempre (level, xp, hp_current, estamina_current),
 // então rastreador de combate, tabuleiro e dados seguem funcionando. Embutida como a ficha do Cave Story (character.js / masterFicha.js).
+import { useSystemOf } from '../systems/index.js';
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
 import { getCharacterSheet, subscribeCharacterSheet, sheetDataOf, updateSheetData, uploadAvatar, grantXp, revokeXp, hpBarClass } from '../characterSheet.js';
@@ -71,6 +72,7 @@ const signed = (n) => (n >= 0 ? '+' + n : String(n));
 const pct = (cur, max) => (max > 0 ? Math.max(0, Math.min(100, Math.round((cur / max) * 100))) : 0);
 
 export function renderFichaMslScreen(app, { session, profile, campaign, characterId, onBack }) {
+  useSystemOf(campaign);
   const isMaster = profile.role === 'master';
   const $ = (id) => app.querySelector('#' + id);
 

@@ -20,6 +20,7 @@
 // existindo como um indicador/lembrete de qual é o principal da
 // campanha, mas agora é só INFORMATIVO -- abrir um tabuleiro pra
 // olhar/jogar não depende mais dele, qualquer um da lista abre.
+import { useSystemOf } from '../systems/index.js';
 import { nameInCampaign } from '../accounts.js';
 import { supabase } from '../supabaseClient.js';
 import { escapeHtml } from '../shared/gameData.js';
@@ -80,6 +81,7 @@ let boardsChannel = null;
 let tokensChannel = null;
 
 export function renderBoardScreen(app, { session, profile, campaign, characterId, characterName }) {
+  useSystemOf(campaign);
   const campaignId = campaign.id;
   const isMaster = profile.role === 'master';
   const $ = (id) => app.querySelector('#' + id);

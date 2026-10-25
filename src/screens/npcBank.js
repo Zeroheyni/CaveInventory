@@ -19,10 +19,11 @@ import {
   compactStats,
 } from '../characterSheet.js';
 import { renderFichaScreen } from './ficha.js';
-import { activeRuleset } from '../systems/index.js';
+import { activeRuleset, useSystemOf } from '../systems/index.js';
 import { renderCharacterScreen } from './character.js';
 
 export function renderNpcBankScreen(app, { session, profile, campaign, topApp, onBack, escapeBack }) {
+  useSystemOf(campaign);
   const campaignId = campaign.id;
   const $ = (id) => app.querySelector('#' + id);
 

@@ -36,6 +36,9 @@ import './styles/board.css';
 import { supabase } from './supabaseClient.js';
 import { renderApp } from './router.js';
 import { isRerenderSuppressed } from './auth.js';
+import { startVersionCheck } from './versionCheck.js';
+
+startVersionCheck();
 
 let lastUserId;
 
