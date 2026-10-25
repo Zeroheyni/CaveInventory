@@ -53,7 +53,7 @@ export const ADVANTAGES = [
   { id: 'resistencia_magia', level: 2, name: 'Resistência à Magia', text: '+2 RM', bonus: { res_magica: 2 } },
   { id: 'estavel', level: 2, name: 'Estável', text: '+2 em todos os testes de Autocontrole' },
   { id: 'mestre_em_fuga', level: 2, name: 'Mestre em Fuga', text: '+2 em furtividade, acrobacia e abrir fechaduras' },
-  { id: 'famoso', level: 2, name: 'Famoso', text: 'Conhecido num meio escolhido (artista, atleta, influenciador etc.). +2 em testes sociais com quem te reconhece. Pessoas do seu meio te reconhecem sempre. Para as outras, o mestre decide ou rola 1d6 (reconhece com 5 ou 6). Em troca, -2 em disfarce e para passar despercebido em público, e inimigos também te reconhecem', choice: 'meio' },
+  { id: 'famoso', level: 2, name: 'Famoso', text: 'Conhecido num meio escolhido (artista, atleta, influenciador etc.). Vantagem e +2 em testes sociais com quem te reconhece. Pessoas do seu meio te reconhecem sempre. Para as outras, o mestre decide ou rola 1d6 (reconhece com 5 ou 6). Em troca, -2 em disfarce e para passar despercebido em público, e inimigos também te reconhecem', choice: 'meio' },
   { id: 'aprendiz_de_magia', level: 2, name: 'Aprendiz de Magia', text: '+2 nos testes de estudo de magias' },
   { id: 'memoria_muscular', level: 2, name: 'Memória Muscular', text: '+2 nos testes de estudo de técnicas físicas' },
   { id: 'critico_aprimorado', level: 3, name: 'Crítico Aprimorado', text: 'Acerto crítico com 19 ou 20 no d20', flags: { critico: 19 } },
