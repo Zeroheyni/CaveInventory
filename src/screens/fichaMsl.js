@@ -1183,7 +1183,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     return `
       <div class="ficha-section">
         <div class="ficha-section-head"><span class="ficha-section-title">FICHA</span></div>
-        <div class="ficha-fields-grid">${f('jogador', 'Jogador')}${f('idade', 'Idade')}${f('trabalho', 'Ocupação')}${f('genero', 'Gênero')}${f('raca', 'Raça')}</div>
+        <div class="ficha-fields-grid">${f('jogador', 'Jogador')}${f('idade', 'Idade')}${f('trabalho', 'Ocupação')}${f('genero', 'Gênero')}${f('nacionalidade', 'Nacionalidade')}${f('raca', 'Raça')}</div>
       </div>
       ${isMaster
         ? `<div class="ficha-section msl-master-magic">

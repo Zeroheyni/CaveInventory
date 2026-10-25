@@ -2,6 +2,7 @@
 // Ficha em characters.system_data.msl (jsonb); só nível/XP e HP/PE atuais usam as colunas de sempre (level, xp, hp_current,
 // estamina_current), pra rastreador de combate, tabuleiro e dados continuarem funcionando sem mudança.
 // Convenções do livro: divisões arredondam pra baixo; atributo nunca fica abaixo de 0; "teste" = 1d20 + atributo//2 + modificadores.
+import { SINGLE_CURRENCY } from './currency.js';
 import { ADVANTAGES, DISADVANTAGES, SKILLS, SKILL_BONUS, MSL_CONDITIONS, SANITY_LOSS } from './msl-data.js';
 
 const A = (key, label, abbr, icon, color, group, sub, short) => ({ key, label, abbr, icon, color, group, sub, short: short || label });
@@ -307,7 +308,7 @@ export const rollDice = (n, sides) => Array.from({ length: n }, () => rollDie(si
 export const magicLearning = {
   id: 'magic-learning',
   label: 'Magic Learning',
-  singleCurrency: true, // dinheiro normal (um valor só), não as 4 moedas bronze/prata/ouro/platina
+  currency: SINGLE_CURRENCY, // dinheiro normal (um valor só), não as 4 moedas bronze/prata/ouro/platina
   hasPublicInventory: false, // sem inventário público nem baú do veículo (transporte)
   hasOwnSheet: true, // a ficha tem tela própria (screens/fichaMsl.js) -- ficha.js do Cave Story não vale aqui
 

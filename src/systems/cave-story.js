@@ -2,9 +2,12 @@
 // characterSheet.js (atributos, vida, estamina, XP), character.js (carga), combat.js (condições) e boardHud.js (siglas).
 // Os dados dos personagens deste sistema continuam nas colunas atuais da tabela `characters` (vitalidade, forca, ...,
 // level, xp, hp_current...): nada foi migrado.
+import { COIN_CURRENCY } from './currency.js';
+
 export const caveStory = {
   id: 'cave-story',
   label: 'Cave Story',
+  currency: COIN_CURRENCY, // bronze/prata/ouro/platina, base 100
 
   // atributos de status (chave = coluna em `characters`)
   attributes: [

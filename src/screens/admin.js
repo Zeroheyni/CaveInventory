@@ -12,6 +12,8 @@ import {
   setCampaignCombatChannel,
   listCharacterDiscordConfigs,
   setCharacterDiscordChannel,
+  listCharacterSheetDiscordConfigs,
+  setCharacterSheetDiscordChannel,
   setPlayerDiscordUserId,
   setCampaignLiveSession,
   countMembersByCampaign,
@@ -73,7 +75,8 @@ export function renderAdminScreen(app, opts) {
   let charactersByCampaign = new Map();
   let discordChannelByCampaign = new Map();
   let combatChannelByCampaign = new Map();
-  let discordChannelByCharacter = new Map();
+  let discordChannelByCharacter = new Map(); // canal do INVENTÁRIO
+  let sheetChannelByCharacter = new Map(); // canal da FICHA
   let confirming = null; // 'kind:id' no 1º clique de excluir
   let confirmingTimer = null;
   let deleteStage = null; // { kind: 'campaign'|'character'|'account', id, error } -- passo da senha
@@ -117,6 +120,9 @@ export function renderAdminScreen(app, opts) {
     charactersByCampaign.set(campaignId, chars);
     const cfgs = chars.length ? await listCharacterDiscordConfigs(chars.map((c) => c.id)) : [];
     cfgs.forEach((c) => discordChannelByCharacter.set(c.character_id, c.channel_id));
+    const sheetCfgs = chars.length ? await listCharacterSheetDiscordConfigs(chars.map((c) => c.id)) : [];
+    chars.forEach((c) => sheetChannelByCharacter.delete(c.id));
+    sheetCfgs.forEach((c) => sheetChannelByCharacter.set(c.character_id, c.channel_id));
   }
 
   function flash(text, error = false) {
@@ -244,10 +250,18 @@ export function renderAdminScreen(app, opts) {
             <label>dono</label>
             <select class="pf-input" data-assign="${ch.id}">${ownerChoices(ch.owner_id, members).map((m) => `<option value="${m.id}" ${m.id === ch.owner_id ? 'selected' : ''}>${escapeHtml(m.username)}</option>`).join('')}</select>
             <button type="button" class="btn btn-ghost" data-act="assign-char" data-chid="${ch.id}">passar</button>
-            <label>canal Discord</label>
-            <input type="text" class="pf-input" data-discord-character="${ch.id}" placeholder="ID do canal" value="${escapeHtml(discordChannelByCharacter.get(ch.id) || '')}" />
+          </div>
+          <div class="mg-char-opts mg-discord-line">
+            <label class="mg-discord-lbl">🎒 Canal do INVENTÁRIO <small>(inventário + espaço pessoal)</small></label>
+            <input type="text" class="pf-input" data-discord-character="${ch.id}" placeholder="ID do canal do inventário" value="${escapeHtml(discordChannelByCharacter.get(ch.id) || '')}" />
             <button type="button" class="btn btn-ghost" data-act="save-char-discord" data-chid="${ch.id}">vincular</button>
             <span class="mg-fb" data-discord-character-fb="${ch.id}"></span>
+          </div>
+          <div class="mg-char-opts mg-discord-line">
+            <label class="mg-discord-lbl">📜 Canal da FICHA <small>(nome, atributos, vantagens e desvantagens)</small></label>
+            <input type="text" class="pf-input" data-sheet-character="${ch.id}" placeholder="ID do canal da ficha (vazio = desvincular)" value="${escapeHtml(sheetChannelByCharacter.get(ch.id) || '')}" />
+            <button type="button" class="btn btn-ghost" data-act="save-char-sheet-discord" data-chid="${ch.id}">vincular</button>
+            <span class="mg-fb" data-sheet-character-fb="${ch.id}"></span>
           </div>
         </div>`;
       })
@@ -702,6 +716,20 @@ export function renderAdminScreen(app, opts) {
         setFeedback(`[data-discord-character-fb="${chid}"]`, 'vinculado ✓');
       } catch (err) {
         setFeedback(`[data-discord-character-fb="${chid}"]`, 'erro: ' + err.message);
+      }
+    },
+    'save-char-sheet-discord': async (el) => {
+      const chid = el.dataset.chid;
+      const input = $(`input[data-sheet-character="${chid}"]`);
+      const v = input.value.trim();
+      setFeedback(`[data-sheet-character-fb="${chid}"]`, v ? 'vinculando...' : 'desvinculando...');
+      try {
+        await setCharacterSheetDiscordChannel(chid, v);
+        if (v) sheetChannelByCharacter.set(chid, v);
+        else sheetChannelByCharacter.delete(chid);
+        setFeedback(`[data-sheet-character-fb="${chid}"]`, v ? 'vinculado ✓ (a ficha vai pro canal)' : 'desvinculado');
+      } catch (err) {
+        setFeedback(`[data-sheet-character-fb="${chid}"]`, 'erro: ' + err.message);
       }
     },
     'save-player-discord': async (el) => {

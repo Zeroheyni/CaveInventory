@@ -1,5 +1,5 @@
 import { supabase } from './supabaseClient.js';
-import { requestDiscordSync, setPlayerDiscordId, setCharacterDiscordChannelRpc, createCampaignRpc, deleteCampaignRpc } from './accounts.js';
+import { requestDiscordSync, setPlayerDiscordId, setCharacterDiscordChannelRpc, setCharacterDiscordSheetChannelRpc, createCampaignRpc, deleteCampaignRpc } from './accounts.js';
 
 export async function listAllCampaigns() {
   const { data, error } = await supabase.from('campaigns').select('*').order('created_at', { ascending: false });
@@ -65,6 +65,18 @@ export async function listCharacterDiscordConfigs(characterIds) {
     .in('character_id', characterIds);
   if (error) throw error;
   return data;
+}
+
+// canal da FICHA do jogador (o bot manda a ficha no formato NOME/IDADE/atributos/vantagens...), separado do canal do inventário
+export async function listCharacterSheetDiscordConfigs(characterIds) {
+  if (!characterIds.length) return [];
+  const { data, error } = await supabase.from('discord_sheet_config').select('character_id, channel_id').in('character_id', characterIds);
+  if (error) throw error;
+  return data;
+}
+
+export async function setCharacterSheetDiscordChannel(characterId, channelId) {
+  await setCharacterDiscordSheetChannelRpc(characterId, channelId); // grava e já pede a sincronização
 }
 
 export async function setCharacterDiscordChannel(characterId, channelId) {

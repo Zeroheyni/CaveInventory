@@ -33,3 +33,6 @@ verify_jwt = false
 # campanha). Com a verificação ligada o Supabase exige token assinado pelo segredo legado.
 [functions.account-admin]
 verify_jwt = false
+
+[functions.discord-sync-sheet]
+verify_jwt = false

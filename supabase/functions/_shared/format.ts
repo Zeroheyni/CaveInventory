@@ -32,13 +32,36 @@ export function round(n: number): number {
 
 export type Currency = { bronze: number; silver: number; gold: number; platinum: number } | null | undefined;
 
-// caixinha padrão de moedas, reaproveitada pelo inventário do personagem e
-// pelas seções da área pública — só aparece se houver alguma moeda > 0
-export function currencyBox(currency: Currency): string[] {
+// Dinheiro por sistema (espelho de src/systems/currency.js + o `currency` de cada ruleset). O banco guarda sempre no formato
+// das 4 moedas (characters.currency); o sistema só decide COMO mostrar. Sistema novo com moeda diferente: acrescentar aqui.
+//   coins  -> mostra cada unidade (ex.: 3b 12s 0o 0p)
+//   single -> total numa moeda só (dinheiro normal)
+export type CurrencyDef =
+  | { mode: 'coins'; title: string; units: { key: 'bronze' | 'silver' | 'gold' | 'platinum'; short: string }[] }
+  | { mode: 'single'; title: string };
+const COINS: CurrencyDef = {
+  mode: 'coins', title: '💰 MOEDAS',
+  units: [{ key: 'bronze', short: 'b' }, { key: 'silver', short: 's' }, { key: 'gold', short: 'o' }, { key: 'platinum', short: 'p' }],
+};
+export const CURRENCY_BY_SYSTEM: Record<string, CurrencyDef> = {
+  'cave-story': COINS,
+  'magic-learning': { mode: 'single', title: '💰 DINHEIRO' },
+};
+export const currencyDefOf = (system?: string | null): CurrencyDef => CURRENCY_BY_SYSTEM[system ?? 'cave-story'] ?? COINS;
+
+// caixinha de dinheiro, reaproveitada pelo inventário do personagem e pelas seções da área pública — só aparece se houver algo
+export function currencyBox(currency: Currency, system?: string | null): string[] {
   if (!currency) return [];
-  const { bronze, silver, gold, platinum } = currency;
-  if (!bronze && !silver && !gold && !platinum) return [];
-  return ['╔══ 💰 MOEDAS ══╗', ` ${bronze}b  ${silver}s  ${gold}o  ${platinum}p`, '╚═══════════════╝'];
+  const def = currencyDefOf(system);
+  if (def.mode === 'single') {
+    // total em unidades (mesma conta da RPC transfer_currency): 1 prata = 100 bronze, etc.
+    const total = (currency.bronze || 0) + (currency.silver || 0) * 100 + (currency.gold || 0) * 10000 + (currency.platinum || 0) * 1000000;
+    if (!total) return [];
+    return [`╔══ ${def.title} ══╗`, ` ${total.toLocaleString('pt-BR')}`, '╚═══════════════╝'];
+  }
+  if (def.units.every((u) => !currency[u.key])) return [];
+  const parts = def.units.map((u) => `${currency[u.key] || 0}${u.short}`);
+  return [`╔══ ${def.title} ══╗`, ` ${parts.join('  ')}`, '╚═══════════════╝'];
 }
 
 // nomes vêm de input livre do jogador — nunca deixa um item quebrar o code block do Discord
@@ -151,7 +174,7 @@ function slotEquipLabel(data: CharData, val: string | undefined): string {
   return '—';
 }
 
-export function buildCharacterInventoryText(maxCarga: number, data: CharData, currency?: Currency): string {
+export function buildCharacterInventoryText(maxCarga: number, data: CharData, currency?: Currency, system?: string | null): string {
   const lines: string[] = [];
   const total = round(totalWeight(data));
   const max = round(maxCarga);
@@ -189,7 +212,7 @@ export function buildCharacterInventoryText(maxCarga: number, data: CharData, cu
   lines.push('╔════════ EQUIPAMENTO ═══════╗');
   (data.equipSlots ?? []).forEach((slot) => lines.push(`${slot.label}: ${slotEquipLabel(data, data.equip?.[slot.key])}`));
   lines.push('╚═══════════════════════════╝');
-  const coinLines = currencyBox(currency);
+  const coinLines = currencyBox(currency, system);
   if (coinLines.length) { lines.push(''); lines.push(...coinLines); }
   return lines.join('\n');
 }

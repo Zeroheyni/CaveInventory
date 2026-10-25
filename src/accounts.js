@@ -111,6 +111,9 @@ export const setCampaignMaster = (campaignId, masterId) => rpc('admin_set_campai
 export const setPlayerDiscordId = (userId, discordUserId) => rpc('set_player_discord_id', { p_user_id: userId, p_discord_user_id: discordUserId });
 export const setCharacterDiscordChannelRpc = (characterId, channelId) =>
   rpc('set_character_discord_channel', { p_character_id: characterId, p_channel_id: channelId });
+// canal da FICHA (separado do canal do inventário; db/084). canal vazio desvincula.
+export const setCharacterDiscordSheetChannelRpc = (characterId, channelId) =>
+  rpc('set_character_discord_sheet_channel', { p_character_id: characterId, p_channel_id: channelId });
 export const requestDiscordSync = (kind, id) => rpc('request_discord_sync', { p_kind: kind, p_id: id });
 
 // ---- Edge Function account-admin (service role; cria/exclui contas) ----

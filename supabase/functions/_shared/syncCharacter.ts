@@ -15,15 +15,17 @@ export async function syncCharacter(characterId: string) {
 
 async function syncCharacterInner(characterId: string) {
   const client = serviceClient();
-  const { data: character, error } = await client.from('characters').select('id, max_carga, currency, data').eq('id', characterId).single();
+  const { data: character, error } = await client.from('characters').select('id, max_carga, currency, data, campaign_id').eq('id', characterId).single();
   if (error || !character) return; // personagem sumiu (excluído) — nada a fazer
+  // o sistema da campanha decide como o dinheiro aparece (moedas em cascata x dinheiro normal)
+  const { data: camp } = await client.from('campaigns').select('system').eq('id', character.campaign_id).maybeSingle();
 
   const { data: config } = await client.from('discord_character_config').select('*').eq('character_id', characterId).maybeSingle();
   if (!config) return; // ninguém vinculou canal pra esse personagem ainda
 
   const data = character.data ?? {};
 
-  const invText = buildCharacterInventoryText(character.max_carga, data, character.currency);
+  const invText = buildCharacterInventoryText(character.max_carga, data, character.currency, camp?.system);
   const invChunks = splitIntoChunks(invText);
   const invIds = await syncMessageList(
     config.channel_id,

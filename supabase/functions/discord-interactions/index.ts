@@ -16,7 +16,8 @@ function json(body: unknown) {
 }
 
 // custom_id: "rc:<characterId>:<i>" (inventário), "rt:<characterId>:<i>"
-// (espaço pessoal) ou "rp:<compartmentId|avulso>:<campaignId>:<i>" (público).
+// (espaço pessoal), "rs:<characterId>:<i>" (ficha -> function discord-sync-sheet)
+// ou "rp:<compartmentId|avulso>:<campaignId>:<i>" (público).
 // Clicar em qualquer botão de um personagem/campanha resincroniza o grupo
 // inteiro (mais simples e barato do que só a mensagem clicada).
 async function handleRefresh(customId: string) {
@@ -26,6 +27,14 @@ async function handleRefresh(customId: string) {
       await syncCharacter(a);
     } else if (kind === 'rp') {
       await syncPublicArea(b);
+    } else if (kind === 'rs') {
+      // a ficha mora numa function própria (autocontida); chama ela com o segredo compartilhado
+      const res = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/discord-sync-sheet`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-sync-secret': Deno.env.get('DISCORD_SYNC_SHARED_SECRET') ?? '' },
+        body: JSON.stringify({ character_id: a }),
+      });
+      if (!res.ok) console.error('discord-sync-sheet falhou', res.status, await res.text());
     }
   } catch (err) {
     console.error('refresh falhou', customId, err);

@@ -177,6 +177,9 @@
 .mg-char-opts{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-top:10px; padding-top:10px; border-top:1px dashed var(--stone-line); }
 .mg-char-opts label{ font-size:11px; color: var(--ink-faint); }
 .mg-char-opts .pf-input{ flex:1; min-width:120px; width:auto; padding:6px 9px; font-size:12.5px; }
+.mg-discord-line{ margin-top:6px; padding-top:6px; border-top:none; }
+.mg-discord-lbl{ flex:0 0 100%; font-size:11.5px; font-weight:700; color: var(--ink); }
+.mg-discord-lbl small{ font-weight:400; color: var(--ink-faint); }
 .mg-stack{ border-top:none; padding-top:0; margin-bottom:12px; }
 .mg-fb{ font-size:11px; color: var(--ink-dim); }
 .mg-perms{ display:flex; gap:6px; flex-wrap:wrap; margin-top:10px; }

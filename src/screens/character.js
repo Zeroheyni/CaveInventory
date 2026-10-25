@@ -26,7 +26,7 @@ let activeChannel = null;
 // playCharacterId: o DONO jogando o próprio personagem (escolhido na tela de seleção; onSwitchCharacter volta pra ela).
 export function renderCharacterScreen(app, { session, profile, campaign, characterId: presetCharacterId, playCharacterId, ownerName, onBack, onSwitchCharacter }) {
   setActiveSystem(campaign.system);
-  const singleMoney = !!activeRuleset().singleCurrency; // dinheiro único (Magic Learning) em vez das 4 moedas
+  const singleMoney = !!activeRuleset().currency?.mode === 'single'; // dinheiro único (Magic Learning) em vez das 4 moedas
   const hasPublicInv = activeRuleset().hasPublicInventory !== false; // sem público/veículo no Magic Learning
   const campaignId = campaign.id;
   const userId = session.user.id;
