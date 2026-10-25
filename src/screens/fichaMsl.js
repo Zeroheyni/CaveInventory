@@ -455,8 +455,12 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       [msl.sanidade >= 100 || true, '5. Sanidade', 'começa em 100'],
       [true, '6. Nível', 'nível 1, 0 de XP (sobe com XP do mestre)'],
     ];
-    return '<div class="msl-guide"><div class="msl-guide-head"><b>📋 Como criar sua ficha</b><span class="msl-hint">siga os passos; quando terminar, conclua a criação na aba Notas</span></div>' +
-      steps.map(([ok, t, d]) => '<div class="msl-guide-step ' + (ok ? 'ok' : '') + '"><span>' + (ok ? '✔' : '○') + '</span><b>' + t + '</b><small>' + escapeHtml(d) + '</small></div>').join('') + '</div>';
+    return '<div class="msl-guide"><div class="msl-guide-head"><b>📋 Como criar sua ficha</b><span class="msl-hint">siga os passos; quando todos estiverem ✔, aparece o botão de concluir a criação (também fica na aba Notas)</span></div>' +
+      steps.map(([ok, t, d]) => '<div class="msl-guide-step ' + (ok ? 'ok' : '') + '"><span>' + (ok ? '✔' : '○') + '</span><b>' + t + '</b><small>' + escapeHtml(d) + '</small></div>').join('') +
+      (steps.every((st) => st[0]) && (isOwner() || isMaster)
+        ? '<div class="msl-guide-done"><span>Tudo pronto! Falta só concluir a criação.</span><button type="button" class="btn" data-act="finish-creation" title="tira o aviso de em criação; depois só o mestre altera vantagens, desvantagens e escola">✔ concluir a criação do personagem</button></div>'
+        : '') +
+      '</div>';
   }
 
   function poolBadges(pool) {

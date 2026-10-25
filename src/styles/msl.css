@@ -282,6 +282,7 @@
 .msl-guide-head{ display:flex; gap:12px; align-items:baseline; flex-wrap:wrap; margin-bottom:8px; }
 .msl-guide-head b{ font:800 12.5px var(--font-display); letter-spacing:0.1em; text-transform:uppercase; }
 .msl-guide-step{ display:grid; grid-template-columns: 20px auto 1fr; gap:8px; align-items:baseline; padding:5px 0; border-top:1px solid rgba(255,255,255,0.06); font:12px var(--font-mono); }
+.msl-guide-done{ display:flex; align-items:center; justify-content:space-between; gap:10px; flex-wrap:wrap; margin-top:8px; padding:8px 10px; border:1px solid var(--accent-core); border-radius:8px; background: var(--accent-faint); font:12px var(--font-mono); color: var(--ink); }
 .msl-guide-step span{ color: var(--ink-faint); }
 .msl-guide-step b{ color: var(--ink); white-space:nowrap; }
 .msl-guide-step small{ color: var(--ink-faint); font-size:11px; }
