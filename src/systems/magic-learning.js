@@ -117,6 +117,8 @@ export function mslOf(char) {
     armor: Math.max(0, parseInt(raw.armor, 10) || 0), // armadura de itens
     fluxoUsed: Math.max(0, parseInt(raw.fluxoUsed, 10) || 0), // MP gasto no turno atual (limite = Fluxo)
     done: !!raw.done, // criação concluída
+    family: String(raw.family || ''), // família mágica (Herança Arcana): libera as magias de família dessa família
+    noMagic: !!raw.noMagic, // "ainda não tem magia": esconde atributos/status mágicos e não cobra a distribuição deles
   };
 }
 

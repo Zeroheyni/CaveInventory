@@ -6,6 +6,8 @@ import { escapeHtml } from '../shared/gameData.js';
 import { getCharacterSheet, subscribeCharacterSheet, sheetDataOf, updateSheetData, uploadAvatar, grantXp, revokeXp, hpBarClass } from '../characterSheet.js';
 import { rollD20Test, getHiddenRollMode } from '../dice.js';
 import { nameInCampaign } from '../accounts.js';
+import { computeSpell, variableTable, normalizeCustomSpell } from '../systems/msl-spells.js';
+import { listCustomSpells, saveCustomSpell, deleteCustomSpell } from '../mslSpells.js';
 import {
   magicLearning,
   ATTRIBUTE_GROUPS,
@@ -88,10 +90,15 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   let showTemp = false;
   let showHelp = false; // descrições dos atributos (Função, "o alvo resiste com", "costuma escalar")
   let uploadingAvatar = false;
-  let spellFilter = { school: '', level: '', text: '', learned: false };
+  let spellFilter = { school: '', level: '', text: '', learned: false, source: '' };
   let spellOpen = new Set();
   let spellMsg = '';
   let spellBrowserOpen = false;
+  let customSpells = []; // magias personalizadas da campanha que este usuário pode ver (db/081)
+  let spellEditor = null; // rascunho do editor de magia (mestre)
+  let helpOpen = false; // painel "?" com as siglas
+  let edError = '';
+  let lastFormulaIdx = null; // última linha de fórmula em que o cursor esteve (pra inserir siglas)
   let perkPicker = null; // 'adv' | 'dis' quando o seletor visual está aberto
   let perkFilter = { level: '', text: '' };
   let busy = false;
@@ -100,6 +107,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   // ---------------------------------------------------------------- carga
   async function load() {
     sheet = await getCharacterSheet(characterId);
+    await refreshCustomSpells();
     if (sheet && !mslOf(sheet).initialized && canEdit()) await initializeSheet();
     render();
     if (!activeChannel) {
@@ -195,6 +203,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     }
     const y = window.scrollY;
     const msl = mslOf(sheet);
+    if (msl.noMagic && tab === 'magias') tab = 'atributos';
     const d = derive(sheet);
     const needed = xpNeededFor(sheet.level);
     const xpPct = pct(sheet.xp, needed);
@@ -206,7 +215,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
         ${resourcesHtml(msl, d, ws)}
         ${lastRollHtml()}
         <div class="msl-tabs">
-          ${TABS.map(([id, label]) => `<button type="button" class="msl-tab ${tab === id ? 'active' : ''}" data-tab="${id}">${label}</button>`).join('')}
+          ${TABS.filter(([id]) => !(msl.noMagic && id === 'magias')).map(([id, label]) => `<button type="button" class="msl-tab ${tab === id ? 'active' : ''}" data-tab="${id}">${label}</button>`).join('')}
         </div>
         <div class="msl-body">${tabHtml(msl, d)}</div>
       </div>`;
@@ -238,6 +247,8 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
             ${sch}${el}
             <span class="msl-chip msl-wound msl-wound-${ws.tone}">${ws.label}</span>
             ${!msl.done ? '<span class="msl-chip msl-chip-warn">em criação</span>' : ''}
+            ${msl.family ? '<span class="msl-chip msl-chip-fam" title="família mágica: libera as magias de família">🏛 ' + escapeHtml(msl.family) + '</span>' : ''}
+            ${msl.noMagic ? '<span class="msl-chip" title="ainda não tem magia: atributos e status mágicos ocultos">sem magia (ainda)</span>' : ''}
           </div>
           ${
             isMaster
@@ -276,7 +287,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       <div class="ficha-bars msl-bars">
         ${barBlock('hp', 'HP', '❤', sheet.hp_current, d.hpMax, hpClass)}
         ${barBlock('pe', 'PE', '⚡', sheet.estamina_current, d.peMax, 'ficha-estamina-fill')}
-        ${barBlock('mp', 'MP', '✨', mp, d.mpMax, 'msl-mp-fill')}
+        ${msl.noMagic ? '' : barBlock('mp', 'MP', '✨', mp, d.mpMax, 'msl-mp-fill')}
         ${barBlock('san', 'Sanidade', '🧠', msl.sanidade, d.sanidadeMax, 'msl-san-fill', stage.id === 'ok' ? '' : 'msl-bar-warn')}
       </div>
       <div class="msl-derived">
@@ -284,11 +295,15 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
           ['CE', d.ce, 'Classe de Esquiva'],
           ['Desloc.', d.deslocamento + ' m', 'por movimento (2 PA); correr (3 PA) dobra'],
           ['CC', d.cc, 'Capacidade de Carga (peso)'],
-          ['Fluxo', d.fluxo, 'MP máximo gasto por turno'],
-          ['Manut.', d.manutencao, 'vagas de magias sustentadas'],
-          ['Formas', d.formas, 'vagas de estruturas mágicas'],
-          ['Detecção', d.deteccao + ' m', 'percepção de rastros mágicos'],
-          ['Decifração', d.decifracao, 'nível máximo de magia que identifica/aprende'],
+          ...(msl.noMagic
+            ? []
+            : [
+                ['Fluxo', d.fluxo, 'MP máximo gasto por turno'],
+                ['Manut.', d.manutencao, 'vagas de magias sustentadas'],
+                ['Formas', d.formas, 'vagas de estruturas mágicas'],
+                ['Detecção', d.deteccao + ' m', 'percepção de rastros mágicos'],
+                ['Decifração', d.decifracao, 'nível máximo de magia que identifica/aprende'],
+              ]),
           ['Armadura', d.armadura, 'reduz o dano recebido'],
         ]
           .map(([k, v, tip]) => `<span class="msl-stat" title="${escapeHtml(tip)}"><b>${v}</b>${k}</span>`)
@@ -383,7 +398,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     }
     const poolLeft = { basicos: msl.pool.basicos - used.basicos, sociais: msl.pool.sociais - used.sociais, magicos: msl.pool.magicos - used.magicos };
     const view = { attrs, bonus, poolLeft };
-    const canDraft = isOwner() && !isMaster && msl.pool.basicos + msl.pool.sociais + msl.pool.magicos > 0;
+    const canDraft = isOwner() && !isMaster && msl.pool.basicos + msl.pool.sociais + (msl.noMagic ? 0 : msl.pool.magicos) > 0;
     const sumOf = (g) => byGroupSum(g, attrs);
     const pool = (k, g) => `<span class="msl-pool" title="soma dos pontos já colocados nos atributos do grupo">total usado <b>${sumOf(g)}</b></span><span class="msl-pool" title="pontos que ainda dá pra distribuir">sobram <b>${poolLeft[k]}</b></span>`;
     const byGroup = (g) => attrDefs.filter((a) => a.group === g);
@@ -413,10 +428,10 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
           <div class="msl-asection-head"><h3>🗣️ Atributos sociais</h3>${pool('sociais', 'social')}</div>
           <div class="msl-ablocks msl-ablocks-one">${attrBlock('Sociais', '🗣️', '#e879f9', byGroup('social'), msl, view, 'label')}</div>
         </section>
-        <section class="msl-asection">
+        ${msl.noMagic ? '' : `<section class="msl-asection">
           <div class="msl-asection-head"><h3>✨ Atributos mágicos</h3>${pool('magicos', 'magico')}</div>
           <div class="msl-ablocks msl-ablocks-one">${attrBlock('Mágicos', '🔮', '#a78bfa', byGroup('magico'), msl, view, 'label')}</div>
-        </section>
+        </section>`}
       </div>`;
   }
   const byGroupSum = (g, attrs) => attrDefs.filter((a) => a.group === g).reduce((s, a) => s + (attrs[a.key] || 0), 0);
@@ -425,9 +440,9 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   function creationGuideHtml(msl, poolLeft) {
     if (msl.done) return '';
     const pv = pvSummary(msl);
-    const left = poolLeft.basicos + poolLeft.sociais + poolLeft.magicos;
+    const left = poolLeft.basicos + poolLeft.sociais + (msl.noMagic ? 0 : poolLeft.magicos);
     const steps = [
-      [left <= 0, '1. Atributos', left <= 0 ? 'todos os pontos distribuídos' : 'faltam ' + poolLeft.basicos + ' básicos · ' + poolLeft.sociais + ' sociais · ' + poolLeft.magicos + ' mágicos (pontos de um grupo não passam pro outro)'],
+      [left <= 0, '1. Atributos', left <= 0 ? 'todos os pontos distribuídos' + (msl.noMagic ? ' (sem magia por enquanto: os mágicos não contam)' : '') : 'faltam ' + poolLeft.basicos + ' básicos · ' + poolLeft.sociais + ' sociais' + (msl.noMagic ? '' : ' · ' + poolLeft.magicos + ' mágicos') + ' (pontos de um grupo não passam pro outro)'],
       [true, '2. Status', 'calculados sozinhos pelas fórmulas (barras e quadros acima)'],
       [msl.skillGrades <= 0, '3. Perícias', msl.skillGrades <= 0 ? 'os 4 graus foram usados' : 'faltam ' + msl.skillGrades + ' de ' + 4 + ' graus (básico custa 1, treinado 2; ninguém começa como mestre)'],
       [pv.left >= 0 && pv.rawGained <= 8, '4. Vantagens e desvantagens', 'PV ganhos ' + pv.gained + '/8 · gastos ' + pv.spent + ' · sobra ' + pv.left + ' (o que sobrar na criação é perdido)'],
@@ -619,6 +634,191 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   }
 
   // ---------------------------------------------------------------- aba: magias
+  // ---------------------------------------------------------------- magias personalizadas, cálculo automático e fórmulas
+  async function refreshCustomSpells() {
+    try {
+      customSpells = await listCustomSpells(campaign.id);
+    } catch (_) {
+      customSpells = []; // tabela ainda não criada / sem permissão: fica só com as do livro
+    }
+  }
+  const familyOf = () => (mslOf(sheet).family || '').trim().toLowerCase();
+  // magias do livro + as personalizadas que este personagem pode ver (família: só a dele; o mestre vê todas)
+  async function allSpells() {
+    const base = await loadSpells();
+    const fam = familyOf();
+    const extra = customSpells.filter((s) => !s.familia || isMaster || s.familia.trim().toLowerCase() === fam);
+    return [...base, ...extra];
+  }
+
+  // caixa "calculado pra você": escalamentos do livro e fórmulas da magia, já com os atributos desta ficha
+  function computedBoxHtml(s) {
+    if (!(s.escalamentos || []).length && !(s.calc || []).length) return '';
+    const calc = computeSpell(s, sheet, sheet.level);
+    const rows = calc.rows
+      .map((r) => {
+        const head = r.attr ? `<b>${escapeHtml(r.attr)}</b> <span class="msl-calc-val">${r.value}</span>` : `<b>${escapeHtml(r.label || '')}</b>`;
+        const how = r.formulaText ? `<small>${escapeHtml(r.formulaText)}</small>` : r.every ? `<small>a cada ${r.every} pontos</small>` : '';
+        return `<li class="${r.active ? 'on' : 'off'}">${head} → <span class="msl-calc-out">${escapeHtml(r.text)}</span> ${how}</li>`;
+      })
+      .join('');
+    const totals = calc.totals.map((t) => `<div class="msl-calc-total"><b>${escapeHtml(t.label)}</b><span>${escapeHtml(t.text)}</span><small>${escapeHtml(t.note || '')}</small></div>`).join('');
+    return `
+      <div class="msl-calc">
+        <div class="msl-calc-head">📐 Calculado pra ${escapeHtml(sheet.name)} <small>com os atributos desta ficha${calc.dc ? ` · dificuldade pra resistir <b>${calc.dc}</b>` : ''}</small></div>
+        ${totals ? `<div class="msl-calc-totals">${totals}</div>` : ''}
+        <ul class="msl-calc-list">${rows}</ul>
+        ${calc.errors.length ? `<p class="admin-error" style="display:block;">${calc.errors.map(escapeHtml).join(' · ')}</p>` : ''}
+      </div>`;
+  }
+
+  // ---- editor de magia personalizada (só mestre) ----
+  const blankSpell = () => ({
+    dbId: null,
+    family: '',
+    nome: '',
+    escola: '',
+    estilo: '',
+    nivel: 1,
+    classificacao: 'Livre',
+    descricao: '',
+    atributo_principal: 'Poder Mágico',
+    ativacao: 'instantânea, ação, 2 PA',
+    alvo: '',
+    resistencia: '',
+    efeito: '',
+    custo_mp: 1,
+    manutencao: '',
+    sustentada: false,
+    rastro: 'Efêmero',
+    calc: [{ label: 'Alcance', type: 'valor', formula: 'ARM * 2', sides: 6, unit: 'm de alcance', attr: 'armazenamento', every: 10, amount: 1 }],
+  });
+  function startEditor(spell) {
+    if (!spell) spellEditor = blankSpell();
+    else spellEditor = { ...blankSpell(), ...JSON.parse(JSON.stringify(spell)), dbId: spell.dbId || null, family: spell.familia || '', calc: (spell.calc || []).map((r) => ({ ...r })) };
+    helpOpen = false;
+    render();
+    const box = $('msl-editor');
+    if (box) box.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+  }
+  const ATTR_OPTS = (sel) => attrDefs.map((a) => `<option value="${a.key}" ${sel === a.key ? 'selected' : ''}>${a.label}</option>`).join('');
+  const ATTR_LABEL_OPTS = (sel) => attrDefs.filter((a) => a.group !== 'social').map((a) => `<option ${sel === a.label ? 'selected' : ''}>${a.label}</option>`).join('');
+
+  function editorPreviewHtml() {
+    if (!spellEditor) return '';
+    let spell;
+    try {
+      spell = normalizeCustomSpell(spellEditor);
+    } catch (err) {
+      return `<p class="admin-error" style="display:block;">${escapeHtml(err.message)}</p>`;
+    }
+    const calc = computeSpell(spell, sheet, sheet.level);
+    return `
+      <div class="msl-calc-head">👁 Prévia com os atributos de ${escapeHtml(sheet.name)}${calc.dc ? ` · dificuldade <b>${calc.dc}</b>` : ''}</div>
+      ${calc.rows.length ? `<ul class="msl-calc-list">${calc.rows.map((r) => `<li class="${r.active ? 'on' : 'off'}"><b>${escapeHtml(r.label || r.attr || '')}</b> → <span class="msl-calc-out">${escapeHtml(r.text)}</span> ${r.formulaText ? `<small>${escapeHtml(r.formulaText)}</small>` : ''}</li>`).join('')}</ul>` : '<p class="msl-hint">adicione linhas de cálculo abaixo</p>'}
+      ${calc.errors.length ? `<p class="admin-error" style="display:block;">${calc.errors.map(escapeHtml).join(' · ')}</p>` : ''}`;
+  }
+
+  function helpHtml() {
+    const rows = variableTable(sheet, sheet.level);
+    const groups = [['basico', 'Básicos'], ['social', 'Sociais'], ['magico', 'Mágicos'], ['status', 'Status']];
+    return `
+      <div class="msl-help">
+        <div class="msl-help-head"><b>? Siglas pra usar nas fórmulas</b><span class="msl-hint">clique numa sigla pra inserir no campo de fórmula que você estava editando. O valor ao lado é o de ${escapeHtml(sheet.name)} (com bônus de vantagens e modificadores temporários).</span><button type="button" class="btn btn-ghost" data-act="ed-help">fechar</button></div>
+        <div class="msl-help-grid">
+          ${groups
+            .map(
+              ([g, label]) => `
+            <div class="msl-help-col"><div class="msl-group-title">${label}</div>
+              ${rows
+                .filter((r) => r.group === g)
+                .map((r) => `<button type="button" class="msl-help-var" data-ed-insert="${r.abbr}" title="${escapeHtml(r.name)}${r.aliases.length ? ' — também vale: ' + r.aliases.join(', ') : ''}"><code>${r.abbr}</code><span>${escapeHtml(r.name)}</span><b>${r.value ?? '—'}</b></button>`)
+                .join('')}
+            </div>`
+            )
+            .join('')}
+        </div>
+        <ul class="msl-list msl-help-tips">
+          <li>Operações: <code>+</code> <code>−</code> <code>×</code> (ou <code>x</code> ou <code>*</code>) <code>÷</code> (ou <code>/</code>) e parênteses. Divisão arredonda pra baixo, como no livro.</li>
+          <li>Também dá pra escrever o nome inteiro: <code>Armazenamento × 2</code>, <code>Interpretação ÷ 4</code>. Funções: <code>MIN(a, b)</code> e <code>MAX(a, b)</code>.</li>
+          <li>Exemplos: <code>ARM × 2</code> = alcance de 2 m por ponto de Armazenamento · <code>5 + CAN ÷ 2</code> · <code>(MOL + CTR) ÷ 10</code> dados de dano.</li>
+          <li>Tipos de linha: <b>valor</b> (a fórmula dá um número + unidade), <b>dados</b> (a fórmula dá quantos dados de N lados) e <b>passos</b> (como no livro: "+X a cada N pontos do atributo").</li>
+        </ul>
+      </div>`;
+  }
+
+  function editorHtml() {
+    const e = spellEditor;
+    const f = (k, label, type = 'text', extra = '') => `<label>${label}<input type="${type}" data-ed="${k}" value="${escapeHtml(e[k] ?? '')}" ${extra}></label>`;
+    return `
+      <div class="ficha-section msl-editor" id="msl-editor">
+        <div class="ficha-section-head">
+          <span class="ficha-section-title">${e.dbId ? 'EDITAR MAGIA PERSONALIZADA' : 'NOVA MAGIA PERSONALIZADA'}</span>
+          <button type="button" class="btn btn-ghost" data-act="ed-cancel">cancelar</button>
+        </div>
+        <div class="msl-ed-grid">
+          ${f('nome', 'Nome')}
+          <label>Escola<select data-ed="escola"><option value="">—</option>${SCHOOLS.map((s) => `<option ${e.escola === s ? 'selected' : ''}>${s}</option>`).join('')}</select></label>
+          ${f('estilo', 'Estilo')}
+          <label>Nível<select data-ed="nivel">${[1, 2, 3, 4, 5].map((n) => `<option ${Number(e.nivel) === n ? 'selected' : ''}>${n}</option>`).join('')}</select></label>
+          <label>Classificação<select data-ed="classificacao">${['Livre', 'Uso específico', 'Restrita', 'Autorização Especial', 'Proibida'].map((c) => `<option ${e.classificacao === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+          <label>Atributo principal<select data-ed="atributo_principal">${ATTR_LABEL_OPTS(e.atributo_principal)}</select></label>
+          ${f('custo_mp', 'Custo (MP)', 'number', 'min="0"')}
+          ${f('manutencao', 'Manutenção (MP/turno)', 'number', 'min="0"')}
+          <label class="msl-check"><input type="checkbox" data-ed="sustentada" ${e.sustentada ? 'checked' : ''}> sustentada</label>
+          <label>Rastro<select data-ed="rastro">${['Efêmero', 'Instável', 'Persistente', 'Marcante'].map((c) => `<option ${e.rastro === c ? 'selected' : ''}>${c}</option>`).join('')}</select></label>
+          ${f('ativacao', 'Ativação')}
+          ${f('alvo', 'Alvo')}
+          ${f('resistencia', 'Resistência')}
+          <label class="msl-ed-wide">Família (deixe vazio = qualquer um pode aprender)<input type="text" data-ed="family" value="${escapeHtml(e.family)}" placeholder="ex.: Lunaris — só personagens dessa família veem e aprendem"></label>
+        </div>
+        <label class="msl-ed-block">Descrição curta<input type="text" data-ed="descricao" value="${escapeHtml(e.descricao)}"></label>
+        <label class="msl-ed-block">Efeito (texto)<textarea data-ed="efeito" rows="3" placeholder="o que a magia faz; cite os valores calculados pelas linhas abaixo">${escapeHtml(e.efeito)}</textarea></label>
+
+        <div class="msl-ed-calc">
+          <div class="msl-ed-calc-head">
+            <b>📐 Cálculos automáticos</b>
+            <button type="button" class="msl-q" data-act="ed-help" title="ver as siglas dos atributos e status">?</button>
+            <span class="msl-hint">ex.: <code>ARM × 2</code> = alcance — o valor é calculado com a ficha de quem conjura</span>
+          </div>
+          ${helpOpen ? helpHtml() : ''}
+          ${e.calc
+            .map((r, i) => {
+              const t = r.type || 'valor';
+              const common = `<input type="text" class="msl-ed-label" data-ed-row="${i}:label" value="${escapeHtml(r.label || '')}" placeholder="nome (Alcance, Dano, Duração...)">`;
+              const unit = `<input type="text" data-ed-row="${i}:unit" value="${escapeHtml(r.unit || '')}" placeholder="unidade (m de alcance, de dano, turnos...)">`;
+              const body =
+                t === 'passos'
+                  ? `<span>+</span><input type="number" step="any" class="msl-ed-num" data-ed-row="${i}:amount" value="${r.amount ?? 1}"><span>a cada</span><input type="number" min="1" class="msl-ed-num" data-ed-row="${i}:every" value="${r.every ?? 10}"><span>pontos de</span><select data-ed-row="${i}:attr">${ATTR_OPTS(r.attr)}</select>${unit}`
+                  : `<input type="text" class="msl-ed-formula" data-ed-row="${i}:formula" value="${escapeHtml(r.formula || '')}" placeholder="fórmula: ARM × 2">${t === 'dados' ? `<span>d</span><input type="number" min="2" class="msl-ed-num" data-ed-row="${i}:sides" value="${r.sides ?? 6}">` : ''}${unit}`;
+              return `<div class="msl-ed-row">${common}<select data-ed-row="${i}:type"><option value="valor" ${t === 'valor' ? 'selected' : ''}>valor</option><option value="dados" ${t === 'dados' ? 'selected' : ''}>dados</option><option value="passos" ${t === 'passos' ? 'selected' : ''}>passos (+X a cada N)</option></select><div class="msl-ed-rowbody">${body}</div><button type="button" class="msl-x" data-act="ed-del-row" data-i="${i}" title="remover linha">×</button></div>`;
+            })
+            .join('')}
+          <button type="button" class="btn btn-ghost" data-act="ed-add-row">+ linha de cálculo</button>
+          <div class="msl-ed-preview" id="msl-ed-preview">${editorPreviewHtml()}</div>
+        </div>
+        ${edError ? `<p class="admin-error" style="display:block;">${escapeHtml(edError)}</p>` : ''}
+        <div class="msl-ed-actions">
+          <button type="button" class="btn" data-act="ed-save">${e.dbId ? 'salvar alterações' : 'criar magia'}</button>
+          <button type="button" class="btn btn-ghost" data-act="ed-cancel">cancelar</button>
+        </div>
+      </div>`;
+  }
+
+  async function saveEditor() {
+    edError = '';
+    try {
+      const wasEditing = !!spellEditor.dbId;
+      await saveCustomSpell(campaign.id, spellEditor, spellEditor.family, spellEditor.dbId);
+      await refreshCustomSpells();
+      spellEditor = null;
+      spellMsg = wasEditing ? 'Magia atualizada.' : 'Magia criada! Já aparece no grimório (quem for da família indicada também a vê).';
+    } catch (err) {
+      edError = err.message;
+    }
+    render();
+  }
+
   function spellsTab(msl, d) {
     const known = msl.spells;
     const canEditSchool = canEditTraits();
@@ -632,9 +832,11 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
         </div>
         ${spellMsg ? `<div class="msl-lastroll">${escapeHtml(spellMsg)}</div>` : ''}
       </div>
+      ${spellEditor && isMaster ? editorHtml() : ''}
       <div class="ficha-section">
         <div class="ficha-section-head">
           <span class="ficha-section-title">MAGIAS CONHECIDAS (${known.length})</span>
+          ${isMaster ? '<button type="button" class="btn btn-ghost" data-act="ed-new" title="cria uma magia da campanha, com cálculos automáticos a partir da ficha">✚ criar magia</button>' : ''}
           ${canEdit() ? `<button type="button" class="btn btn-ghost" data-act="spell-browser">${spellBrowserOpen ? 'fechar' : '+ aprender magia'}</button>` : ''}
         </div>
         <div id="msl-known-spells">${known.length ? '<p class="msl-hint">carregando magias...</p>' : '<p class="msl-hint">nenhuma magia conhecida ainda — use "+ aprender magia"</p>'}</div>
@@ -644,7 +846,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
 
   async function fillSpells() {
     const msl = mslOf(sheet);
-    const list = await loadSpells();
+    const list = await allSpells();
     const d = derive(sheet);
     const knownBox = $('msl-known-spells');
     if (knownBox && msl.spells.length) {
@@ -664,7 +866,8 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
           (!f.school || s.escola === f.school) &&
           (!f.level || String(s.nivel) === String(f.level)) &&
           (!f.text || norm(s.nome + ' ' + s.estilo + ' ' + s.descricao).includes(norm(f.text))) &&
-          (!f.learned || !msl.spells.includes(s.id))
+          (!f.learned || !msl.spells.includes(s.id)) &&
+          (!f.source || (f.source === 'livro' ? !s.custom : f.source === 'custom' ? !!s.custom && !s.familia : !!s.familia))
       );
       box.innerHTML = `
         <div class="ficha-section-head"><span class="ficha-section-title">GRIMÓRIO — ${rows.length} magia(s)</span></div>
@@ -672,20 +875,22 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
           <select data-spellf="school"><option value="">todas as escolas</option>${SCHOOLS.map((s) => `<option ${f.school === s ? 'selected' : ''}>${s}</option>`).join('')}</select>
           <select data-spellf="level"><option value="">todos os níveis</option>${[1, 2, 3, 4, 5].map((n) => `<option value="${n}" ${String(f.level) === String(n) ? 'selected' : ''}>nível ${n}</option>`).join('')}</select>
           <input type="text" data-spellf="text" placeholder="buscar nome, estilo, descrição…" value="${escapeHtml(f.text)}">
+          ${customSpells.length ? `<select data-spellf="source"><option value="">livro + personalizadas</option><option value="livro" ${f.source === 'livro' ? 'selected' : ''}>só as do livro</option><option value="custom" ${f.source === 'custom' ? 'selected' : ''}>personalizadas</option><option value="familia" ${f.source === 'familia' ? 'selected' : ''}>de família</option></select>` : ''}
           <label class="msl-check"><input type="checkbox" data-spellf="learned" ${f.learned ? 'checked' : ''}> esconder as que já sei</label>
         </div>
-        <p class="msl-hint">Só dá pra aprender magia de nível ≤ sua Decifração (${d.decifracao}). Magias de família ficam fora (Herança Arcana).</p>
+        <p class="msl-hint">Só dá pra aprender magia de nível ≤ sua Decifração (${d.decifracao}). Magias de família só aparecem pra quem o mestre marcou como dessa família.</p>
         ${rows.map((s) => spellCard(s, msl, d, false)).join('') || '<p class="msl-hint">nada encontrado</p>'}`;
     }
   }
 
   function spellCard(s, msl, d, known) {
     const open = spellOpen.has((known ? 'k' : 'b') + s.id);
-    const mainKey = attrKeyByLabel(s.atributo_principal);
-    const dc = mainKey ? spellDifficulty(sheetWithMods(), mainKey) : null;
+    const calcSpell = computeSpell(s, sheet, sheet.level);
+    const dc = calcSpell.dc;
+    const famMismatch = !!s.familia && s.familia.trim().toLowerCase() !== familyOf();
     const tooHigh = s.nivel > d.decifracao;
     const learned = msl.spells.includes(s.id);
-    const tags = [s.escola, s.estilo, 'nív ' + s.nivel, s.classificacao + (s.contexto_legal ? ` (${s.contexto_legal})` : ''), s.rastro].filter(Boolean);
+    const tags = [s.escola, s.estilo, 'nív ' + s.nivel, s.classificacao + (s.contexto_legal ? ` (${s.contexto_legal})` : ''), s.rastro, s.familia ? '🏛 família ' + s.familia : '', s.custom && !s.familia ? '✚ personalizada' : ''].filter(Boolean);
     return `
       <div class="msl-spell ${open ? 'open' : ''}" data-spell-card="${(known ? 'k' : 'b') + s.id}">
         <div class="msl-spell-head" data-spell-toggle="${(known ? 'k' : 'b') + s.id}">
@@ -703,7 +908,8 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
           <p><b>Resistência:</b> ${escapeHtml(s.resistencia || '—')}${dc ? ` · dificuldade <b>${dc}</b>` : ''}</p>
           <p><b>Efeito:</b> ${escapeHtml(s.efeito || '—')}</p>
           <p><b>Atributo principal:</b> ${escapeHtml(s.atributo_principal || '—')}${(s.atributos_secundarios || []).length ? ' · secundários: ' + escapeHtml(s.atributos_secundarios.join(', ')) : ''}</p>
-          ${(s.escalamentos || []).length ? `<p><b>Escalamentos:</b></p><ul>${s.escalamentos.map((e) => `<li>${escapeHtml(e.atributo)}: ${escapeHtml(e.efeito)}</li>`).join('')}</ul>` : ''}
+          ${computedBoxHtml(s)}
+          ${(s.escalamentos || []).length ? `<p class="msl-hint"><b>Texto do livro (escalamentos):</b></p><ul class="msl-hint">${s.escalamentos.map((e) => `<li>${escapeHtml(e.atributo)}: ${escapeHtml(e.efeito)}</li>`).join('')}</ul>` : ''}
           ${s.preparo ? `<p><b>Preparo:</b> ${escapeHtml(s.preparo)}</p>` : ''}${s.modos ? `<p><b>Modos:</b> ${escapeHtml(s.modos)}</p>` : ''}
           ${s.requisitos ? `<p><b>Requisitos:</b> ${escapeHtml(s.requisitos)}</p>` : ''}${s.variacoes ? `<p><b>Variações:</b> ${escapeHtml(s.variacoes)}</p>` : ''}${s.informacoes ? `<p><b>Informações:</b> ${escapeHtml(s.informacoes)}</p>` : ''}
         </div>`
@@ -711,6 +917,8 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
         }
         <div class="msl-spell-btns">
           ${known && canEdit() ? `<button type="button" class="btn" data-cast="${s.id}">✨ Conjurar</button><button type="button" class="btn btn-ghost" data-forget="${s.id}">esquecer</button>` : ''}
+          ${isMaster && s.custom ? `<button type="button" class="btn btn-ghost" data-ed-edit="${s.dbId}">✎ editar</button><button type="button" class="btn btn-ghost" data-ed-delete="${s.dbId}">🗑 apagar</button>` : ''}
+          ${famMismatch && !known && isMaster ? `<span class="msl-hint">⚠ esse personagem não é da família ${escapeHtml(s.familia)}</span>` : ''}
           ${!known && canEdit() ? (learned ? '<span class="msl-hint">já conhecida</span>' : `<button type="button" class="btn ${tooHigh ? 'btn-ghost' : ''}" data-learn="${s.id}" title="${tooHigh ? 'acima da sua Decifração' : ''}">${tooHigh ? 'aprender (acima da Decifração)' : 'aprender'}</button>`) : ''}
         </div>
       </div>`;
@@ -720,7 +928,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
 
   // conjurar: gasta PE = PA e MP da magia; confere o Fluxo do turno
   async function cast(spellId) {
-    const list = await loadSpells();
+    const list = await allSpells();
     const s = list.find((x) => x.id === spellId);
     if (!s) return;
     const msl = mslOf(sheet);
@@ -741,8 +949,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     if (used > d.fluxo) problems.push(`passa do Fluxo do turno (${used}/${d.fluxo})`);
     if (s.nivel > d.decifracao) problems.push(`nível ${s.nivel} acima da sua Decifração (${d.decifracao})`);
     if (problems.length && !window.confirm('Atenção: ' + problems.join('; ') + '.\nConjurar mesmo assim?')) return;
-    const mainKey = attrKeyByLabel(s.atributo_principal);
-    const dc = mainKey ? spellDifficulty(sheet, mainKey) : null;
+    const dc = computeSpell(s, sheet, sheet.level).dc;
     spellMsg = `${s.nome}: −${pa} PE, −${mp} MP${dc ? ` · dificuldade pra resistir ${dc}` : ''}${/instabilidade_magica/.test(JSON.stringify(msl.disadvantages)) ? ' · Instabilidade Mágica: role 1d10 (1 = falha)' : ''}`;
     await commit(
       (m) => {
@@ -808,6 +1015,14 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
         <div class="ficha-section-head"><span class="ficha-section-title">FICHA</span></div>
         <div class="ficha-fields-grid">${f('jogador', 'Jogador')}${f('idade', 'Idade')}${f('trabalho', 'Ocupação')}${f('genero', 'Gênero')}${f('raca', 'Raça')}</div>
       </div>
+      ${isMaster
+        ? `<div class="ficha-section msl-master-magic">
+        <div class="ficha-section-head"><span class="ficha-section-title">MAGIA DESTE PERSONAGEM (mestre)</span></div>
+        <label class="msl-check"><input type="checkbox" data-field-bool="noMagic" ${msl.noMagic ? 'checked' : ''}> <b>Ainda não tem magia</b> — esconde os atributos e status mágicos e não cobra a distribuição dos pontos mágicos (dá pra desmarcar quando ele despertar)</label>
+        <div class="msl-armor-row"><label class="msl-lbl">Família mágica</label><input type="text" data-field="family" style="width:240px" value="${escapeHtml(msl.family)}" placeholder="ex.: Lunaris (Herança Arcana)"></div>
+        <p class="msl-hint">Quem é da família vê e pode aprender as magias personalizadas marcadas com esse mesmo nome de família (aba Magias → ✚ criar magia).</p>
+      </div>`
+        : ''}
       <div class="ficha-section">
         <div class="ficha-section-head"><span class="ficha-section-title">HISTÓRIA</span></div>
         <textarea class="ficha-historia-box" data-sheetfield="historia" placeholder="conte a história do personagem..." ${canEdit() ? '' : 'disabled'}>${escapeHtml(data.historia)}</textarea>
@@ -842,7 +1057,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     if ((el = btn('[data-tab]'))) {
       tab = el.dataset.tab;
       render();
-      if (tab === 'magias') fillSpells();
+      if (tab === 'magias') refreshCustomSpells().then(fillSpells);
       return;
     }
     if ((el = btn('[data-rollmode]'))) {
@@ -907,8 +1122,49 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       return;
     }
 
+    if ((el = btn('[data-ed-insert]'))) {
+      insertSigla(el.dataset.edInsert);
+      return;
+    }
+    if ((el = btn('[data-ed-edit]'))) {
+      const sp = customSpells.find((x) => x.dbId === el.dataset.edEdit);
+      if (sp) startEditor(sp);
+      return;
+    }
+    if ((el = btn('[data-ed-delete]'))) {
+      const sp = customSpells.find((x) => x.dbId === el.dataset.edDelete);
+      if (sp && window.confirm('Apagar a magia "' + sp.nome + '" da campanha? Quem já a aprendeu perde o acesso.')) {
+        try {
+          await deleteCustomSpell(sp.dbId);
+          await refreshCustomSpells();
+        } catch (err) {
+          window.alert('Erro: ' + err.message);
+        }
+        render();
+      }
+      return;
+    }
     if ((el = btn('[data-act]'))) {
       const act = el.dataset.act;
+      if (act === 'ed-new') return startEditor(null);
+      if (act === 'ed-cancel') {
+        spellEditor = null;
+        edError = '';
+        return render();
+      }
+      if (act === 'ed-save') return saveEditor();
+      if (act === 'ed-help') {
+        helpOpen = !helpOpen;
+        return render();
+      }
+      if (act === 'ed-add-row') {
+        spellEditor.calc.push({ label: '', type: 'valor', formula: '', sides: 6, unit: '', attr: 'armazenamento', every: 10, amount: 1 });
+        return render();
+      }
+      if (act === 'ed-del-row') {
+        spellEditor.calc.splice(parseInt(el.dataset.i, 10), 1);
+        return render();
+      }
       const msl = mslOf(sheet);
       if (act === 'back') return onBack && onBack();
       if (act === 'avatar') return $('msl-avatar-input').click();
@@ -1098,7 +1354,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     if ((el = t.closest('[data-field]'))) {
       const f = el.dataset.field;
       const v = el.type === 'number' ? Math.max(0, parseInt(el.value, 10) || 0) : el.value;
-      return commit((m) => (m[f] = v), {}, { rerender: f === 'school' || f === 'element' });
+      return commit((m) => (m[f] = v), {}, { rerender: f === 'school' || f === 'element' || f === 'family' });
     }
     if ((el = t.closest('[data-perk-note]'))) {
       const [kind, id] = el.dataset.perkNote.split(':');
@@ -1119,6 +1375,14 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       }
       busy = false;
       return;
+    }
+    if ((el = t.closest('[data-ed], [data-ed-row]'))) {
+      applyEditorField(el, true);
+      return;
+    }
+    if ((el = t.closest('[data-field-bool]'))) {
+      const f = el.dataset.fieldBool;
+      return commit((m) => (m[f] = el.checked), {}, { rerender: true });
     }
     if ((el = t.closest('[data-perkf-text]'))) {
       perkFilter.text = el.value;
@@ -1154,6 +1418,47 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     }
   }
 
+  // editor de magia: guarda o que é digitado e atualiza só a prévia (sem refazer a tela e perder o cursor)
+  function applyEditorField(el, fromChange) {
+    if (!spellEditor) return;
+    if (el.dataset.ed) {
+      spellEditor[el.dataset.ed] = el.type === 'checkbox' ? el.checked : el.value;
+    } else if (el.dataset.edRow) {
+      const [i, f] = el.dataset.edRow.split(':');
+      spellEditor.calc[parseInt(i, 10)][f] = el.value;
+      if (f === 'type' && fromChange) return render();
+    }
+    const pv = $('msl-ed-preview');
+    if (pv) pv.innerHTML = editorPreviewHtml();
+  }
+  function handleInput(e) {
+    const el = e.target.closest && e.target.closest('[data-ed], [data-ed-row]');
+    if (el && el.tagName !== 'SELECT') applyEditorField(el, false);
+  }
+  function handleFocusIn(e) {
+    const el = e.target.closest && e.target.closest('[data-ed-row$=":formula"]');
+    if (el) lastFormulaIdx = parseInt(el.dataset.edRow, 10);
+  }
+  // botão da sigla no painel "?": coloca no campo de fórmula em que você estava
+  function insertSigla(abbr) {
+    if (!spellEditor) return;
+    let i = lastFormulaIdx;
+    if (i === null || !spellEditor.calc[i] || (spellEditor.calc[i].type || 'valor') === 'passos') i = spellEditor.calc.findIndex((r) => (r.type || 'valor') !== 'passos');
+    if (i < 0) return;
+    const input = app.querySelector('[data-ed-row="' + i + ':formula"]');
+    const cur = spellEditor.calc[i].formula || '';
+    const pos = input && typeof input.selectionStart === 'number' ? input.selectionStart : cur.length;
+    spellEditor.calc[i].formula = cur.slice(0, pos) + abbr + cur.slice(pos);
+    render();
+    const again = app.querySelector('[data-ed-row="' + i + ':formula"]');
+    if (again) {
+      again.focus();
+      const np = pos + abbr.length;
+      again.setSelectionRange(np, np);
+    }
+  }
+  app.addEventListener('input', handleInput);
+  app.addEventListener('focusin', handleFocusIn);
   app.addEventListener('click', handleClick);
   app.addEventListener('change', handleChange);
   app.addEventListener('keydown', handleKeydown);
@@ -1161,6 +1466,8 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
     app.removeEventListener('click', handleClick);
     app.removeEventListener('change', handleChange);
     app.removeEventListener('keydown', handleKeydown);
+    app.removeEventListener('input', handleInput);
+    app.removeEventListener('focusin', handleFocusIn);
     if (activeChannel) {
       supabase.removeChannel(activeChannel);
       activeChannel = null;
