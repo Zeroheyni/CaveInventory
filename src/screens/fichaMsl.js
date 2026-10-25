@@ -126,6 +126,8 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
 
   const isOwner = () => !!sheet && !!session && sheet.owner_id === session.user.id;
   const canEdit = () => isMaster || isOwner();
+  // criar magia: o mestre sempre; o jogador só se o mestre liberou nesta ficha (padrão: bloqueado)
+  const canCreateSpell = () => isMaster || (isOwner() && !!mslOf(sheet).canCreateSpells);
   const inCreation = () => !mslOf(sheet).done;
   // jogador monta o personagem durante a criação; depois só o mestre mexe em atributos/traços (o jogador mexe em recursos, magias, notas)
   const canEditTraits = () => isMaster || (isOwner() && inCreation());
@@ -997,12 +999,12 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
         </div>
         ${spellMsg ? `<div class="msl-lastroll">${escapeHtml(spellMsg)}</div>` : ''}
       </div>
-      ${spellEditor && (isMaster || isOwner()) ? editorHtml() : ''}
+      ${spellEditor && canCreateSpell() ? editorHtml() : ''}
       ${activePanelHtml(msl, d)}
       <div class="ficha-section">
         <div class="ficha-section-head">
           <span class="ficha-section-title">MAGIAS CONHECIDAS (${known.length})</span>
-          ${isMaster || isOwner() ? '<button type="button" class="btn btn-ghost" data-act="ed-new" title="' + (isMaster ? 'cria uma magia da campanha (ou de uma família), com cálculos automáticos a partir da ficha' : 'cria uma magia só pro seu personagem, com cálculos automáticos a partir da ficha') + '">' + (isMaster ? '✚ criar magia' : '✚ criar minha magia') + '</button>' : ''}
+          ${canCreateSpell() ? '<button type="button" class="btn btn-ghost" data-act="ed-new" title="' + (isMaster ? 'cria uma magia da campanha (ou de uma família), com cálculos automáticos a partir da ficha' : 'cria uma magia só pro seu personagem, com cálculos automáticos a partir da ficha') + '">' + (isMaster ? '✚ criar magia' : '✚ criar minha magia') + '</button>' : ''}
           ${canEdit() ? `<button type="button" class="btn btn-ghost" data-act="spell-browser">${spellBrowserOpen ? 'fechar' : '+ aprender magia'}</button>` : ''}
         </div>
         <div id="msl-known-spells">${known.length ? '<p class="msl-hint">carregando magias...</p>' : '<p class="msl-hint">nenhuma magia conhecida ainda — use "+ aprender magia"</p>'}</div>
@@ -1083,7 +1085,8 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
         }
         <div class="msl-spell-btns">
           ${known && canEdit() ? `<button type="button" class="btn" data-cast="${s.id}">✨ Conjurar</button><button type="button" class="btn btn-ghost" data-forget="${s.id}">esquecer</button>` : ''}
-          ${s.custom && (isMaster || (s.privateTo && s.createdBy === session.user.id)) ? `<button type="button" class="btn btn-ghost" data-ed-edit="${s.dbId}">✎ editar</button><button type="button" class="btn btn-ghost" data-ed-delete="${s.dbId}">🗑 apagar</button>` : ''}
+          ${s.custom && canCreateSpell() && (isMaster || (s.privateTo && s.createdBy === session.user.id)) ? `<button type="button" class="btn btn-ghost" data-ed-edit="${s.dbId}">✎ editar</button>` : ''}
+          ${s.custom && (isMaster || (s.privateTo && s.createdBy === session.user.id)) ? `<button type="button" class="btn btn-ghost" data-ed-delete="${s.dbId}">🗑 apagar</button>` : ''}
           ${famMismatch && !known && isMaster ? `<span class="msl-hint">⚠ esse personagem não é da família ${escapeHtml(s.familia)}</span>` : ''}
           ${!known && canEdit() ? (learned ? '<span class="msl-hint">já conhecida</span>' : `<button type="button" class="btn ${tooHigh ? 'btn-ghost' : ''}" data-learn="${s.id}" title="${tooHigh ? 'acima da sua Decifração' : ''}">${tooHigh ? 'aprender (acima da Decifração)' : 'aprender'}</button>`) : ''}
         </div>
@@ -1202,6 +1205,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
         ? `<div class="ficha-section msl-master-magic">
         <div class="ficha-section-head"><span class="ficha-section-title">MAGIA DESTE PERSONAGEM (mestre)</span></div>
         <label class="msl-check"><input type="checkbox" data-field-bool="noMagic" ${msl.noMagic ? 'checked' : ''}> <b>Ainda não tem magia</b> — esconde os atributos e status mágicos e não cobra a distribuição dos pontos mágicos (dá pra desmarcar quando ele despertar)</label>
+        <label class="msl-check"><input type="checkbox" data-field-bool="canCreateSpells" ${msl.canCreateSpells ? 'checked' : ''}> <b>Pode criar magias</b> — libera o botão "✚ criar minha magia" pro jogador (por padrão ele NÃO pode; o mestre sempre pode)</label>
         <div class="msl-armor-row"><label class="msl-lbl">Família mágica</label><input type="text" data-field="family" style="width:240px" value="${escapeHtml(msl.family)}" placeholder="ex.: Lunaris (Herança Arcana)"></div>
         <p class="msl-hint">Quem é da família vê e pode aprender as magias personalizadas marcadas com esse mesmo nome de família (aba Magias → ✚ criar magia).</p>
       </div>`
