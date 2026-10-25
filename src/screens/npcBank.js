@@ -19,6 +19,7 @@ import {
   compactStats,
 } from '../characterSheet.js';
 import { renderFichaScreen } from './ficha.js';
+import { activeRuleset } from '../systems/index.js';
 import { renderCharacterScreen } from './character.js';
 
 export function renderNpcBankScreen(app, { session, profile, campaign, topApp, onBack, escapeBack }) {
@@ -74,7 +75,7 @@ export function renderNpcBankScreen(app, { session, profile, campaign, topApp, o
     app.innerHTML = `
       ${onBack ? `<button type="button" class="btn btn-ghost" id="npc-bank-back-btn" style="margin-bottom:12px;">← voltar</button>` : ''}
       <div class="npc-bank-head">
-        <div class="ficha-section-title">BANCO DE NPCS</div>
+        <div class="ficha-section-title">BANCO DE NPCS <span class="npc-bank-scope" title="cada mesa tem o seu banco: NPCs de uma mesa não aparecem nas outras">· só desta mesa: ${escapeHtml(campaign.name || '')}</span></div>
         ${!createMode ? `<button type="button" class="btn" id="npc-bank-new-btn">+ novo NPC</button>` : ''}
       </div>
       ${createMode ? createPanel() : ''}
@@ -135,11 +136,11 @@ export function renderNpcBankScreen(app, { session, profile, campaign, topApp, o
         <div class="form-grid">
           <div class="field"><label for="npc-simple-name">Nome</label><input type="text" id="npc-simple-name" value="${editing ? escapeHtml(npc.name) : ''}" placeholder="ex: Goblin"></div>
           <div class="field"><label for="npc-simple-hp">Vida máx.</label><input type="number" id="npc-simple-hp" min="1" value="${hMax}"></div>
-          <div class="field"><label for="npc-simple-est">Estamina máx.</label><input type="number" id="npc-simple-est" min="0" value="${eMax}"></div>
+          <div class="field"><label for="npc-simple-est">${(activeRuleset().vitalLabels || {}).estamina ? 'PE' : 'Estamina'} máx.</label><input type="number" id="npc-simple-est" min="0" value="${eMax}"></div>
         </div>
         <div class="field" style="margin-bottom:10px;"><label for="npc-simple-damage">Dano</label><input type="text" id="npc-simple-damage" value="${editing ? escapeHtml(npc.npc_damage || '') : ''}" placeholder="ex: 6 cortante"></div>
         <div class="uses-row">
-          <label class="checkbox-wrap"><input type="checkbox" id="npc-simple-status" ${editing ? (npc.npc_has_status ? 'checked' : '') : ''}> Incluir os 7 status</label>
+          ${activeRuleset().hasOwnSheet ? '<span class="msl-hint">Pra ter atributos, perícias e magias, crie uma ficha completa.</span>' : `<label class="checkbox-wrap"><input type="checkbox" id="npc-simple-status" ${editing ? (npc.npc_has_status ? 'checked' : '') : ''}> Incluir os 7 status</label>`}
         </div>
         ${formError ? `<p class="admin-error" style="display:block;">${escapeHtml(formError)}</p>` : ''}
         <button type="button" class="btn" id="npc-simple-submit">${editing ? 'salvar' : 'criar NPC'}</button>
@@ -242,7 +243,7 @@ export function renderNpcBankScreen(app, { session, profile, campaign, topApp, o
         const hpVal = Math.max(1, parseInt($('npc-simple-hp').value) || 1);
         const estVal = Math.max(0, parseInt($('npc-simple-est').value) || 0);
         const damage = $('npc-simple-damage').value.trim();
-        const hasStatus = $('npc-simple-status').checked;
+        const hasStatus = !!($('npc-simple-status') || {}).checked;
         if (!name) {
           formError = 'dê um nome pro NPC.';
           render();

@@ -202,6 +202,8 @@ export async function listCampaignNpcs(campaignId) {
 // em todo status, já confirmado -- mestre não precisa "distribuir
 // pontos" de um NPC) e devolve pra abrir a ficha/inventário na hora.
 export async function createCompleteNpc(campaignId, name) {
+  // Magic Learning: a ficha mora em system_data.msl; já nasce "concluída" (o mestre não distribui pontos de NPC) com HP/PE/MP do nível 0 (15/20/10)
+  const msl = activeRuleset().id === 'magic-learning';
   const { data, error } = await supabase
     .from('characters')
     .insert({
@@ -211,8 +213,9 @@ export async function createCompleteNpc(campaignId, name) {
       npc_sheet_type: 'completa',
       name: name || 'Novo NPC',
       status_confirmed: true,
-      hp_current: 40,
-      estamina_current: 10,
+      hp_current: msl ? 15 : 40,
+      estamina_current: msl ? 20 : 10,
+      ...(msl ? { system_data: { msl: { initialized: true, done: true, mp: 10 } } } : {}),
       data: {
         items: [], containers: [], order: [],
         equipSlots: [

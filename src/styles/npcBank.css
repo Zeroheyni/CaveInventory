@@ -37,3 +37,4 @@
 
 /* seletor de inventário do mestre -- reusa .ficha-dash-card, só realça o hover */
 .npc-chooser-card:hover{ border-color: var(--accent-core); box-shadow: 0 8px 20px rgba(0,0,0,0.3); }
+.npc-bank-scope{ font:400 11px var(--font-mono); letter-spacing:0; color: var(--ink-faint); margin-left:6px; text-transform:none; }
