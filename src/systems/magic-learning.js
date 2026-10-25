@@ -119,6 +119,7 @@ export function mslOf(char) {
     fluxoUsed: Math.max(0, parseInt(raw.fluxoUsed, 10) || 0), // MP gasto no turno atual (limite = Fluxo)
     done: !!raw.done, // criação concluída
     family: String(raw.family || ''), // família mágica (Herança Arcana): libera as magias de família dessa família
+    perksConfirmed: !!raw.perksConfirmed, // vantagens/desvantagens confirmadas: o jogador não mexe mais (só o mestre destranca)
     canCreateSpells: !!raw.canCreateSpells, // o mestre libera: jogador só cria magia própria se isto estiver ligado (padrão: não pode)
     noMagic: !!raw.noMagic, // "ainda não tem magia": esconde atributos/status mágicos e não cobra a distribuição deles
   };

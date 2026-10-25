@@ -131,7 +131,10 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
   const canCreateSpell = () => isMaster || (isOwner() && !!mslOf(sheet).canCreateSpells);
   const inCreation = () => !mslOf(sheet).done;
   // jogador monta o personagem durante a criação; depois só o mestre mexe em atributos/traços (o jogador mexe em recursos, magias, notas)
-  const canEditTraits = () => isMaster || (isOwner() && inCreation());
+  // vantagens/desvantagens: o jogador só mexe na criação E enquanto não confirmou (confirmar tranca; só o mestre destranca)
+  const canEditTraits = () => isMaster || (isOwner() && inCreation() && !mslOf(sheet).perksConfirmed);
+  // escola e elemento: o jogador escolhe durante a criação
+  const canEditSetup = () => isMaster || (isOwner() && inCreation());
 
   // primeira abertura: HP/PE/MP começam cheios (sem isso ficam com os valores padrão do Cave Story)
   async function initializeSheet() {
@@ -448,7 +451,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       [left <= 0, '1. Atributos', left <= 0 ? 'todos os pontos distribuídos' + (msl.noMagic ? ' (sem magia por enquanto: os mágicos não contam)' : '') : 'faltam ' + poolLeft.basicos + ' básicos · ' + poolLeft.sociais + ' sociais' + (msl.noMagic ? '' : ' · ' + poolLeft.magicos + ' mágicos') + ' (pontos de um grupo não passam pro outro)'],
       [true, '2. Status', 'calculados sozinhos pelas fórmulas (barras e quadros acima)'],
       [msl.skillGrades <= 0, '3. Perícias', msl.skillGrades <= 0 ? 'os 4 graus foram usados' : 'faltam ' + msl.skillGrades + ' de ' + 4 + ' graus (básico custa 1, treinado 2; ninguém começa como mestre)'],
-      [pv.left >= 0 && pv.rawGained <= 8, '4. Vantagens e desvantagens', 'PV ganhos ' + pv.gained + '/8 · gastos ' + pv.spent + ' · sobra ' + pv.left + ' (o que sobrar na criação é perdido)'],
+      [pv.left >= 0 && pv.rawGained <= 8 && msl.perksConfirmed, '4. Vantagens e desvantagens', 'PV ganhos ' + pv.gained + '/8 · gastos ' + pv.spent + ' · sobra ' + pv.left + (msl.perksConfirmed ? ' · 🔒 confirmadas' : ' — falta CONFIRMAR na aba Traços (o que sobrar na criação é perdido)')],
       [msl.sanidade >= 100 || true, '5. Sanidade', 'começa em 100'],
       [true, '6. Nível', 'nível 1, 0 de XP (sobe com XP do mestre)'],
     ];
@@ -531,7 +534,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
       <div class="msl-perk">
         <div class="msl-perk-head"><b>${escapeHtml(def.name)}</b><span class="msl-lvl">nív ${def.level}</span>${canEditTraits() ? `<button type="button" class="msl-x" data-del-${kind}="${e.id}">×</button>` : ''}</div>
         <div class="msl-perk-text">${escapeHtml(def.text)}</div>
-        ${def.choice ? `<input type="text" class="msl-inline" data-perk-note="${kind}:${e.id}" placeholder="${escapeHtml(def.choice)}…" value="${escapeHtml(e.note || '')}" ${canEdit() ? '' : 'disabled'}>` : ''}
+        ${def.choice ? `<input type="text" class="msl-inline" data-perk-note="${kind}:${e.id}" placeholder="${escapeHtml(def.choice)}…" value="${escapeHtml(e.note || '')}" ${canEditTraits() ? '' : 'disabled'}>` : ''}
       </div>`;
   }
   // ---- seletor visual de vantagens/desvantagens: cartões com o texto inteiro, filtro por nível e busca ----
@@ -598,6 +601,9 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
         <div class="ficha-section-head">
           <span class="ficha-section-title">VANTAGENS E DESVANTAGENS</span>
           ${!msl.done ? `<span class="msl-pool">PV ganhos <b>${pv.gained}</b> / ${DISADVANTAGE_PV_MAX}</span><span class="msl-pool">gastos <b>${pv.spent}</b></span><span class="msl-pool ${pv.left < 0 ? 'bad' : ''}">sobra <b>${pv.left}</b></span>` : ''}
+          ${msl.perksConfirmed ? `<span class="msl-pool msl-locked" title="as vantagens e desvantagens foram confirmadas">🔒 confirmadas</span>` : ''}
+          ${isMaster && msl.perksConfirmed ? `<button type="button" class="btn btn-ghost" data-act="perks-unlock" title="deixa o jogador editar de novo">🔓 destrancar</button>` : ''}
+          ${isOwner() && !isMaster && !msl.done && !msl.perksConfirmed ? `<button type="button" class="btn" data-act="perks-confirm" title="tranca as vantagens e desvantagens: depois só o mestre consegue mudar">✔ confirmar vantagens e desvantagens</button>` : ''}
         </div>
         ${warn.length ? `<p class="admin-error" style="display:block;">${warn.map(escapeHtml).join(' · ')}</p>` : ''}
         ${perkPicker && canEditTraits() ? perkPickerHtml(msl, pv) : ''}
@@ -966,7 +972,7 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
 
   function spellsTab(msl, d) {
     const known = msl.spells;
-    const canEditSchool = canEditTraits();
+    const canEditSchool = canEditSetup();
     return `
       <div class="ficha-section">
         <div class="ficha-section-head"><span class="ficha-section-title">ESCOLA E ELEMENTO</span></div>
@@ -1397,6 +1403,16 @@ export function renderFichaMslScreen(app, { session, profile, campaign, characte
           m.pool = { basicos: m.pool.basicos - used.basicos, sociais: m.pool.sociais - used.sociais, magicos: m.pool.magicos - used.magicos };
         }, {}, { syncMax: true });
       }
+      if (act === 'perks-confirm') {
+        const pv = pvSummary(msl);
+        if (pv.left < 0) return window.alert('Você gastou ' + -pv.left + ' PV a mais do que ganhou. Tire alguma vantagem ou pegue mais desvantagens antes de confirmar.');
+        if (pv.lvl3adv > 1) return window.alert('Só uma vantagem de nível 3 na criação. Tire a que sobra antes de confirmar.');
+        const rest = pv.left > 0 ? '\n\nAtenção: sobram ' + pv.left + ' PV, e o que sobra na criação é perdido.' : '';
+        if (!window.confirm('Confirmar as vantagens e desvantagens? Depois disso só o mestre consegue mudar.' + rest)) return;
+        perkPicker = null;
+        return commit((m) => (m.perksConfirmed = true));
+      }
+      if (act === 'perks-unlock') return commit((m) => (m.perksConfirmed = false));
       if (act === 'perk-open') {
         perkPicker = el.dataset.kind;
         perkFilter = { level: '', text: '' };

@@ -360,3 +360,4 @@
 .msl-ed-bases .msl-hint{ flex-basis:100%; }
 .msl-ed-bases label{ display:flex; flex-direction:column; gap:3px; font:10px var(--font-mono); color: var(--ink-faint); }
 .msl-ed-bases input{ width:110px !important; }
+.msl-locked{ color:#ffd93d; border-color: rgba(255,217,61,0.5); }
