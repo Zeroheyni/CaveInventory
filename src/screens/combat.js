@@ -39,6 +39,8 @@ import {
 import { listCampaignMembers } from '../accounts.js';
 import { hpMax as charHpMax, estaminaMax as charEstaminaMax, hpBarClass, statusStats, statValueOf, testModOf, compactStats } from '../characterSheet.js';
 import { activeRuleset } from '../systems/index.js';
+import { createMslCombatUi } from './combatMsl.js';
+import { initiativeFor } from '../systems/msl-combat.js';
 import { evaluateDamageFormula, normalizeItemName } from '../shared/damageFormula.js';
 import { rollDice, listRecentRolls, subscribeDiceRolls, DICE_PRESETS, normalizeCustomDie, getHiddenRollMode, setHiddenRollMode, onHiddenRollMode, revealRoll } from '../dice.js';
 import {
@@ -96,6 +98,30 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
   let combatState = { active: false, round: 1 };
   let participants = [];
   let charactersInCampaign = [];
+  // Magic Learning: Pontos de Ação, exaustão, iniciativa automática e dano com tipos (ver combatMsl.js)
+  const isMsl = activeRuleset().id === 'magic-learning';
+  const hpFloor = () => (isMsl ? -30 : 0); // Morrendo vai até -15; Propenso a Ferimentos morre antes
+  const msl = isMsl
+    ? createMslCombatUi({
+        campaignId,
+        isMaster,
+        userId: rollerId,
+        characterId,
+        getState: () => combatState,
+        getParticipants: () => participants,
+        getCurrent: () => currentTurnNow(),
+        getMySelf: () => participants.find((p) => p.character_id === characterId) || null,
+        charOf: (p) => charOf(p),
+        charForParticipant: (p) => (isMaster ? charOf(p) : p.character_id && p.character_id === characterId ? myStatusStats : null),
+        rerender: () => render(),
+        reload: () => load(),
+      })
+    : null;
+  function currentTurnNow() {
+    if (!combatState.active) return null;
+    const all = participants.slice().sort((a, b) => a.position - b.position);
+    return combatState.fixed_initiative ? all.find((p) => p.id === combatState.current_turn_id) || all[0] || null : all[0] || null;
+  }
   let members = [];
   let addFormOpen = false;
   let addSource = 'character';
@@ -693,10 +719,13 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
               ? `<button type="button" class="btn btn-ghost" id="combat-toggle-fixed" title="trava a ordem: em vez da lista girar a cada turno, só a borda verde caminha">${combatState.fixed_initiative ? '🔓 destravar iniciativa' : '🔒 fixar iniciativa'}</button>`
               : ''
           }
+          ${msl && participants.length > 0 ? msl.topButtonsHtml() : ''}
           ${isMaster && participants.length > 0 ? `<button type="button" class="btn" id="combat-pass-turn">passar turno ▸</button>` : ''}
           ${isMaster ? `<button type="button" class="admin-danger-btn" id="combat-end-btn">encerrar combate</button>` : ''}
         </div>
       </div>
+
+      ${msl ? msl.panelHtml() : ''}
 
       ${
         !isMaster && mySelf
@@ -732,6 +761,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         ${list.length === 0 ? '<div class="combat-empty">ninguém na iniciativa ainda</div>' : list.map((p) => participantRow(p, currentTurn && p.id === currentTurn.id, rankMap.get(p.id))).join('')}
       </div>
 
+      ${msl && isMaster ? msl.damageHtml() : ''}
       ${isMaster ? addParticipantSection() : ''}
       ${isMaster ? permissionsSection() : ''}
       ${barsMgmtHtml}
@@ -751,6 +781,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         <span class="combat-team-dot team-${p.team}"></span>
         <div class="combat-row-main">
           <div class="combat-row-name">${escapeHtml(p.display_name)}</div>
+          ${msl ? msl.rowBadges(p) : ''}
           <div class="combat-row-sub">
             ${
               showHp
@@ -882,7 +913,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
             <label>Iniciativa</label>
             <div style="display:flex; gap:6px;">
               <input type="number" class="slot-select" id="combat-add-initiative" placeholder="valor">
-              <button type="button" class="combat-roll-btn" id="combat-add-roll" title="rolar 1d20">🎲</button>
+              <button type="button" class="combat-roll-btn" id="combat-add-roll" title="${msl ? 'rolar 1d20 + Reflexos÷2' : 'rolar 1d20'}">🎲</button>
             </div>
           </div>
           <div class="field" style="margin-bottom:10px;">
@@ -1084,6 +1115,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     wired = true;
 
     app.addEventListener('click', async (e) => {
+      if (msl && (await msl.onClick(e))) return;
       const trayToggleBtn = e.target.closest('#combat-dice-tray-toggle');
       if (trayToggleBtn) {
         diceTrayOpen = !diceTrayOpen;
@@ -1383,6 +1415,13 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
       const rollBtn = e.target.closest('#combat-add-roll');
       if (rollBtn) {
+        if (msl) {
+          // personagem ou NPC do banco selecionado: usa a ficha dele; avulso: só o d20
+          const pickId = addSource === 'character' ? ($('combat-add-character') || {}).value : addSource === 'npc_bank' ? ($('combat-add-bank-npc') || {}).value : null;
+          const ch = pickId ? charactersInCampaign.find((c) => c.id === pickId) : null;
+          $('combat-add-initiative').value = String(initiativeFor(ch).total);
+          return;
+        }
         $('combat-add-initiative').value = String(Math.floor(Math.random() * 20) + 1);
         return;
       }
@@ -1395,7 +1434,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         const pid = hpDeltaBtn.dataset.pid;
         const p = participants.find((x) => x.id === pid);
         if (!p) return;
-        const next = Math.max(0, Math.min(p.hp_max, p.hp_current + Number(hpDeltaBtn.dataset.hpDelta)));
+        const next = Math.max(hpFloor(), Math.min(p.hp_max, p.hp_current + Number(hpDeltaBtn.dataset.hpDelta)));
         p.hp_current = next; // otimista -- clique seguinte já lê o valor atualizado, sem esperar o roundtrip
         render();
         await updateParticipantHp(pid, next, p.character_id);
@@ -1440,6 +1479,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     });
 
     app.addEventListener('change', async (e) => {
+      if (msl && msl.onChange(e)) return;
       const trayQtyInput = e.target.closest('#combat-dice-qty');
       if (trayQtyInput) {
         diceQty = Math.min(10, Math.max(1, parseInt(trayQtyInput.value, 10) || 1));
@@ -1595,7 +1635,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
         const pid = hpInput.dataset.pid;
         const p = participants.find((x) => x.id === pid);
         if (!p) return;
-        const next = Math.max(0, Math.min(p.hp_max, parseInt(hpInput.value) || 0));
+        const next = Math.max(hpFloor(), Math.min(p.hp_max, parseInt(hpInput.value) || 0));
         await updateParticipantHp(pid, next, p.character_id);
         return;
       }
@@ -1621,6 +1661,7 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
 
     // ---- arrastar pra reordenar (só mestre) ----
     const list = () => $('combat-list');
+    if (msl) app.addEventListener('input', (e) => msl.onInput(e));
     app.addEventListener('dragstart', (e) => {
       const row = e.target.closest('.combat-participant-row[draggable="true"]');
       if (!row) return;
@@ -1789,6 +1830,10 @@ export function renderCombatScreen(app, { session, profile, campaign, characterI
     addCharacterId = null;
     addBankNpcId = null;
     await load();
+    if (msl) {
+      await msl.autoSort();
+      await load();
+    }
   }
 
   // o 🙈 pode ser ligado no dock do tabuleiro ou na aba Dados: repinta o botão da bandeja

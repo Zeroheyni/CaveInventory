@@ -6,6 +6,7 @@ import { supabase } from './supabaseClient.js';
 import { logEvent } from './battleLog.js';
 import { setMemberFlags } from './accounts.js';
 import { activeRuleset } from './systems/index.js';
+import { startTurnEffects } from './systems/msl-combat.js';
 
 // catálogo fixo de condições (Fase 8, db/031_patch_combat_conditions.sql) --
 // fórmula/catálogo em vez de texto livre, mesmo espírito de STATUS_STATS
@@ -98,6 +99,8 @@ export async function passTurn(campaignId, newOrder, combatState) {
     .update({ ...nextState, updated_at: new Date().toISOString() })
     .eq('campaign_id', campaignId);
   if (error) throw error;
+  // Magic Learning: quem ganhou a vez sofre sangramento/queimadura no início do turno
+  if (activeRuleset().id === 'magic-learning') startTurnEffects(newOrder[0].id).catch(() => {});
 }
 
 // Variante de "passar o turno" pro modo iniciativa fixa -- não mexe em
@@ -114,6 +117,7 @@ export async function passTurnFixed(campaignId, nextTurnId, participantCount, co
     .update({ ...nextState, current_turn_id: nextTurnId, updated_at: new Date().toISOString() })
     .eq('campaign_id', campaignId);
   if (error) throw error;
+  if (activeRuleset().id === 'magic-learning' && nextTurnId) startTurnEffects(nextTurnId).catch(() => {});
 }
 
 // "Passar o turno" / "voltar o turno" a partir de qualquer tela (o rastreador flutuante do tabuleiro usa): recebe os participantes e o

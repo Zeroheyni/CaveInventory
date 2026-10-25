@@ -180,6 +180,8 @@ export const ACTIONS = [
 export const MSL_CONDITIONS = [
   { key: 'sangrando', label: 'Sangrando', icon: '🩸', color: '#ff5a5a' },
   { key: 'queimando', label: 'Queimando', icon: '🔥', color: '#ff8a4c' },
+  { key: 'impactado', label: 'Impacto (−1 PA)', icon: '💥', color: '#ffb84d' },
+  { key: 'desmaiado', label: 'Desmaiado', icon: '😵', color: '#a3a3a3' },
   { key: 'congelado', label: 'Gelo (-2 PA)', icon: '❄', color: '#5ad4ff' },
   { key: 'eletrizado', label: 'Eletrizado', icon: '⚡', color: '#ffd93d' },
   { key: 'ventania', label: 'Vento (-Reflexos)', icon: '🌪', color: '#9db4c7' },
