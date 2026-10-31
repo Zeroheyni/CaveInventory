@@ -1606,6 +1606,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   }
 
   async function handleDeleteToken(tokenId) {
+    if (!isMaster) return; // só o mestre tira token (o banco também recusa, db/086)
     try {
       await deleteToken(tokenId);
       tokens = tokens.filter((t) => t.id !== tokenId);
@@ -1834,7 +1835,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
         title="${escapeHtml(t.label || '?')}">
         ${avatarOrLetter(t)}
         ${isMaster ? `<button type="button" class="board-token-edit-btn" data-token-edit-open="${t.id}" title="editar aparência">⚙</button>` : ''}
-        ${movable ? `<button type="button" class="board-token-del" data-token-del="${t.id}" title="tirar do tabuleiro">×</button>` : ''}
+        ${isMaster ? `<button type="button" class="board-token-del" data-token-del="${t.id}" title="tirar do tabuleiro">×</button>` : ''}
         ${tokenLightButtonHtml(t)}
         ${tokenEditPopoverHtml(t)}
       </div>`;
