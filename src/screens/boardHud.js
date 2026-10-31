@@ -34,7 +34,7 @@ import { getCombatState, getParticipants, subscribeCombat, isVisibleToPlayer, up
 import { renderCombatScreen } from './combat.js';
 import { renderDiceScreen } from './dice.js';
 import { hpMax, estaminaMax, statusStats, testModOf, compactStats } from '../characterSheet.js';
-import { paOf, isExhaustedRound, PA_PER_ROUND } from '../systems/msl-combat.js';
+import { paOf, isExhaustedRound, PA_PER_ROUND, spendAction, refundAction, enterExhaustion } from '../systems/msl-combat.js';
 import { activeRuleset, useSystemOf } from '../systems/index.js';
 import { listCharacterCustomBarsFor, customBarMax, updateCharacterCustomBarValue } from '../customBars.js';
 import { rollDice, subscribeDiceRolls, DICE_PRESETS, sidesFromDie, getHiddenRollMode, setHiddenRollMode, onHiddenRollMode, revealRoll } from '../dice.js';
@@ -1111,6 +1111,7 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
             }).join('')}
           </div>
         </div>
+        ${paHtml()}
         ${diceHtml}
       </div>`;
     wire();
@@ -1204,6 +1205,93 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
     if (more) more.addEventListener('click', openDice);
     const hid = el.querySelector('#dock-hidden');
     if (hid) hid.addEventListener('click', () => setHiddenRollMode(!getHiddenRollMode()));
+    wirePa();
+  }
+
+  // ------------------------------------------------ Pontos de Ação (Magic Learning): 6 por rodada, cada PA gasto custa 1 PE também
+  // Vive no participante do combate (mesmas colunas da aba Combate e do rastreador), então só funciona com combate ativo.
+  const isMsl = activeRuleset().id === 'magic-learning';
+  const pa = { state: null, p: null, msg: '', busy: false };
+  let paMsgTimer = null;
+  let paReloadTimer = null;
+
+  function paHtml() {
+    if (!isMsl) return '';
+    const live = !!(pa.state && pa.state.active && pa.p);
+    const round = pa.state ? pa.state.round : 1;
+    const now = live ? paOf(pa.p, round) : PA_PER_ROUND;
+    const exh = live && isExhaustedRound(pa.p, round);
+    const pips = Array.from({ length: PA_PER_ROUND }, (_, i) => '<i class="' + (live && i < now ? 'on' : '') + '"></i>').join('');
+    const off = live && !pa.busy ? '' : ' disabled';
+    const costBtn = (c) => '<button type="button" class="dock-chip dock-pa-btn" data-pa-cost="' + c + '"' + (live && c > now ? ' disabled' : off) + ' title="gasta ' + c + ' PA' + (exh ? '' : ' e ' + c + ' PE') + '">−' + c + ' PA</button>';
+    const noPe = live && !exh && char && char.estamina_current <= 0;
+    return (
+      '<div class="dock-group dock-pa">' +
+      '<span class="dock-group-label">AÇÕES</span>' +
+      '<div class="dock-chips">' +
+      '<span class="dock-pa-pips' + (exh ? ' exh' : '') + '" title="' + (live ? 'Pontos de Ação desta rodada' + (exh ? ' (agindo exausto)' : '') : 'Pontos de Ação: só valem com o combate ativo') + '">' + pips + '</span>' +
+      '<b class="dock-pa-num">' + (live ? now : '–') + '<small>/' + PA_PER_ROUND + '</small></b>' +
+      costBtn(1) + costBtn(2) + costBtn(3) +
+      '<button type="button" class="dock-chip dock-pa-btn" data-pa-refund="1"' + off + ' title="devolve 1 PA (e 1 PE): corrige um clique errado">↺ +1</button>' +
+      (noPe ? '<button type="button" class="dock-chip dock-pa-btn warn" data-pa-exh="1"' + off + ' title="com 0 PE: rola 1d6 de PA nesta rodada e ganha +1 de exaustão">😮‍💨 agir exausto</button>' : '') +
+      (live ? '' : '<span class="dock-pa-hint">só em combate</span>') +
+      '<span class="dock-pa-msg">' + escapeHtml(pa.msg) + '</span>' +
+      '</div></div>'
+    );
+  }
+  function renderPa() {
+    const slot = el.querySelector('.dock-pa');
+    if (!slot) return;
+    slot.outerHTML = paHtml();
+    wirePa();
+  }
+  function paFlash(msg) {
+    pa.msg = msg;
+    clearTimeout(paMsgTimer);
+    paMsgTimer = setTimeout(() => {
+      pa.msg = '';
+      renderPa();
+    }, 4500);
+  }
+  async function loadPa() {
+    if (!hasChar || !isMsl) return;
+    try {
+      const [state, { data: p }] = await Promise.all([
+        getCombatState(campaignId),
+        supabase.from('combat_participants').select('*').eq('campaign_id', campaignId).eq('character_id', characterId).maybeSingle(),
+      ]);
+      pa.state = state;
+      pa.p = p || null;
+    } catch (_) {
+      /* mantém o último estado conhecido */
+    }
+    renderPa();
+  }
+  async function paRun(fn) {
+    if (pa.busy || !pa.p || !pa.state || !pa.state.active) return;
+    pa.busy = true;
+    renderPa();
+    try {
+      await fn(pa.p, pa.state.round);
+      pa.msg = '';
+      // PE gasto/devolvido pelo combate: espelha na barra do dock
+      if (char) {
+        char.estamina_current = pa.p.stamina_current;
+        updateVitalUi('estamina');
+      }
+    } catch (err) {
+      paFlash(err.message);
+    }
+    pa.busy = false;
+    renderPa();
+  }
+  function wirePa() {
+    el.querySelectorAll('[data-pa-cost]').forEach((b) => b.addEventListener('click', () => paRun((p, round) => spendAction(p, round, { cost: Number(b.dataset.paCost), label: 'PA gasto' }))));
+    el.querySelectorAll('[data-pa-refund]').forEach((b) => b.addEventListener('click', () => paRun((p, round) => refundAction(p, round, 1))));
+    el.querySelectorAll('[data-pa-exh]').forEach((b) => b.addEventListener('click', () => paRun(async (p, round) => {
+      const r = await enterExhaustion(p, round, char);
+      paFlash('Exausto: ' + r.d6 + ' PA nesta rodada · exaustão ' + r.level + (r.fainted ? ' · desmaiou' : ''));
+    })));
   }
 
   // ------------------------------------------------ carga + realtime
@@ -1265,6 +1353,16 @@ function mountDock(el, { campaignId, session, profile, characterId, characterNam
         reloadTimer = setTimeout(load, 400);
       })
       .subscribe();
+    if (isMsl) {
+      subscribeCombat(
+        campaignId,
+        () => {
+          clearTimeout(paReloadTimer);
+          paReloadTimer = setTimeout(loadPa, 400);
+        },
+        'combat-board-dock-' + characterId
+      );
+    }
   }
-  load();
+  load().then(loadPa);
 }

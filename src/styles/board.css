@@ -938,3 +938,18 @@
 .trk-pa.exh i.on{ background:#ffd93d; border-color:#ffd93d; box-shadow: 0 0 5px rgba(255,217,61,0.5); }
 .trk-exh{ font:700 9px var(--font-mono); color:#ffd93d; line-height:1; margin-top:1px; }
 .trk-card.current .trk-pa i.on{ box-shadow: 0 0 7px var(--accent); }
+
+/* ---------- dock: Pontos de Ação (Magic Learning) ---------- */
+.dock-pa{ flex:1 0 100%; }
+.dock-pa-pips{ display:inline-flex; gap:5px; align-items:center; padding:0 4px; }
+.dock-pa-pips i{ width:14px; height:14px; border-radius:50%; background: rgba(255,255,255,0.08); border:2px solid rgba(255,255,255,0.2); transition: background .2s ease, box-shadow .2s ease, transform .2s ease; }
+.dock-pa-pips i.on{ background: var(--accent); border-color: var(--accent); box-shadow: 0 0 8px rgba(var(--accent-rgb),0.55); }
+.dock-pa-pips.exh i.on{ background:#ffd93d; border-color:#ffd93d; box-shadow:0 0 8px rgba(255,217,61,0.55); }
+.dock-pa-num{ font-family: var(--font-display); font-size:17px; color: var(--ink); min-width:34px; }
+.dock-pa-num small{ font-size:10px; color: var(--ink-faint); }
+.dock-pa-btn{ font-weight:700; }
+.dock-pa-btn:disabled{ opacity:.4; cursor:not-allowed; transform:none !important; }
+.dock-pa-btn:not(:disabled):hover{ border-color: var(--accent); color: var(--accent); background: var(--accent-faint); }
+.dock-pa-btn.warn{ color:#ffd93d; border-color: rgba(255,217,61,0.5); }
+.dock-pa-hint{ font:11px var(--font-mono); color: var(--ink-faint); }
+.dock-pa-msg{ font:11px var(--font-mono); color:#ff9a7a; max-width:360px; }
