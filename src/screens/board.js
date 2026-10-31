@@ -54,6 +54,10 @@ import {
   updateWalls,
   updateBoardSettings,
   listBoardLights,
+  listBoardDrawings,
+  insertDrawing,
+  deleteDrawing,
+  clearBoardDrawings,
   insertLight,
   updateLight,
   deleteLight,
@@ -242,6 +246,11 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     name: () => myDisplayName(),
     defaultColor: () => myCursorColor(),
     send: (payload) => broadcastFx(tokensChannel, payload),
+    // desenhos de indicação PERMANENTES (db/085): só o mestre grava/apaga; todo mundo vê
+    canPersist: () => isMaster && !viewAsPlayer,
+    persist: (shape) => insertDrawing(viewBoardId, campaignId, shape),
+    erase: (id) => deleteDrawing(id),
+    eraseAll: () => clearBoardDrawings(viewBoardId),
     // ferramenta de desenho e ferramenta de parede disputam o mesmo clique: ligar uma desliga a outra
     onToolChange: (t) => {
       if (t && wallTool) setWallTool(null);
@@ -616,6 +625,16 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     dragLastX = Math.max(0, Math.min(100, p.x));
     dragLastY = Math.max(0, Math.min(100, p.y));
     return { x: dragLastX, y: dragLastY };
+  }
+
+  let drawingsReloadTimer = null;
+  async function reloadDrawings() {
+    if (!viewBoardId) return;
+    try {
+      fx.setPermanent(await listBoardDrawings(viewBoardId));
+    } catch (_) {
+      // sem a tabela (migration db/085 ainda não aplicada) ou sem rede: o tabuleiro segue sem desenhos permanentes
+    }
   }
 
   async function reloadWalls() {
@@ -1165,7 +1184,14 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     } catch (_) {
       lights = [];
     }
+    let drawings = [];
+    try {
+      drawings = await listBoardDrawings(boardId);
+    } catch (_) {
+      drawings = []; // migration db/085 ainda não aplicada
+    }
     render();
+    fx.setPermanent(drawings);
     resubscribeTokens();
     startCursorPruneTimer();
     await loadMemory();
@@ -1230,6 +1256,10 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       onCursor: handleRemoteCursor,
       onDrag: handleRemoteDrag,
       onFx: (payload) => fx.receive(payload),
+      onDrawings: () => {
+        clearTimeout(drawingsReloadTimer);
+        drawingsReloadTimer = setTimeout(reloadDrawings, 250);
+      },
       onWalls: () => {
         clearTimeout(wallsReloadTimer);
         wallsReloadTimer = setTimeout(reloadWalls, 300);

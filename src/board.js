@@ -142,6 +142,37 @@ export async function updateWalls(updates) {
 }
 
 // ---------------------------------------------------------------
+// Desenhos de indicação PERMANENTES (db/085): só o mestre cria/apaga, a mesa inteira vê. Coordenadas em % do palco.
+// (ping e desenho temporário continuam sendo Broadcast efêmero -- ver boardFx.js.)
+// shape: { kind: 'free'|'arrow'|'circle'|'pin', color, data, label? }
+// ---------------------------------------------------------------
+export async function listBoardDrawings(boardId) {
+  const { data, error } = await supabase.from('board_drawings').select('*').eq('board_id', boardId).order('created_at');
+  if (error) throw error;
+  return data;
+}
+
+export async function insertDrawing(boardId, campaignId, shape) {
+  const { data, error } = await supabase
+    .from('board_drawings')
+    .insert({ board_id: boardId, campaign_id: campaignId, kind: shape.kind, color: shape.color, data: shape.data, label: shape.label || null })
+    .select()
+    .single();
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteDrawing(id) {
+  const { error } = await supabase.from('board_drawings').delete().eq('id', id);
+  if (error) throw error;
+}
+
+export async function clearBoardDrawings(boardId) {
+  const { error } = await supabase.from('board_drawings').delete().eq('board_id', boardId);
+  if (error) throw error;
+}
+
+// ---------------------------------------------------------------
 // Luzes (db/060) -- presas a um token (token_id) ou fixas no cenário
 // (token_id null + x/y). Raio em % da largura do palco. Ver
 // boardLighting.js (render) e LIGHT_PRESETS (tipos).
@@ -320,7 +351,7 @@ async function dropChannel(topic) {
 }
 
 // devolve uma Promise<canal> (o canal só é criado depois que o antigo de mesmo tópico saiu)
-export async function subscribeBoard(boardId, { onChange, onCursor, onDrag, onWalls, onLights, onFx } = {}) {
+export async function subscribeBoard(boardId, { onChange, onCursor, onDrag, onWalls, onLights, onFx, onDrawings } = {}) {
   await dropChannel('board-tokens-' + boardId);
   const channel = supabase.channel('board-tokens-' + boardId);
   if (onChange) {
@@ -331,6 +362,9 @@ export async function subscribeBoard(boardId, { onChange, onCursor, onDrag, onWa
   }
   if (onLights) {
     channel.on('postgres_changes', { event: '*', schema: 'public', table: 'board_lights', filter: `board_id=eq.${boardId}` }, onLights);
+  }
+  if (onDrawings) {
+    channel.on('postgres_changes', { event: '*', schema: 'public', table: 'board_drawings', filter: `board_id=eq.${boardId}` }, onDrawings);
   }
   if (onCursor) channel.on('broadcast', { event: 'cursor' }, ({ payload }) => onCursor(payload));
   if (onDrag) channel.on('broadcast', { event: 'drag' }, ({ payload }) => onDrag(payload));

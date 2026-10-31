@@ -953,3 +953,11 @@
 .dock-pa-btn.warn{ color:#ffd93d; border-color: rgba(255,217,61,0.5); }
 .dock-pa-hint{ font:11px var(--font-mono); color: var(--ink-faint); }
 .dock-pa-msg{ font:11px var(--font-mono); color:#ff9a7a; max-width:360px; }
+
+/* ---------- desenhos permanentes (mestre) ---------- */
+.board-fx-sep{ height:1px; background: var(--stone-line); margin:2px 4px; }
+.board-fx-btn small{ display:block; font-size:7.5px; letter-spacing:.05em; line-height:1; margin-top:1px; opacity:.85; }
+.board-fx-btn.perm.on{ background: rgba(255,207,122,0.16); border-color:#ffcf7a; color:#ffcf7a; box-shadow:0 0 10px rgba(255,207,122,0.4); }
+.board-fx-btn.danger:hover{ background: rgba(var(--danger-rgb),0.18); color: var(--danger); }
+.board-fx-capture[data-tool="erase"]{ cursor: not-allowed; }
+.board-fx-capture[data-tool="pin"]{ cursor: copy; }

@@ -1,6 +1,11 @@
 // Tabuleiro -- efeitos temporários que TODO MUNDO vê na hora: ping (📍) e desenhos (livre / seta / círculo) que somem
 // sozinhos depois de alguns segundos. É Broadcast efêmero (nada vai pro banco), no mesmo canal do tabuleiro.
 //
+// DESENHOS PERMANENTES (db/085, só o mestre): o botão 📌 liga o modo "permanente" -- ✏ ➚ ◯ passam a GRAVAR o desenho no tabuleiro (todos
+// veem até o mestre apagar); 📍+ cria um marcador com nome; 🧽 apaga um desenho clicando nele; 🗑 limpa todos. Quem recebe a lista é
+// setPermanent() (o board.js carrega do banco e atualiza pelo realtime); aqui só se desenha, acha o desenho clicado e avisa o host
+// (host.persist / host.erase / host.eraseAll).
+//
 // Como usar na tela: um clique com a ferramenta 📍 faz o ping; Alt+clique faz o ping sem trocar de ferramenta; com ✏ ➚ ◯
 // arrasta-se pra desenhar. Coordenadas em % do palco (igual tokens), então valem em qualquer zoom/tela. O tamanho dos
 // traços/ping é constante NA TELA (compensa o zoom do palco com --inv-zoom).
@@ -13,6 +18,11 @@ const TOOLS = [
   { key: 'free', icon: '✏️', label: 'Desenho livre (some sozinho)' },
   { key: 'arrow', icon: '➚', label: 'Seta (arraste)' },
   { key: 'circle', icon: '◯', label: 'Círculo (arraste do centro pra fora)' },
+];
+// ferramentas que só o mestre vê (desenhos permanentes)
+const TOOLS_MASTER = [
+  { key: 'pin', icon: '📌', label: 'Marcador PERMANENTE com nome (clique no mapa)' },
+  { key: 'erase', icon: '🧽', label: 'Apagar um desenho permanente (clique em cima dele)' },
 ];
 const HEX = /^#[0-9a-fA-F]{6}$/;
 const clampPct = (v) => Math.max(0, Math.min(100, Number.isFinite(+v) ? +v : 0));
@@ -37,6 +47,10 @@ export function createBoardFx(host) {
   let draft = null; // desenho em andamento (só local, até soltar)
   let draftPointer = null;
   const effects = []; // { fx, t0, ... } recebidos + os meus
+  const permanent = []; // desenhos permanentes (vêm do banco): { id, fx, color, label, ... }
+  let permMode = false; // mestre: ✏ ➚ ◯ gravam no tabuleiro em vez de sumir sozinhos
+  let hidePerm = false; // só pra mim: esconde os permanentes
+  const canPersist = () => !!(host.canPersist && host.canPersist());
   const reduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
   const myColor = () => color || host.defaultColor() || '#5ad4ff';
@@ -54,7 +68,26 @@ export function createBoardFx(host) {
     }
     if (p.fx === 'arrow') return { ...base, x1: clampPct(p.x1), y1: clampPct(p.y1), x2: clampPct(p.x2), y2: clampPct(p.y2) };
     if (p.fx === 'circle') return { ...base, x: clampPct(p.x), y: clampPct(p.y), r: Math.max(0.3, clampPct(p.r)) };
+    if (p.fx === 'pin') return { ...base, x: clampPct(p.x), y: clampPct(p.y) };
     return null;
+  }
+  // linha de board_drawings -> desenho pronto pra pintar
+  function fromRow(r) {
+    if (!r) return null;
+    const e = sanitize({ fx: r.kind, uid: r.created_by, color: r.color, ...(r.data || {}) });
+    if (!e) return null;
+    e.id = r.id;
+    e.label = String(r.label || '').slice(0, 40);
+    return e;
+  }
+  function setPermanent(rows) {
+    permanent.length = 0;
+    (rows || []).forEach((r) => {
+      const e = fromRow(r);
+      if (e) permanent.push(e);
+    });
+    renderBar();
+    schedule();
   }
   function add(e) {
     effects.push({ ...e, t0: performance.now() });
@@ -239,6 +272,133 @@ export function createBoardFx(host) {
     ctx.restore();
   }
 
+  // marcador permanente: gota fixa (sem ondas nem pulo) com o nome em cima
+  function drawPin(e, k) {
+    const px = (e.x / 100) * canvas._cssW;
+    const py = (e.y / 100) * canvas._cssH;
+    ctx.save();
+    ctx.translate(px, py - 16 * k);
+    ctx.shadowColor = e.color;
+    ctx.shadowBlur = 12 * k;
+    ctx.beginPath();
+    ctx.moveTo(0, 16 * k);
+    ctx.bezierCurveTo(-13 * k, 2 * k, -11 * k, -13 * k, 0, -13 * k);
+    ctx.bezierCurveTo(11 * k, -13 * k, 13 * k, 2 * k, 0, 16 * k);
+    ctx.closePath();
+    ctx.fillStyle = e.color;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.lineWidth = 2 * k;
+    ctx.strokeStyle = 'rgba(255,255,255,0.92)';
+    ctx.stroke();
+    ctx.beginPath();
+    ctx.arc(0, -3 * k, 4.2 * k, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.95)';
+    ctx.fill();
+    if (e.label) {
+      ctx.font = '600 ' + 12 * k + 'px "JetBrains Mono", monospace';
+      const tw = ctx.measureText(e.label).width;
+      const bw = tw + 14 * k;
+      const bh = 19 * k;
+      const bx = -bw / 2;
+      const by = -13 * k - bh - 6 * k;
+      ctx.beginPath();
+      if (ctx.roundRect) ctx.roundRect(bx, by, bw, bh, bh / 2);
+      else ctx.rect(bx, by, bw, bh);
+      ctx.fillStyle = 'rgba(8,12,16,0.85)';
+      ctx.fill();
+      ctx.lineWidth = 1.3 * k;
+      ctx.strokeStyle = e.color;
+      ctx.stroke();
+      ctx.fillStyle = '#fff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(e.label, 0, by + bh / 2 + 0.5 * k);
+    }
+    ctx.restore();
+  }
+
+  function paintPermanent(e, k) {
+    if (e.fx === 'free') drawFree(e, 0.95, k);
+    else if (e.fx === 'arrow') drawArrow(e, 0.95, k);
+    else if (e.fx === 'circle') drawCircle(e, 0.95, k);
+    else if (e.fx === 'pin') drawPin(e, k);
+  }
+
+  // ---- achar o desenho permanente sob o clique (ferramenta 🧽) ----
+  function distSeg(px, py, x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const l2 = dx * dx + dy * dy;
+    const t = l2 ? Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / l2)) : 0;
+    return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
+  }
+  function hitPermanent(p) {
+    if (!canvas || !canvas._cssW) return null;
+    const W = canvas._cssW;
+    const H = canvas._cssH;
+    const px = (p.x / 100) * W;
+    const py = (p.y / 100) * H;
+    const k = invZoom();
+    const thr = 14 * k;
+    let best = null;
+    let bd = Infinity;
+    permanent.forEach((e) => {
+      let d = Infinity;
+      if (e.fx === 'free') {
+        for (let i = 1; i < e.pts.length; i++) {
+          d = Math.min(d, distSeg(px, py, (e.pts[i - 1][0] / 100) * W, (e.pts[i - 1][1] / 100) * H, (e.pts[i][0] / 100) * W, (e.pts[i][1] / 100) * H));
+        }
+      } else if (e.fx === 'arrow') {
+        d = distSeg(px, py, (e.x1 / 100) * W, (e.y1 / 100) * H, (e.x2 / 100) * W, (e.y2 / 100) * H);
+      } else if (e.fx === 'circle') {
+        const dc = Math.hypot(px - (e.x / 100) * W, py - (e.y / 100) * H);
+        d = Math.abs(dc - (e.r / 100) * W);
+      } else if (e.fx === 'pin') {
+        const dc = Math.hypot(px - (e.x / 100) * W, py - ((e.y / 100) * H - 16 * k));
+        d = dc < 22 * k ? dc / 2 : Infinity;
+      }
+      if (d < thr && d < bd) {
+        bd = d;
+        best = e;
+      }
+    });
+    return best;
+  }
+  async function eraseAt(p) {
+    const e = hitPermanent(p);
+    if (!e || !host.erase) return;
+    const i = permanent.indexOf(e);
+    if (i >= 0) permanent.splice(i, 1); // some na hora; o realtime confirma
+    schedule();
+    try {
+      await host.erase(e.id);
+    } catch (err) {
+      permanent.push(e); // não conseguiu apagar: volta
+      schedule();
+      window.alert('Não consegui apagar o desenho: ' + err.message);
+    }
+  }
+  async function persistShape(e) {
+    const { fx, color, label, ...data } = e;
+    try {
+      const row = await host.persist({ kind: fx, color: color || myColor(), data, label: label || null });
+      const pe = fromRow(row);
+      if (pe && !permanent.some((x) => x.id === pe.id)) {
+        permanent.push(pe);
+        renderBar();
+        schedule();
+      }
+    } catch (err) {
+      window.alert('Não consegui salvar o desenho permanente: ' + err.message + '\n(se for a primeira vez, a migration db/085 precisa estar aplicada)');
+    }
+  }
+  // desenho terminado: permanente (mestre, modo 📌) grava no banco; senão é o desenho temporário de sempre
+  function commit(e) {
+    if (permMode && canPersist()) persistShape(e);
+    else emit(e);
+  }
+
   function paintOne(e, now, k) {
     const age = now - e.t0;
     if (e.fx === 'ping') {
@@ -259,6 +419,7 @@ export function createBoardFx(host) {
     ctx.setTransform(canvas._s, 0, 0, canvas._s, 0, 0);
     ctx.clearRect(0, 0, canvas._cssW, canvas._cssH);
     const k = invZoom();
+    if (!hidePerm) permanent.forEach((e) => paintPermanent(e, k));
     for (let i = effects.length - 1; i >= 0; i--) {
       if (!paintOne(effects[i], now, k)) effects.splice(i, 1);
     }
@@ -306,6 +467,17 @@ export function createBoardFx(host) {
       emit({ fx: 'ping', x: round2(p.x), y: round2(p.y) });
       return;
     }
+    if (tool === 'erase') {
+      if (canPersist()) eraseAt(p);
+      return;
+    }
+    if (tool === 'pin') {
+      if (!canPersist()) return;
+      const label = window.prompt('Nome do marcador (opcional, até 40 letras):', '');
+      if (label === null) return;
+      persistShape({ fx: 'pin', color: myColor(), x: round2(p.x), y: round2(p.y), label: label.trim().slice(0, 40) });
+      return;
+    }
     e.preventDefault();
     try {
       capture.setPointerCapture(e.pointerId);
@@ -341,11 +513,11 @@ export function createBoardFx(host) {
     draft = null;
     draftPointer = null;
     if (d.fx === 'free') {
-      if (d.pts.length >= 2) emit({ fx: 'free', color: d.color, pts: simplify(d.pts).map((q) => [round2(q[0]), round2(q[1])]) });
+      if (d.pts.length >= 2) commit({ fx: 'free', color: d.color, pts: simplify(d.pts).map((q) => [round2(q[0]), round2(q[1])]) });
     } else if (d.fx === 'arrow') {
-      if (Math.hypot(d.x2 - d.x1, d.y2 - d.y1) > 0.8) emit({ fx: 'arrow', color: d.color, x1: round2(d.x1), y1: round2(d.y1), x2: round2(d.x2), y2: round2(d.y2) });
+      if (Math.hypot(d.x2 - d.x1, d.y2 - d.y1) > 0.8) commit({ fx: 'arrow', color: d.color, x1: round2(d.x1), y1: round2(d.y1), x2: round2(d.x2), y2: round2(d.y2) });
     } else if (d.fx === 'circle') {
-      if (d.r > 0.6) emit({ fx: 'circle', color: d.color, x: round2(d.x), y: round2(d.y), r: round2(d.r) });
+      if (d.r > 0.6) commit({ fx: 'circle', color: d.color, x: round2(d.x), y: round2(d.y), r: round2(d.r) });
     }
     schedule();
   }
@@ -353,13 +525,19 @@ export function createBoardFx(host) {
   // ---- barra de ferramentas ----
   function barHtml() {
     const active = (k) => (tool === k ? 'on' : '');
+    const master = canPersist();
     // a cor da conta vem primeiro (é o padrão); as outras são trocas rápidas
     const palette = [myColor().toLowerCase(), ...SWATCHES.filter((c) => c !== myColor().toLowerCase())];
     return `
       <div class="board-fx-tools">
         ${TOOLS.map((t) => `<button type="button" class="board-fx-btn ${active(t.key)}" data-fx-tool="${t.key}" title="${t.label}">${t.icon}</button>`).join('')}
+        ${master ? `<span class="board-fx-sep"></span>
+          <button type="button" class="board-fx-btn perm ${permMode ? 'on' : ''}" data-fx-perm="1" title="${permMode ? 'MODO PERMANENTE LIGADO: os desenhos ✏ ➚ ◯ ficam gravados no tabuleiro. Clique pra voltar aos temporários.' : 'Ligar o modo PERMANENTE: os desenhos ✏ ➚ ◯ passam a ficar gravados no tabuleiro até você apagar'}">♾<small>perm</small></button>
+          ${TOOLS_MASTER.map((t) => `<button type="button" class="board-fx-btn ${active(t.key)}" data-fx-tool="${t.key}" title="${t.label}">${t.key === 'pin' ? '📌<small>marcar</small>' : t.icon}</button>`).join('')}
+          ${permanent.length ? `<button type="button" class="board-fx-btn danger" data-fx-clear="1" title="Apagar TODOS os desenhos permanentes deste tabuleiro (${permanent.length})">🗑</button>` : ''}` : ''}
+        ${permanent.length ? `<button type="button" class="board-fx-btn ${hidePerm ? 'on' : ''}" data-fx-hide="1" title="${hidePerm ? 'Mostrar os desenhos permanentes' : 'Esconder os desenhos permanentes (só pra você)'}">${hidePerm ? '🙈' : '👁'}</button>` : ''}
       </div>
-      <div class="board-fx-colors ${tool && tool !== 'ping' ? 'show' : ''}">
+      <div class="board-fx-colors ${tool && tool !== 'ping' && tool !== 'erase' ? 'show' : ''}">
         ${palette.map((c) => `<button type="button" class="board-fx-sw ${myColor().toLowerCase() === c ? 'on' : ''}" data-fx-color="${c}" style="--c:${c}" title="cor"></button>`).join('')}
       </div>`;
   }
@@ -369,6 +547,41 @@ export function createBoardFx(host) {
     bar.querySelectorAll('[data-fx-tool]').forEach((b) => {
       b.addEventListener('pointerdown', (e) => e.stopPropagation());
       b.addEventListener('click', () => setTool(tool === b.dataset.fxTool ? null : b.dataset.fxTool));
+    });
+    bar.querySelectorAll('[data-fx-perm]').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.addEventListener('click', () => {
+        permMode = !permMode;
+        if (permMode && (!tool || tool === 'ping' || tool === 'erase' || tool === 'pin')) setTool('free');
+        else renderBar();
+      });
+    });
+    bar.querySelectorAll('[data-fx-hide]').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.addEventListener('click', () => {
+        hidePerm = !hidePerm;
+        renderBar();
+        schedule();
+      });
+    });
+    bar.querySelectorAll('[data-fx-clear]').forEach((b) => {
+      b.addEventListener('pointerdown', (e) => e.stopPropagation());
+      b.addEventListener('click', async () => {
+        if (!permanent.length || !host.eraseAll) return;
+        if (!window.confirm('Apagar TODOS os ' + permanent.length + ' desenhos permanentes deste tabuleiro?')) return;
+        const backup = permanent.slice();
+        permanent.length = 0;
+        renderBar();
+        schedule();
+        try {
+          await host.eraseAll();
+        } catch (err) {
+          permanent.push(...backup);
+          renderBar();
+          schedule();
+          window.alert('Não consegui apagar: ' + err.message);
+        }
+      });
     });
     bar.querySelectorAll('[data-fx-color]').forEach((b) => {
       b.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -416,6 +629,7 @@ export function createBoardFx(host) {
   return {
     mount,
     receive,
+    setPermanent,
     setTool,
     getTool: () => tool,
     pingAtClient,
@@ -432,6 +646,7 @@ export function createBoardFx(host) {
       if (raf !== null) cancelAnimationFrame(raf);
       raf = null;
       effects.length = 0;
+      permanent.length = 0;
       draft = null;
       draftPointer = null;
       stage = canvas = capture = bar = ctx = null;
