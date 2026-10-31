@@ -57,6 +57,7 @@ import {
   listBoardDrawings,
   insertDrawing,
   deleteDrawing,
+  updateDrawing,
   clearBoardDrawings,
   insertLight,
   updateLight,
@@ -250,6 +251,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     canPersist: () => isMaster && !viewAsPlayer,
     persist: (shape) => insertDrawing(viewBoardId, campaignId, shape),
     erase: (id) => deleteDrawing(id),
+    update: (id, data) => updateDrawing(id, data),
     eraseAll: () => clearBoardDrawings(viewBoardId),
     // ferramenta de desenho e ferramenta de parede disputam o mesmo clique: ligar uma desliga a outra
     onToolChange: (t) => {

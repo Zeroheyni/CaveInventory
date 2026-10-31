@@ -961,3 +961,5 @@
 .board-fx-btn.danger:hover{ background: rgba(var(--danger-rgb),0.18); color: var(--danger); }
 .board-fx-capture[data-tool="erase"]{ cursor: not-allowed; }
 .board-fx-capture[data-tool="pin"]{ cursor: copy; }
+.board-fx-capture[data-tool="move"]{ cursor: grab; }
+.board-fx-capture[data-tool="move"]:active{ cursor: grabbing; }

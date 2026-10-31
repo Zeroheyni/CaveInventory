@@ -162,6 +162,12 @@ export async function insertDrawing(boardId, campaignId, shape) {
   return data;
 }
 
+// mover/editar um desenho permanente: só as coordenadas (data) mudam
+export async function updateDrawing(id, data) {
+  const { error } = await supabase.from('board_drawings').update({ data }).eq('id', id);
+  if (error) throw error;
+}
+
 export async function deleteDrawing(id) {
   const { error } = await supabase.from('board_drawings').delete().eq('id', id);
   if (error) throw error;

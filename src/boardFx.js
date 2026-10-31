@@ -21,6 +21,7 @@ const TOOLS = [
 ];
 // ferramentas que só o mestre vê (desenhos permanentes)
 const TOOLS_MASTER = [
+  { key: 'move', icon: '✋', label: 'Mover um desenho permanente (arraste-o)' },
   { key: 'pin', icon: '📌', label: 'Marcador PERMANENTE com nome (clique no mapa)' },
   { key: 'erase', icon: '🧽', label: 'Apagar um desenho permanente (clique em cima dele)' },
 ];
@@ -50,6 +51,7 @@ export function createBoardFx(host) {
   const permanent = []; // desenhos permanentes (vêm do banco): { id, fx, color, label, ... }
   let permMode = false; // mestre: ✏ ➚ ◯ gravam no tabuleiro em vez de sumir sozinhos
   let hidePerm = false; // só pra mim: esconde os permanentes
+  let moving = null; // desenho permanente sendo arrastado: { e, o: ponto de partida (%), orig: cópia das coordenadas, bounds }
   const canPersist = () => !!(host.canPersist && host.canPersist());
   const reduceMotion = () => !!(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
 
@@ -81,6 +83,7 @@ export function createBoardFx(host) {
     return e;
   }
   function setPermanent(rows) {
+    if (moving) return; // chegou atualização do banco no meio de um arrasto: o próximo ciclo corrige
     permanent.length = 0;
     (rows || []).forEach((r) => {
       const e = fromRow(r);
@@ -333,7 +336,7 @@ export function createBoardFx(host) {
     const t = l2 ? Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / l2)) : 0;
     return Math.hypot(px - (x1 + t * dx), py - (y1 + t * dy));
   }
-  function hitPermanent(p) {
+  function hitPermanent(p, { fill = false } = {}) {
     if (!canvas || !canvas._cssW) return null;
     const W = canvas._cssW;
     const H = canvas._cssH;
@@ -354,6 +357,7 @@ export function createBoardFx(host) {
       } else if (e.fx === 'circle') {
         const dc = Math.hypot(px - (e.x / 100) * W, py - (e.y / 100) * H);
         d = Math.abs(dc - (e.r / 100) * W);
+        if (fill && dc < (e.r / 100) * W) d = Math.min(d, thr * 0.9); // pra mover, pegar por dentro também vale (perde pra um acerto mais exato)
       } else if (e.fx === 'pin') {
         const dc = Math.hypot(px - (e.x / 100) * W, py - ((e.y / 100) * H - 16 * k));
         d = dc < 22 * k ? dc / 2 : Infinity;
@@ -364,6 +368,59 @@ export function createBoardFx(host) {
       }
     });
     return best;
+  }
+  const coordsOf = (e) => {
+    if (e.fx === 'free') return { pts: e.pts.map((q) => [q[0], q[1]]) };
+    if (e.fx === 'arrow') return { x1: e.x1, y1: e.y1, x2: e.x2, y2: e.y2 };
+    if (e.fx === 'circle') return { x: e.x, y: e.y, r: e.r };
+    return { x: e.x, y: e.y };
+  };
+  // limites do desenho em %, pra o arrasto nunca empurrar parte dele pra fora do mapa
+  function boundsOf(e) {
+    let xs;
+    let ys;
+    if (e.fx === 'free') {
+      xs = e.pts.map((q) => q[0]);
+      ys = e.pts.map((q) => q[1]);
+    } else if (e.fx === 'arrow') {
+      xs = [e.x1, e.x2];
+      ys = [e.y1, e.y2];
+    } else if (e.fx === 'circle') {
+      // o raio é em % da LARGURA; na vertical vira r * largura/altura
+      const ry = e.r * ((canvas && canvas._cssW) / ((canvas && canvas._cssH) || 1) || 1);
+      xs = [e.x - e.r, e.x + e.r];
+      ys = [e.y - ry, e.y + ry];
+    } else {
+      xs = [e.x];
+      ys = [e.y];
+    }
+    return { x0: Math.min(...xs), x1: Math.max(...xs), y0: Math.min(...ys), y1: Math.max(...ys) };
+  }
+  function applyMove(m, dx, dy) {
+    const { e, orig, bounds } = m;
+    dx = Math.max(-bounds.x0, Math.min(100 - bounds.x1, dx));
+    dy = Math.max(-bounds.y0, Math.min(100 - bounds.y1, dy));
+    if (e.fx === 'free') e.pts = orig.pts.map((q) => [round2(q[0] + dx), round2(q[1] + dy)]);
+    else if (e.fx === 'arrow') {
+      e.x1 = round2(orig.x1 + dx);
+      e.y1 = round2(orig.y1 + dy);
+      e.x2 = round2(orig.x2 + dx);
+      e.y2 = round2(orig.y2 + dy);
+    } else {
+      e.x = round2(orig.x + dx);
+      e.y = round2(orig.y + dy);
+    }
+  }
+  async function finishMove(m) {
+    const changed = JSON.stringify(coordsOf(m.e)) !== JSON.stringify(m.orig);
+    if (!changed || !host.update) return;
+    try {
+      await host.update(m.e.id, coordsOf(m.e));
+    } catch (err) {
+      Object.assign(m.e, m.orig); // não gravou: volta pro lugar
+      schedule();
+      window.alert('Não consegui mover o desenho: ' + err.message);
+    }
   }
   async function eraseAt(p) {
     const e = hitPermanent(p);
@@ -471,6 +528,18 @@ export function createBoardFx(host) {
       if (canPersist()) eraseAt(p);
       return;
     }
+    if (tool === 'move') {
+      if (!canPersist()) return;
+      const hit = hitPermanent(p, { fill: true });
+      if (!hit) return;
+      e.preventDefault();
+      try {
+        capture.setPointerCapture(e.pointerId);
+      } catch (_) { /* ponteiro já liberado */ }
+      draftPointer = e.pointerId;
+      moving = { e: hit, o: p, orig: coordsOf(hit), bounds: boundsOf(hit) };
+      return;
+    }
     if (tool === 'pin') {
       if (!canPersist()) return;
       const label = window.prompt('Nome do marcador (opcional, até 40 letras):', '');
@@ -490,6 +559,14 @@ export function createBoardFx(host) {
     schedule();
   }
   function onMove(e) {
+    if (moving && e.pointerId === draftPointer) {
+      const q = pctAt(e.clientX, e.clientY);
+      if (q) {
+        applyMove(moving, q.x - moving.o.x, q.y - moving.o.y);
+        schedule();
+      }
+      return;
+    }
     if (!draft || e.pointerId !== draftPointer) return;
     const p = pctAt(e.clientX, e.clientY);
     if (!p) return;
@@ -508,6 +585,14 @@ export function createBoardFx(host) {
     schedule();
   }
   function onUp(e) {
+    if (moving && e.pointerId === draftPointer) {
+      const m = moving;
+      moving = null;
+      draftPointer = null;
+      finishMove(m);
+      schedule();
+      return;
+    }
     if (!draft || e.pointerId !== draftPointer) return;
     const d = draft;
     draft = null;
@@ -537,7 +622,7 @@ export function createBoardFx(host) {
           ${permanent.length ? `<button type="button" class="board-fx-btn danger" data-fx-clear="1" title="Apagar TODOS os desenhos permanentes deste tabuleiro (${permanent.length})">🗑</button>` : ''}` : ''}
         ${permanent.length ? `<button type="button" class="board-fx-btn ${hidePerm ? 'on' : ''}" data-fx-hide="1" title="${hidePerm ? 'Mostrar os desenhos permanentes' : 'Esconder os desenhos permanentes (só pra você)'}">${hidePerm ? '🙈' : '👁'}</button>` : ''}
       </div>
-      <div class="board-fx-colors ${tool && tool !== 'ping' && tool !== 'erase' ? 'show' : ''}">
+      <div class="board-fx-colors ${tool && tool !== 'ping' && tool !== 'erase' && tool !== 'move' ? 'show' : ''}">
         ${palette.map((c) => `<button type="button" class="board-fx-sw ${myColor().toLowerCase() === c ? 'on' : ''}" data-fx-color="${c}" style="--c:${c}" title="cor"></button>`).join('')}
       </div>`;
   }
@@ -552,7 +637,7 @@ export function createBoardFx(host) {
       b.addEventListener('pointerdown', (e) => e.stopPropagation());
       b.addEventListener('click', () => {
         permMode = !permMode;
-        if (permMode && (!tool || tool === 'ping' || tool === 'erase' || tool === 'pin')) setTool('free');
+        if (permMode && (!tool || tool === 'ping' || tool === 'erase' || tool === 'pin' || tool === 'move')) setTool('free');
         else renderBar();
       });
     });
@@ -595,6 +680,7 @@ export function createBoardFx(host) {
   function setTool(next, { silent = false } = {}) {
     tool = next || null;
     draft = null;
+    moving = null;
     draftPointer = null;
     if (capture) {
       capture.style.display = tool ? 'block' : 'none';
