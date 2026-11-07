@@ -963,3 +963,7 @@
 .board-fx-capture[data-tool="pin"]{ cursor: copy; }
 .board-fx-capture[data-tool="move"]{ cursor: grab; }
 .board-fx-capture[data-tool="move"]:active{ cursor: grabbing; }
+
+/* quadriculado por cima do mapa (db/087): fica embaixo dos tokens, não pega clique */
+.board-grid-layer{ position:absolute; inset:0; pointer-events:none; }
+.board-grid-layer svg{ position:absolute; inset:0; width:100%; height:100%; display:block; }

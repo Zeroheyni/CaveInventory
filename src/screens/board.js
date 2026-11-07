@@ -722,6 +722,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       return {
         tab: sceneryTab,
         ...lightingState(),
+        ...gridState(),
         tool: wallTool || 'mover',
         collision: b.collision_enabled !== false,
         showWalls: !!b.show_walls_to_players,
@@ -761,6 +762,62 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
       wallEditor.removeWalls(walls.map((w) => w.id));
     },
   };
+
+  // ---- QUADRICULADO por cima do mapa (db/087): linhas em SVG no espaço 0-100 do palco, esticado pro palco todo.
+  // A casa é quadrada: grid_size é % da LARGURA; na altura vira grid_size * (largura/altura) %.
+  function gridSvg(b) {
+    if (!b || !b.grid_enabled) return '';
+    const size = clamp(Number(b.grid_size) || 5, 1, 25);
+    const stepY = size * stageAspect();
+    const ox = (clamp(Number(b.grid_offset_x) || 0, 0, 100) / 100) * size;
+    const oy = (clamp(Number(b.grid_offset_y) || 0, 0, 100) / 100) * stepY;
+    const r = (n) => Math.round(n * 1000) / 1000;
+    let d = '';
+    for (let x = ox, i = 0; x <= 100.0001 && i < 300; x += size, i++) d += 'M' + r(x) + ' 0V100';
+    for (let y = oy, i = 0; y <= 100.0001 && i < 300; y += stepY, i++) d += 'M0 ' + r(y) + 'H100';
+    const color = /^#[0-9a-fA-F]{6}$/.test(b.grid_color || '') ? b.grid_color : '#ffffff';
+    const op = clamp(Number(b.grid_opacity) || 0.4, 0.05, 1);
+    return '<svg viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"><path d="' + d + '" fill="none" stroke="' + color + '" stroke-opacity="' + op + '" stroke-width="1" vector-effect="non-scaling-stroke"/></svg>';
+  }
+  function paintGrid() {
+    const layer = $('board-grid-layer');
+    if (!layer) return;
+    const b = currentBoard();
+    const key = b ? [b.grid_enabled, b.grid_size, b.grid_offset_x, b.grid_offset_y, b.grid_color, b.grid_opacity, stageAspect().toFixed(4)].join('|') : '';
+    if (key === gridKey) return;
+    gridKey = key;
+    layer.innerHTML = gridSvg(b);
+  }
+  function gridState() {
+    const b = currentBoard() || {};
+    const size = Number(b.grid_size) || 5;
+    return {
+      gridOn: !!b.grid_enabled,
+      gridCols: Math.round((100 / size) * 2) / 2, // casas na largura do mapa
+      gridOx: Math.round(b.grid_offset_x || 0),
+      gridOy: Math.round(b.grid_offset_y || 0),
+      gridColor: b.grid_color || '#ffffff',
+      gridOpacity: b.grid_opacity ?? 0.4,
+    };
+  }
+  function gridFields(field, v) {
+    if (field === 'cols') return { grid_size: Math.round(clamp(100 / Math.max(4, Number(v) || 20), 1, 25) * 1000) / 1000 };
+    if (field === 'ox') return { grid_offset_x: clamp(Number(v) || 0, 0, 100) };
+    if (field === 'oy') return { grid_offset_y: clamp(Number(v) || 0, 0, 100) };
+    if (field === 'color') return { grid_color: v };
+    return { grid_opacity: clamp(Number(v) || 0.4, 0.05, 1) };
+  }
+  Object.assign(sceneryApi, {
+    setGridOn: (v) => patchBoard({ grid_enabled: !!v }),
+    // enquanto arrasta o slider: só repinta (sem banco); ao soltar, saveGrid grava e o resto da mesa recebe
+    liveGrid(field, v) {
+      const b = currentBoard();
+      if (!b) return;
+      Object.assign(b, gridFields(field, v));
+      paintGrid();
+    },
+    saveGrid: (field, v) => patchBoard(gridFields(field, v)),
+  });
 
   // estado do painel de luz/ambiente + ações (mescladas no sceneryApi)
   function lightingState() {
@@ -834,6 +891,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   const ZOOM_MAX = 8;
   const FALLBACK_ASPECT = 16 / 9; // tabuleiro sem imagem
   let view = { z: 1, fx: 0.5, fy: 0.5 };
+  let gridKey = ''; // o que a camada do quadriculado está mostrando agora (só repinta se mudar)
   const measuredDims = new Map(); // boardId -> { w, h } medido pela URL (boards antigos)
   const panPointers = new Map(); // pointerId -> último { x, y } (1 dedo = pan, 2 = pinça)
   let pinchLast = null;
@@ -937,6 +995,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
     // controles dos tokens (×, ⚙, alça, popover, cursores) não crescem/encolhem com o zoom
     stage.style.setProperty('--inv-zoom', String(1 / z));
     stage.style.visibility = stageReady() ? '' : 'hidden';
+    paintGrid();
     lighting.resize();
   }
 
@@ -1119,7 +1178,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
   // mexeu (iluminação ligada/desligada, luzes, paredes) chega do mesmo jeito, sem precisar recarregar a página ----
   let reconcileTimer = null;
   const boardSettingsKey = (b) =>
-    b ? [b.lighting_enabled, b.ambient, b.fog_mode, b.ambient_color, b.show_walls_to_players, b.collision_enabled, b.memory_enabled, b.memory_epoch, b.background_image_url].join('|') : '';
+    b ? [b.lighting_enabled, b.ambient, b.fog_mode, b.ambient_color, b.show_walls_to_players, b.collision_enabled, b.memory_enabled, b.memory_epoch, b.background_image_url, b.grid_enabled, b.grid_size, b.grid_offset_x, b.grid_offset_y, b.grid_color, b.grid_opacity].join('|') : '';
   async function reconcileBoard() {
     if (!viewBoardId || document.hidden || sel.dragging() || dragTokenId || resizeTokenId) return;
     try {
@@ -2001,6 +2060,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
 
   // ---- tela 2: tabuleiro em tela cheia ----
   function renderFullscreen() {
+    gridKey = '';
     const board = boards.find((b) => b.id === viewBoardId);
     const bg = board && board.background_image_url;
     app.innerHTML = `
@@ -2009,6 +2069,7 @@ export function renderBoardScreen(app, { session, profile, campaign, characterId
         ${error ? `<div class="board-error board-fullscreen-error">${escapeHtml(error)}</div>` : ''}
         <div class="board-area ${isMaster && wallTool ? 'walls-editing' : ''}" id="board-area">
           <div class="board-stage" id="board-stage" style="${bg ? `background-image:url('${escapeHtml(bg)}');` : ''}">
+            <div class="board-grid-layer" id="board-grid-layer"></div>
             ${tokens.map(tokenHtml).join('')}
             <div class="board-light-layer" id="board-light-layer"><canvas class="board-dark"></canvas><canvas class="board-glow"></canvas><canvas class="board-gray"></canvas></div>
             <div class="board-light-markers" id="board-light-markers">${fixedLightMarkersHtml()}</div>

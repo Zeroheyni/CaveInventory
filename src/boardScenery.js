@@ -139,6 +139,36 @@ export function mountSceneryPanel(container, api) {
   function ambientTab(s) {
     return `
       <div class="scn-section">
+        <label class="scn-check"><input type="checkbox" data-scn-gridon ${s.gridOn ? 'checked' : ''}> <b>quadriculado</b> <small>(desenha uma grade por cima do mapa; todos veem)</small></label>
+        ${
+          s.gridOn
+            ? `
+        <label class="scn-slider">
+          <span>casas (largura)</span>
+          <input type="range" min="4" max="80" step="0.5" value="${s.gridCols}" data-scn-gridf="cols">
+          <output>${s.gridCols}</output>
+        </label>
+        <label class="scn-slider">
+          <span>ajuste →</span>
+          <input type="range" min="0" max="100" step="1" value="${s.gridOx}" data-scn-gridf="ox">
+          <output>${s.gridOx}%</output>
+        </label>
+        <label class="scn-slider">
+          <span>ajuste ↓</span>
+          <input type="range" min="0" max="100" step="1" value="${s.gridOy}" data-scn-gridf="oy">
+          <output>${s.gridOy}%</output>
+        </label>
+        <label class="scn-slider">
+          <span>opacidade</span>
+          <input type="range" min="0.05" max="1" step="0.05" value="${s.gridOpacity}" data-scn-gridf="opacity">
+          <output>${Math.round(s.gridOpacity * 100)}%</output>
+        </label>
+        <label class="scn-inline">cor da grade <input type="color" value="${escapeHtml(s.gridColor)}" data-scn-gridf="color"></label>
+        <p class="scn-hint">A casa é quadrada. Use "casas (largura)" pra bater com o mapa e o ajuste pra alinhar com a margem da imagem.</p>`
+            : ''
+        }
+      </div>
+      <div class="scn-section">
         <label class="scn-check"><input type="checkbox" data-scn-lighting ${s.lighting ? 'checked' : ''}> <b>iluminação ligada</b> <small>(mapa escuro; só o iluminado aparece)</small></label>
         <label class="scn-slider">
           <span>escuridão</span>
@@ -198,6 +228,18 @@ export function mountSceneryPanel(container, api) {
     }
   }
   function wireAmbient() {
+    const gOn = container.querySelector('[data-scn-gridon]');
+    if (gOn) gOn.addEventListener('change', () => api.setGridOn(gOn.checked));
+    container.querySelectorAll('[data-scn-gridf]').forEach((inp) => {
+      const field = inp.dataset.scnGridf;
+      const val = () => (field === 'color' ? inp.value : Number(inp.value));
+      inp.addEventListener('input', () => {
+        const out = inp.parentElement.querySelector('output');
+        if (out) out.textContent = field === 'cols' ? inp.value : field === 'opacity' ? Math.round(Number(inp.value) * 100) + '%' : field === 'color' ? '' : inp.value + '%';
+        api.liveGrid(field, val());
+      });
+      inp.addEventListener('change', () => api.saveGrid(field, val()));
+    });
     const lg = container.querySelector('[data-scn-lighting]');
     if (lg) lg.addEventListener('change', () => api.setLighting(lg.checked));
     const mm = container.querySelector('[data-scn-memory]');
